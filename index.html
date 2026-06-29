@@ -1,0 +1,2423 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Controle de Frota – SERVSUL</title>
+<style>
+  :root {
+    --green: #4CAF50;
+    --green-dark: #388E3C;
+    --yellow: #FDD835;
+    --gray: #f5f5f5;
+    --border: #ccc;
+    --red: #e53935;
+    --blue: #1565C0;
+    --white: #fff;
+    --shadow: 0 2px 8px rgba(0,0,0,.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #e8f5e9; min-height: 100vh; }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--green-dark);
+    color: #fff;
+    padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: var(--shadow);
+  }
+  .header h1 { font-size: 16px; font-weight: 700; letter-spacing: .5px; }
+  .header .subtitle { font-size: 11px; opacity: .85; margin-top: 2px; }
+  .header-logo { font-size: 11px; font-weight: 700; background: var(--yellow); color: #333;
+    padding: 4px 8px; border-radius: 4px; }
+
+  /* ── NAV TABS ── */
+  .nav {
+    display: flex; background: #fff; border-bottom: 2px solid var(--green);
+    position: sticky; top: 64px; z-index: 99;
+  }
+  .nav button {
+    flex: 1; padding: 10px 4px; border: none; background: none;
+    font-size: 12px; font-weight: 600; color: #555; cursor: pointer;
+    border-bottom: 3px solid transparent; transition: all .2s;
+  }
+  .nav button.active { color: var(--green-dark); border-bottom-color: var(--green-dark); background: #f1f8e9; }
+  .nav button:hover:not(.active) { background: #f5f5f5; }
+
+  /* ── SCREENS ── */
+  .screen { display: none; padding: 16px; max-width: 800px; margin: 0 auto; }
+  .screen.active { display: block; }
+
+  /* ── CARDS ── */
+  .card {
+    background: #fff; border-radius: 12px; padding: 16px;
+    margin-bottom: 16px; box-shadow: var(--shadow);
+  }
+  .card h2 { font-size: 14px; font-weight: 700; color: var(--green-dark);
+    margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e0e0e0; }
+
+  /* ── FORM CONTROLS ── */
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; }
+  .form-group select, .form-group input {
+    width: 100%; padding: 10px 12px; border: 1.5px solid var(--border);
+    border-radius: 8px; font-size: 14px; background: #fafafa;
+    transition: border-color .2s;
+  }
+  .form-group select:focus, .form-group input:focus {
+    outline: none; border-color: var(--green); background: #fff;
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 18px; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 700; cursor: pointer; transition: all .15s;
+  }
+  .btn-primary { background: var(--green-dark); color: #fff; }
+  .btn-primary:hover { background: var(--green); }
+  .btn-secondary { background: #e0e0e0; color: #333; }
+  .btn-secondary:hover { background: #bdbdbd; }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-danger:hover { opacity: .85; }
+  .btn-blue { background: var(--blue); color: #fff; }
+  .btn-sm { padding: 6px 12px; font-size: 11px; }
+  .btn-full { width: 100%; margin-top: 8px; }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 12px;
+    font-size: 10px; font-weight: 700;
+  }
+  .badge-green { background: #c8e6c9; color: var(--green-dark); }
+  .badge-yellow { background: #fff9c4; color: #795548; }
+  .badge-gray { background: #eeeeee; color: #666; }
+
+  /* ── CHECKLIST TABLE ── */
+  .checklist-header {
+    background: var(--green-dark); color: #fff;
+    padding: 12px 16px; border-radius: 10px 10px 0 0; margin-bottom: 0;
+  }
+  .checklist-header h2 { color: #fff; border: none; margin: 0; font-size: 15px; }
+  .checklist-header .meta { font-size: 11px; opacity: .85; margin-top: 4px; }
+
+  .table-wrap { overflow-x: auto; }
+  table.checklist {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+    background: #fff; border-radius: 0 0 10px 10px; overflow: hidden;
+  }
+  table.checklist th {
+    background: var(--green); color: #fff; padding: 8px 6px;
+    text-align: center; font-size: 11px; position: sticky; top: 0;
+  }
+  table.checklist td {
+    border: 1px solid #e0e0e0; padding: 4px 4px; text-align: center;
+    vertical-align: middle;
+  }
+  table.checklist tr:nth-child(even) td { background: #f9fbe7; }
+  table.checklist tr.today td { background: #fff9c4 !important; }
+  table.checklist tr.sunday td { background: #eeeeee !important; color: #9e9e9e; }
+  table.checklist tr.sunday .day-num { color: #e53935; font-weight: 900; }
+  table.checklist tr.holiday td { background: #fce4ec !important; color: #880e4f; }
+  table.checklist tr.holiday .day-num { color: #c62828; font-weight: 900; }
+  .day-label {
+    font-size: 10px; font-weight: 700; letter-spacing: .5px;
+    text-transform: uppercase;
+  }
+  table.checklist tr.sunday .day-label { color: #e53935; }
+  table.checklist tr.holiday .day-label { color: #880e4f; }
+  .day-num { font-weight: 700; color: #555; width: 28px; }
+
+  .km-input {
+    width: 80px; padding: 4px 6px; border: 1px solid #ccc;
+    border-radius: 6px; font-size: 12px; text-align: center;
+  }
+  .km-input:focus { outline: none; border-color: var(--green); }
+
+  /* ── SIGNATURE CELL ── */
+  .sig-cell { min-width: 80px; }
+  .sig-thumb {
+    display: inline-block; width: 70px; height: 32px;
+    border: 1px solid #bbb; border-radius: 4px; cursor: pointer;
+    background: #fafafa; position: relative; overflow: hidden;
+  }
+  .sig-thumb img { width: 100%; height: 100%; object-fit: contain; }
+  .sig-thumb.empty::after {
+    content: '✍'; font-size: 18px; position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%,-50%); color: #bbb;
+  }
+  .sig-thumb.signed { border-color: var(--green); }
+
+  /* ── SIGNATURE MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5);
+    z-index: 999; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 16px; padding: 20px;
+    width: min(95vw, 480px); box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  }
+  .modal h3 { font-size: 15px; color: var(--green-dark); margin-bottom: 4px; }
+  .modal .modal-sub { font-size: 11px; color: #888; margin-bottom: 12px; }
+  #sig-canvas {
+    border: 2px solid var(--green); border-radius: 10px;
+    touch-action: none; background: #fafafa; display: block; width: 100%;
+  }
+  .modal-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .modal-actions .btn { flex: 1; }
+
+  /* ── VEHICLE LIST ── */
+  .vehicle-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 8px;
+    margin-bottom: 8px; background: #fafafa;
+  }
+  .vehicle-item .vi-name { font-weight: 700; font-size: 13px; }
+  .vehicle-item .vi-plate {
+    font-size: 12px; background: #333; color: #fff;
+    padding: 3px 8px; border-radius: 4px; font-weight: 700; letter-spacing: 1px;
+  }
+
+  /* ── DRIVER LIST ── */
+  .driver-item {
+    border: 1px solid #e0e0e0; border-radius: 10px;
+    margin-bottom: 10px; background: #fafafa; overflow: hidden;
+  }
+  .driver-item-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; background: #f1f8e9; border-bottom: 1px solid #e0e0e0;
+  }
+  .driver-item .di-name { font-weight: 700; font-size: 13px; color: var(--green-dark); }
+  .driver-item .di-cat {
+    font-size: 11px; font-weight: 700; background: var(--green-dark); color: #fff;
+    padding: 2px 8px; border-radius: 4px;
+  }
+  .driver-info-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px;
+    padding: 10px 12px; font-size: 11px;
+  }
+  .driver-info-grid .di-field { color: #888; font-size: 10px; }
+  .driver-info-grid .di-val { font-weight: 600; color: #333; font-size: 11px; }
+  .driver-item-actions { padding: 8px 12px; display: flex; justify-content: flex-end; gap: 8px; }
+
+  /* ── HISTORY ── */
+  .history-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; border-left: 4px solid var(--green);
+    background: #fafafa; border-radius: 0 8px 8px 0; margin-bottom: 8px;
+    cursor: pointer; transition: background .15s;
+  }
+  .history-item:hover { background: #e8f5e9; }
+  .history-item .hi-title { font-weight: 700; font-size: 13px; }
+  .history-item .hi-sub { font-size: 11px; color: #888; }
+
+  /* ── SUMMARY ── */
+  .summary-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;
+  }
+  .summary-row:last-child { border: none; font-weight: 700; color: var(--green-dark); }
+
+  .tag-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .empty-state { text-align: center; padding: 40px 20px; color: #aaa; font-size: 13px; }
+  .empty-state .icon { font-size: 40px; margin-bottom: 8px; }
+
+  /* ── CHART ── */
+  .chart-wrap { width: 100%; overflow-x: auto; }
+  .chart-bar-row { display: flex; align-items: center; margin-bottom: 8px; gap: 8px; }
+  .chart-label { font-size: 10px; font-weight: 700; color: #444; min-width: 90px;
+    text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chart-bar-bg { flex: 1; background: #e8f5e9; border-radius: 6px; height: 22px;
+    position: relative; overflow: hidden; }
+  .chart-bar-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #388E3C, #66BB6A);
+    transition: width .5s ease; display: flex; align-items: center; justify-content: flex-end;
+    padding-right: 6px; }
+  .chart-bar-fill span { font-size: 10px; font-weight: 700; color: #fff; white-space: nowrap; }
+  .chart-bar-fill.top { background: linear-gradient(90deg, #F57F17, #FDD835); }
+  .chart-bar-fill.top span { color: #333; }
+  .chart-empty { text-align:center; color:#bbb; font-size:12px; padding:16px 0; }
+
+  /* ── SECURITY / ROLES ── */
+  /* Admin-only elements hidden for regular users */
+  body.user-mode .admin-only { display: none !important; }
+  body.user-mode .readonly-msg { display: block !important; }
+  .readonly-msg {
+    display: none; background: #fff3e0; color: #e65100;
+    border: 1px solid #ffcc80; border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; text-align: center; margin-bottom: 8px;
+  }
+
+  /* ── LOGIN OVERLAY ── */
+  #login-overlay {
+    position: fixed; inset: 0; background: linear-gradient(160deg,#1B5E20 0%,#2E7D32 50%,#1565C0 100%);
+    z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .login-box {
+    background: #fff; border-radius: 24px; padding: 28px 22px;
+    width: min(95vw, 340px); box-shadow: 0 16px 56px rgba(0,0,0,.4);
+  }
+  .login-logo { text-align: center; margin-bottom: 22px; }
+  .login-logo .logo-badge {
+    display: inline-block; background: var(--green-dark); color: #fff;
+    font-size: 24px; font-weight: 900; padding: 10px 22px; border-radius: 12px;
+    letter-spacing: 3px; margin-bottom: 6px;
+  }
+  .login-logo p { font-size: 11px; color: #999; margin: 0; }
+  /* PIN dots */
+  .pin-dots {
+    display: flex; justify-content: center; gap: 14px; margin: 18px 0 10px;
+  }
+  .pin-dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid #bbb; background: #fff; transition: all .15s;
+  }
+  .pin-dot.filled { background: var(--green-dark); border-color: var(--green-dark); }
+  .pin-dot.error  { background: var(--red); border-color: var(--red); }
+  /* PIN pad */
+  .pin-pad {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 16px;
+  }
+  .pin-key {
+    padding: 16px 0; font-size: 20px; font-weight: 700;
+    border: 1.5px solid #e0e0e0; border-radius: 12px;
+    background: #fafafa; cursor: pointer; transition: all .1s;
+    color: #333; text-align: center;
+  }
+  .pin-key:active, .pin-key:hover { background: var(--green-dark); color: #fff; border-color: var(--green-dark); }
+  .pin-key.wide { grid-column: span 1; }
+  .pin-key.del  { background: #fff3e0; color: #e65100; border-color: #ffcc80; }
+  .pin-key.del:hover { background: #e65100; color: #fff; border-color: #e65100; }
+  .pin-hint { text-align:center; font-size:11px; color:#aaa; margin-top:6px; min-height:16px; }
+  .pin-error { color: var(--red) !important; font-weight: 700; }
+  .pin-title { text-align:center; font-size:14px; font-weight:700; color:#333; margin-top:4px; }
+  /* Login — step 1: user selection */
+  .login-select-title {
+    text-align:center; font-size:12px; font-weight:600; color:#888;
+    text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px;
+  }
+  .login-user-list { display:flex; flex-direction:column; gap:8px; max-height:240px; overflow-y:auto; }
+  .login-user-card {
+    display:flex; align-items:center; gap:12px; padding:11px 14px;
+    border:1.5px solid #e0e0e0; border-radius:12px; background:#fafafa;
+    cursor:pointer; transition:all .15s; font-size:13px; font-weight:600; color:#333;
+  }
+  .login-user-card:hover { border-color:var(--green-dark); background:#e8f5e9; color:var(--green-dark); }
+  .login-user-card .luc-avatar {
+    width:36px; height:36px; border-radius:50%; display:flex; align-items:center;
+    justify-content:center; font-size:17px; flex-shrink:0;
+    background:#e8f5e9;
+  }
+  .login-user-card.admin-card { border-color:#1565C0; }
+  .login-user-card.admin-card:hover { background:#e3f2fd; color:#1565C0; }
+  .login-user-card.admin-card .luc-avatar { background:#e3f2fd; }
+  /* Login — step 2: PIN */
+  .login-back-btn {
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:12px; font-weight:600; color:#888; cursor:pointer;
+    margin-bottom:8px; padding:4px 0;
+  }
+  .login-back-btn:hover { color:var(--green-dark); }
+  .login-selected-user {
+    text-align:center; background:#f1f8e9; border-radius:10px;
+    padding:8px 12px; margin-bottom:4px; font-weight:700; font-size:13px; color:#2e7d32;
+  }
+
+  /* ── USER BADGE IN HEADER ── */
+  .user-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,.15); border-radius: 8px; padding: 4px 8px;
+  }
+  .user-badge .ub-name { font-size: 10px; font-weight: 700; color: #fff; max-width: 100px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-badge .ub-role { font-size: 9px; color: rgba(255,255,255,.7); }
+  .ub-logout {
+    background: rgba(255,255,255,.2); border: none; color: #fff;
+    font-size: 10px; font-weight: 700; padding: 3px 7px; border-radius: 5px;
+    cursor: pointer; transition: background .15s;
+  }
+  .ub-logout:hover { background: rgba(255,255,255,.35); }
+
+  /* ── LOADING OVERLAY ── */
+  #loading-overlay {
+    position:fixed;inset:0;background:rgba(27,94,32,.92);z-index:10000;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  }
+  .lo-spinner {
+    width:48px;height:48px;border:5px solid rgba(255,255,255,.3);
+    border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .lo-msg { color:#fff;font-size:14px;font-weight:600; }
+  .lo-err { color:#ffcdd2;font-size:13px;font-weight:600;text-align:center;max-width:280px; }
+
+  /* ── SETUP OVERLAY (Firebase config) ── */
+  #setup-overlay {
+    position:fixed;inset:0;background:linear-gradient(160deg,#1B5E20 0%,#2E7D32 50%,#1565C0 100%);
+    z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;
+  }
+  .setup-box {
+    background:#fff;border-radius:20px;padding:28px 22px;width:min(95vw,380px);
+    box-shadow:0 16px 56px rgba(0,0,0,.4);
+  }
+  .setup-box h2 { font-size:17px;font-weight:800;color:#1B5E20;margin-bottom:6px; }
+  .setup-box p  { font-size:12px;color:#666;margin-bottom:14px;line-height:1.5; }
+  .setup-box textarea {
+    width:100%;height:130px;border:1.5px solid #ccc;border-radius:10px;
+    padding:10px;font-size:11px;font-family:monospace;resize:vertical;
+  }
+  .setup-err { color:#c62828;font-size:12px;font-weight:600;margin-top:6px;min-height:18px; }
+  .setup-steps { background:#e8f5e9;border-radius:10px;padding:12px 14px;margin-bottom:14px;
+    font-size:11px;color:#2e7d32;line-height:1.8; }
+
+  /* ── PRINT ── */
+  @media print {
+    .nav, .header, .no-print { display: none !important; }
+    .screen { display: block !important; padding: 0; }
+    table.checklist { font-size: 10px; }
+    .sig-thumb { border: 1px solid #999; }
+    .km-input { border: none; background: none; }
+  }
+
+  /* ── NAV SCROLLABLE ── */
+  .nav { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+  .nav button { flex: 0 0 auto; min-width: 90px; }
+  .nav::-webkit-scrollbar { height: 3px; }
+  .nav::-webkit-scrollbar-thumb { background: var(--green); border-radius: 4px; }
+
+  /* ── FUEL TAB ── */
+  .fuel-filters { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .fuel-filters select { padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; background: #fafafa; }
+  .fuel-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .fuel-summary .fs-card { background: #e8f5e9; border-radius: 10px; padding: 12px; text-align: center; }
+  .fuel-summary .fs-card .fs-value { font-size: 20px; font-weight: 800; color: var(--green-dark); }
+  .fuel-summary .fs-card .fs-label { font-size: 11px; color: #555; margin-top: 2px; }
+  .fuel-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .fuel-table th { background: var(--green-dark); color: #fff; padding: 8px 6px; text-align: left; font-size: 11px; }
+  .fuel-table td { padding: 7px 6px; border-bottom: 1px solid #e0e0e0; }
+  .fuel-table tr:hover { background: #f1f8e9; }
+  .fuel-table .val { font-weight: 700; color: var(--green-dark); }
+
+  /* ── REQUISICAO TAB ── */
+  .req-list-item { border: 1px solid #e0e0e0; border-radius: 10px; padding: 12px; margin-bottom: 10px; background: #fafafa; }
+  .req-list-item .req-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .req-list-item .req-head strong { font-size: 13px; }
+  .req-detail { font-size: 12px; color: #555; line-height: 1.6; }
+  .badge-pending { background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+  .badge-approved { background: #c8e6c9; color: #2e7d32; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+  .badge-denied { background: #ffcdd2; color: #c62828; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+  .req-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+  /* ── FORNECEDORES TAB ── */
+  .forn-category { margin-bottom: 18px; }
+  .forn-category h3 { font-size: 13px; font-weight: 700; color: var(--green-dark); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e0e0e0; }
+  .forn-item { display: flex; justify-content: space-between; align-items: flex-start; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; }
+  .forn-item .fi-info { flex: 1; }
+  .forn-item .fi-name { font-weight: 700; font-size: 13px; }
+  .forn-item .fi-detail { font-size: 11px; color: #666; margin-top: 2px; }
+  .forn-item .fi-actions { display: flex; gap: 4px; }
+  .forn-search { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; background: #fafafa; margin-bottom: 12px; }
+
+  @media print {
+    #screen-fuel .fuel-filters, #screen-fuel .admin-only, #screen-requisicao .admin-only, #screen-fornecedores { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════ LOADING OVERLAY ════════════ -->
+<div id="loading-overlay" style="display:none">
+  <div class="lo-spinner"></div>
+  <div class="lo-msg">Conectando...</div>
+  <div class="lo-err"></div>
+</div>
+
+
+<!-- ════════════ LOGIN OVERLAY ════════════ -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="logo-badge">SERVSUL</div>
+      <p>DRA / Controle de Frota</p>
+    </div>
+
+    <!-- ETAPA 1: Seleção de usuário -->
+    <div id="login-step-select">
+      <div class="login-select-title">Quem vai acessar?</div>
+      <div class="login-user-list" id="login-user-list">
+        <!-- preenchido dinamicamente -->
+      </div>
+    </div>
+
+    <!-- ETAPA 2: PIN -->
+    <div id="login-step-pin" style="display:none">
+      <div class="login-back-btn" onclick="loginGoBack()">← Voltar</div>
+      <div class="login-selected-user" id="login-selected-label">—</div>
+      <div class="pin-title" id="pin-title">Digite seu PIN</div>
+      <div class="pin-dots">
+        <div class="pin-dot" id="dot-0"></div>
+        <div class="pin-dot" id="dot-1"></div>
+        <div class="pin-dot" id="dot-2"></div>
+        <div class="pin-dot" id="dot-3"></div>
+      </div>
+      <div class="pin-hint" id="pin-hint">Informe seu PIN de 4 dígitos</div>
+      <div class="pin-pad">
+        <button class="pin-key" onclick="pinKey('1')">1</button>
+        <button class="pin-key" onclick="pinKey('2')">2</button>
+        <button class="pin-key" onclick="pinKey('3')">3</button>
+        <button class="pin-key" onclick="pinKey('4')">4</button>
+        <button class="pin-key" onclick="pinKey('5')">5</button>
+        <button class="pin-key" onclick="pinKey('6')">6</button>
+        <button class="pin-key" onclick="pinKey('7')">7</button>
+        <button class="pin-key" onclick="pinKey('8')">8</button>
+        <button class="pin-key" onclick="pinKey('9')">9</button>
+        <button class="pin-key" onclick="pinClear()" style="font-size:13px">Limpar</button>
+        <button class="pin-key" onclick="pinKey('0')">0</button>
+        <button class="pin-key del" onclick="pinDelete()">⌫</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <div class="header h1" style="font-size:16px;font-weight:700;color:#fff">🚗 Controle de Frota</div>
+    <div class="subtitle" id="hdr-sub">DRA / SERVSUL</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div class="user-badge">
+      <div>
+        <div class="ub-name" id="hdr-user">—</div>
+        <div class="ub-role" id="hdr-role">—</div>
+      </div>
+    </div>
+    <button class="ub-logout" onclick="logout()">Sair</button>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <button class="active" onclick="showScreen('home')">🏠 Início</button>
+  <button onclick="showScreen('checklist')">📋 Checklist</button>
+  <button onclick="showScreen('vehicles')">🚙 Veículos</button>
+  <button class="admin-only" onclick="showScreen('drivers')">👤 Motoristas</button>
+  <button onclick="showScreen('history')">📁 Histórico</button>
+  <button onclick="showScreen('fuel')">⛽ Combustível</button>
+  <button onclick="showScreen('requisicao')">📝 Requisição</button>
+  <button class="admin-only" onclick="showScreen('fornecedores')">🔧 Fornecedores</button>
+</div>
+
+<!-- ════════════════════ HOME ════════════════════ -->
+<div class="screen active" id="screen-home">
+  <div class="card">
+    <h2>📋 Novo Controle Mensal</h2>
+    <div class="form-group">
+      <label>Veículo</label>
+      <select id="sel-vehicle">
+        <option value="">— Selecione o veículo —</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Motorista</label>
+      <select id="sel-driver">
+        <option value="">— Selecione o motorista —</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Data (Dia / Mês / Ano)</label>
+      <input type="date" id="sel-month">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="openChecklist()">
+      ➤ Abrir Checklist
+    </button>
+  </div>
+
+  <div class="card" id="active-card" style="display:none">
+    <h2>📌 Controles Ativos</h2>
+    <div id="active-list"></div>
+  </div>
+
+  <div class="card">
+    <h2>📊 Resumo Geral</h2>
+    <div id="home-summary">
+      <div class="empty-state"><div class="icon">📂</div>Nenhum registro ainda</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🏆 Veículos que Mais Circulam</h2>
+    <div class="chart-wrap" id="km-chart">
+      <div class="chart-empty">Nenhum dado de KM registrado ainda</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ CHECKLIST ════════════════════ -->
+<div class="screen" id="screen-checklist">
+  <div class="checklist-header card" id="cl-header">
+    <h2 id="cl-title">Controle de Rodagem</h2>
+    <div class="meta" id="cl-meta"></div>
+  </div>
+
+  <div class="card" style="padding:8px 0;">
+    <div class="table-wrap">
+      <table class="checklist" id="cl-table">
+        <thead>
+          <tr>
+            <th>Dia</th>
+            <th>KM Saída</th>
+            <th>KM Chegada</th>
+            <th>Motorista</th>
+            <th>Assinatura</th>
+          </tr>
+        </thead>
+        <tbody id="cl-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" id="cl-summary">
+    <h2>Resumo do Mês</h2>
+    <div id="cl-summary-content"></div>
+  </div>
+
+  <div class="no-print admin-only" style="margin-bottom:8px;">
+    <div class="card" style="padding:12px">
+      <div style="font-size:12px;font-weight:700;color:#388E3C;margin-bottom:8px">🗓️ Marcar Feriado Local (Admin)</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="number" id="feriado-dia" placeholder="Dia" min="1" max="31"
+          style="width:64px;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:13px">
+        <input type="text" id="feriado-nome" placeholder="Nome do feriado"
+          style="flex:1;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:13px">
+        <button class="btn btn-primary btn-sm" onclick="markFeriado()">+ Marcar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="no-print" style="display:flex;gap:8px;margin-bottom:24px;">
+    <button class="btn btn-secondary" style="flex:1" onclick="showScreen('home')">← Voltar</button>
+    <button class="btn btn-blue" style="flex:1" onclick="printChecklist()">🖨️ Imprimir</button>
+  </div>
+</div>
+
+<!-- ════════════════════ VEHICLES ════════════════════ -->
+<div class="screen" id="screen-vehicles">
+  <div class="card admin-only">
+    <h2>➕ Cadastrar Veículo</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div class="form-group" style="flex:1;min-width:120px">
+        <label>Modelo</label>
+        <input type="text" id="new-veh-model" placeholder="Ex: UNO">
+      </div>
+      <div class="form-group" style="flex:1;min-width:120px">
+        <label>Placa</label>
+        <input type="text" id="new-veh-plate" placeholder="Ex: ALG-3220"
+          style="text-transform:uppercase" maxlength="8">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="addVehicle()">+ Adicionar</button>
+  </div>
+
+  <div class="card">
+    <h2>🚙 Frota Cadastrada</h2>
+    <div class="readonly-msg">🔒 Modo somente leitura — faça login como Administrador para editar.</div>
+    <div id="vehicle-list"></div>
+  </div>
+</div>
+
+<!-- ════════════════════ DRIVERS ════════════════════ -->
+<div class="screen" id="screen-drivers">
+  <div class="card admin-only">
+    <h2>➕ Cadastrar Motorista</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Nome completo</label>
+        <input type="text" id="new-driver-name" placeholder="Nome do motorista" style="text-transform:uppercase">
+      </div>
+      <div class="form-group">
+        <label>CPF</label>
+        <input type="text" id="new-driver-cpf" placeholder="000.000.000-00" maxlength="14">
+      </div>
+      <div class="form-group">
+        <label>RG / Órgão</label>
+        <input type="text" id="new-driver-rg" placeholder="0000000-0 SESP/PR">
+      </div>
+      <div class="form-group">
+        <label>Data de Nascimento</label>
+        <input type="text" id="new-driver-nasc" placeholder="DD/MM/AAAA" maxlength="10">
+      </div>
+      <div class="form-group">
+        <label>Nº Registro CNH</label>
+        <input type="text" id="new-driver-cnh" placeholder="00000000000">
+      </div>
+      <div class="form-group">
+        <label>Categoria</label>
+        <select id="new-driver-cat">
+          <option value="">—</option>
+          <option>A</option><option>B</option><option>AB</option>
+          <option>C</option><option>D</option><option>E</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Validade CNH</label>
+        <input type="text" id="new-driver-val" placeholder="DD/MM/AAAA" maxlength="10">
+      </div>
+      <div class="form-group">
+        <label>1ª Habilitação</label>
+        <input type="text" id="new-driver-hab" placeholder="DD/MM/AAAA" maxlength="10">
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="addDriver()">+ Adicionar Motorista</button>
+  </div>
+
+  <div class="card">
+    <h2>👤 Motoristas Cadastrados</h2>
+    <div class="readonly-msg">🔒 Modo somente leitura — faça login como Administrador para editar.</div>
+    <div id="driver-list"></div>
+  </div>
+
+  <div class="card admin-only">
+    <h2>👥 Gerenciar Usuários (PIN)</h2>
+    <div id="users-mgmt-list"></div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
+      <div style="font-size:12px;font-weight:700;color:#555;margin-bottom:8px">+ Novo usuário</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="form-group" style="flex:2;min-width:120px">
+          <label>Nome</label>
+          <input type="text" id="new-user-name" placeholder="Nome do usuário" style="text-transform:uppercase">
+        </div>
+        <div class="form-group" style="flex:1;min-width:80px">
+          <label>PIN (4 dígitos)</label>
+          <input type="password" id="new-user-pin" placeholder="0000" maxlength="4" inputmode="numeric">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addAppUser()">+ Adicionar</button>
+      <div id="user-msg" style="font-size:11px;margin-top:6px;"></div>
+    </div>
+  </div>
+
+  <div class="card admin-only">
+    <h2>🔑 Alterar PIN do Admin</h2>
+    <div class="form-group">
+      <label>PIN atual</label>
+      <input type="password" id="pass-current" placeholder="0000" maxlength="4" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label>Novo PIN (4 dígitos)</label>
+      <input type="password" id="pass-new" placeholder="0000" maxlength="4" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label>Confirmar novo PIN</label>
+      <input type="password" id="pass-confirm" placeholder="0000" maxlength="4" inputmode="numeric">
+    </div>
+    <button class="btn btn-primary" onclick="changePassword()">🔐 Alterar PIN</button>
+    <div id="pass-msg" style="margin-top:8px;font-size:12px;"></div>
+  </div>
+</div>
+
+<!-- ════════════════════ HISTORY ════════════════════ -->
+<div class="screen" id="screen-history">
+  <div class="card">
+    <h2>📁 Registros Salvos</h2>
+    <div id="history-list"></div>
+  </div>
+</div>
+
+<!-- ════════════════════ FUEL ════════════════════ -->
+<div class="screen" id="screen-fuel">
+  <div class="card">
+    <h2>⛽ Controle de Combustível</h2>
+    <div class="fuel-filters">
+      <select id="fuel-month" onchange="renderFuel()">
+        <option value="">Todos os meses</option>
+        <option value="01">Janeiro 2026</option>
+        <option value="02">Fevereiro 2026</option>
+        <option value="03">Março 2026</option>
+        <option value="04">Abril 2026</option>
+        <option value="05">Maio 2026</option>
+        <option value="06">Junho 2026</option>
+      </select>
+      <select id="fuel-plate" onchange="renderFuel()">
+        <option value="">Todas as placas</option>
+      </select>
+      <select id="fuel-client" onchange="renderFuel()">
+        <option value="">Todos os clientes</option>
+        <option value="DRA">DRA</option>
+        <option value="DELTA">DELTA</option>
+      </select>
+    </div>
+    <div class="fuel-summary" id="fuel-summary"></div>
+    <div style="overflow-x:auto" id="fuel-table-wrap"></div>
+    <div id="fuel-chart" style="margin-top:16px"></div>
+  </div>
+  <div class="card admin-only">
+    <h2>➕ Novo Lançamento</h2>
+    <div class="form-group"><label>Data</label><input type="date" id="fuel-new-date"></div>
+    <div class="form-group"><label>Placa</label><input type="text" id="fuel-new-plate" placeholder="ABC-1234"></div>
+    <div class="form-group"><label>Itens</label><input type="text" id="fuel-new-items" placeholder="GAS, PRO, GAA"></div>
+    <div class="form-group"><label>Valor (R$)</label><input type="number" step="0.01" id="fuel-new-value"></div>
+    <div class="form-group"><label>Cliente</label>
+      <select id="fuel-new-client"><option value="DRA">DRA</option><option value="DELTA">DELTA</option></select>
+    </div>
+    <div class="form-group"><label>Fatura</label><input type="text" id="fuel-new-fatura" placeholder="Nº fatura"></div>
+    <button class="btn btn-primary" onclick="addFuelEntry()">💾 Salvar</button>
+  </div>
+</div>
+
+<!-- ════════════════════ REQUISICAO ════════════════════ -->
+<div class="screen" id="screen-requisicao">
+  <div class="card">
+    <h2>📝 Nova Requisição de Combustível</h2>
+    <div class="form-group"><label>Veículo</label><select id="req-vehicle"></select></div>
+    <div class="form-group"><label>Motorista</label><input type="text" id="req-motorista" placeholder="Nome do motorista"></div>
+    <div class="form-group"><label>KM Atual</label><input type="number" id="req-km" placeholder="Quilometragem atual"></div>
+    <div class="form-group"><label>Quantidade (litros)</label><input type="number" step="0.01" id="req-litros" placeholder="Litros solicitados"></div>
+    <div class="form-group"><label>Valor Estimado (R$)</label><input type="number" step="0.01" id="req-valor" placeholder="Valor estimado"></div>
+    <div class="form-group"><label>Observações</label><textarea id="req-obs" rows="2" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:13px"></textarea></div>
+    <button class="btn btn-primary" onclick="submitRequisicao()">📝 Enviar Requisição</button>
+  </div>
+  <div class="card">
+    <h2>📋 Requisições</h2>
+    <div id="req-list"></div>
+  </div>
+</div>
+
+<!-- ════════════════════ FORNECEDORES ════════════════════ -->
+<div class="screen admin-only" id="screen-fornecedores">
+  <div class="card">
+    <h2>🔧 Fornecedores</h2>
+    <input class="forn-search" id="forn-search" placeholder="🔍 Buscar fornecedor..." oninput="renderFornecedores()">
+    <div id="forn-list"></div>
+  </div>
+  <div class="card">
+    <h2>➕ Novo Fornecedor</h2>
+    <div class="form-group"><label>Nome</label><input type="text" id="forn-nome" placeholder="Nome do fornecedor"></div>
+    <div class="form-group"><label>Categoria</label>
+      <select id="forn-categoria">
+        <option value="Mecânico">Mecânico</option>
+        <option value="Guincho">Guincho</option>
+        <option value="Funileiro">Funileiro</option>
+        <option value="Posto de Combustível">Posto de Combustível</option>
+        <option value="Vidros Veiculares">Vidros Veiculares</option>
+        <option value="Outros">Outros</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Telefone</label><input type="text" id="forn-telefone" placeholder="(00) 00000-0000"></div>
+    <div class="form-group"><label>Endereço</label><input type="text" id="forn-endereco" placeholder="Endereço"></div>
+    <div class="form-group"><label>Observações</label><textarea id="forn-obs" rows="2" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:13px"></textarea></div>
+    <button class="btn btn-primary" onclick="addFornecedor()">💾 Salvar</button>
+  </div>
+</div>
+
+<!-- ════════════════════ SIGNATURE MODAL ════════════════════ -->
+<div class="modal-overlay" id="sig-modal">
+  <div class="modal">
+    <h3>✍️ Assinar</h3>
+    <div class="modal-sub" id="sig-modal-sub">Dia 1 – Assinar chegada</div>
+    <canvas id="sig-canvas" width="440" height="140"></canvas>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="clearSig()">🗑 Limpar</button>
+      <button class="btn btn-danger btn-sm" onclick="closeSigModal()">✕ Cancelar</button>
+      <button class="btn btn-primary" onclick="saveSig()">✔ Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+const FLEET_DEFAULT = [
+  { model:'UNO',            plate:'AXL-1427' },
+  { model:'UNO',            plate:'ALG-3220' },
+  { model:'UNO',            plate:'AVY-3D04' },
+  { model:'MOBI',           plate:'SIE-5E16' },
+  { model:'MOBI',           plate:'SHP-9D16' },
+  { model:'MOBI',           plate:'RVK-5G87' },
+  { model:'MOBI',           plate:'SYU-9E48' },
+  { model:'HB-20',          plate:'TYC2H70' },
+  { model:'PALIO',          plate:'BAP-5D50' },
+  { model:'KOMBI',          plate:'AUF-2740' },
+  { model:'KOMBI',          plate:'FJE-1J72' },
+  { model:'JARDINAGEM',     plate:'DRA-2J21' },
+  { model:'ESCOLA DE SAUDE',plate:'DRA-2E21' },
+  { model:'CPPI-PIRAQUARA', plate:'DRA-2C21' },
+];
+
+let vehicles = [...FLEET_DEFAULT];
+let drivers  = [];
+let records  = {};
+let db       = null;   // Firestore instance (null = modo local)
+// records[key] = { vehicle, driver, month, days: { '1': {kmOut, kmIn, sig}, ... } }
+
+let currentKey = null;   // active checklist key
+let sigDay = null;       // which day we're signing
+let sigCanvas, sigCtx, sigDrawing = false;
+
+// ═══════════════════════════════════════════════
+//  PERSIST — Firestore ou localStorage (fallback)
+// ═══════════════════════════════════════════════
+function save() {
+  if (db) {
+    // Salva registro atual no Firestore
+    if (currentKey && records[currentKey]) {
+      db.collection('sv_records').doc(currentKey).set(records[currentKey]).catch(console.error);
+    }
+    // Salva configurações (debounced)
+    clearTimeout(save._t);
+    save._t = setTimeout(() => {
+      db.collection('sv_data').doc('settings').set({ vehicles, drivers }).catch(console.error);
+    }, 800);
+  } else {
+    // Fallback: localStorage
+    localStorage.setItem('sv_vehicles', JSON.stringify(vehicles));
+    localStorage.setItem('sv_drivers',  JSON.stringify(drivers));
+    localStorage.setItem('sv_records',  JSON.stringify(records));
+  }
+}
+
+// ── Firebase: configuração e carga ──────────────
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDmwMFS8dIVmwbbVvSi9o1RcqBYPQMe2eU",
+  authDomain: "modo-produ.firebaseapp.com",
+  projectId: "modo-produ",
+  storageBucket: "modo-produ.firebasestorage.app",
+  messagingSenderId: "243957013475",
+  appId: "1:243957013475:web:ec8e70cc2900cbeaa0ded6",
+  measurementId: "G-N9J2LX0JD6"
+};
+
+async function initFirebase() {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    return true;
+  } catch(e) {
+    console.error('Erro ao inicializar Firebase:', e);
+    return false;
+  }
+}
+
+async function loadFromFirestore() {
+  setLoadingOverlay(true, 'Carregando dados...');
+  try {
+    const [settingsSnap, authSnap, recordsSnap, fuelSnap, reqSnap, fornSnap] = await Promise.all([
+      db.collection('sv_data').doc('settings').get(),
+      db.collection('sv_data').doc('auth').get(),
+      db.collection('sv_records').get(),
+      db.collection('sv_data').doc('fuel').get(),
+      db.collection('sv_data').doc('requisicoes').get(),
+      db.collection('sv_data').doc('fornecedores').get(),
+    ]);
+    if (settingsSnap.exists) {
+      const s = settingsSnap.data();
+      vehicles = s.vehicles || [...FLEET_DEFAULT];
+      drivers  = s.drivers  || [];
+    }
+    if (authSnap.exists) {
+      const a = authSnap.data();
+      _appUsers = a.appUsers || [];
+      _adminPin = a.adminPin || DEFAULT_ADMIN_PIN;
+    }
+    records = {};
+    recordsSnap.forEach(doc => { records[doc.id] = doc.data(); });
+
+    if (fuelSnap.exists && fuelSnap.data().entries) { fuelEntries = fuelSnap.data().entries; }
+    if (reqSnap.exists && reqSnap.data().list) { requisicoes = reqSnap.data().list; }
+    if (fornSnap.exists && fornSnap.data().list) { fornecedores = fornSnap.data().list; }
+
+    // Listeners em tempo real
+    db.collection('sv_records').onSnapshot(snap => {
+      snap.docChanges().forEach(ch => {
+        if (ch.type === 'removed') { delete records[ch.doc.id]; return; }
+        records[ch.doc.id] = ch.doc.data();
+      });
+    });
+    db.collection('sv_data').onSnapshot(snap => {
+      snap.docChanges().forEach(ch => {
+        if (ch.doc.id === 'settings') { const s=ch.doc.data(); vehicles=s.vehicles||vehicles; drivers=s.drivers||drivers; }
+        if (ch.doc.id === 'auth')     { const a=ch.doc.data(); _appUsers=a.appUsers||_appUsers; _adminPin=a.adminPin||_adminPin; renderLoginUsers(); }
+      });
+    });
+    setLoadingOverlay(false);
+  } catch(e) {
+    setLoadingOverlay(false, 'Erro ao carregar: ' + e.message);
+  }
+}
+
+function setLoadingOverlay(show, msg, err) {
+  const el = document.getElementById('loading-overlay');
+  if (!el) return;
+  el.style.display = show ? 'flex' : 'none';
+  if (msg) el.querySelector('.lo-msg').textContent = msg;
+  if (err) el.querySelector('.lo-err').textContent = err;
+}
+
+function useLocalMode() {
+  db = null;
+  vehicles = JSON.parse(localStorage.getItem('sv_vehicles') || 'null') || [...FLEET_DEFAULT];
+  drivers  = JSON.parse(localStorage.getItem('sv_drivers')  || '[]');
+  records  = JSON.parse(localStorage.getItem('sv_records')  || '{}');
+  _appUsers = JSON.parse(localStorage.getItem('sv_app_users') || '[]');
+  _adminPin = localStorage.getItem('sv_admin_pin') || DEFAULT_ADMIN_PIN;
+  finishInit();
+}
+
+function saveAuth() {
+  if (db) {
+    db.collection('sv_data').doc('auth').set({ adminPin: _adminPin, appUsers: _appUsers })
+      .then(() => console.log('✅ Auth salvo no Firestore:', _adminPin))
+      .catch(e => { console.error('❌ Erro ao salvar auth:', e); alert('Erro ao salvar no Firebase: ' + e.message); });
+  } else {
+    localStorage.setItem('sv_app_users', JSON.stringify(_appUsers));
+    localStorage.setItem('sv_admin_pin', _adminPin);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  NAV
+// ═══════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  const idx = {home:0,checklist:1,vehicles:2,drivers:3,history:4,fuel:5,requisicao:6,fornecedores:7}[id];
+  document.querySelectorAll('.nav button')[idx].classList.add('active');
+  if (id === 'home')      renderHome();
+  if (id === 'vehicles')  renderVehicles();
+  if (id === 'drivers')   { renderDrivers(); renderUsersMgmt(); }
+  if (id === 'history')   renderHistory();
+  if (id === 'fuel')        renderFuel();
+  if (id === 'requisicao')  renderRequisicoes();
+  if (id === 'fornecedores') renderFornecedores();
+}
+
+// ═══════════════════════════════════════════════
+//  HOME
+// ═══════════════════════════════════════════════
+function renderHome() {
+  // Vehicle selector
+  const vs = document.getElementById('sel-vehicle');
+  vs.innerHTML = '<option value="">— Selecione o veículo —</option>' +
+    vehicles.map(v => `<option value="${v.plate}">${v.model} – ${v.plate}</option>`).join('');
+
+  // Driver selector — somente motoristas com CNH cadastrada
+  const ds = document.getElementById('sel-driver');
+  ds.innerHTML = '<option value="">— Selecione o motorista —</option>' +
+    drivers.map(d => {
+      const cat = d.categoria ? ` [Cat.${d.categoria}]` : '';
+      return `<option value="${d.name}">${d.name}${cat}</option>`;
+    }).join('');
+
+  // Default date = today
+  const now = new Date();
+  document.getElementById('sel-month').value = now.toISOString().split('T')[0];
+
+  // Active / recent controls
+  const keys = Object.keys(records);
+  const activeCard = document.getElementById('active-card');
+  const activeList = document.getElementById('active-list');
+  if (keys.length > 0) {
+    activeCard.style.display = '';
+    const recent = keys.slice(-6).reverse();
+    activeList.innerHTML = recent.map(k => {
+      const r = records[k];
+      const filled = Object.values(r.days||{}).filter(d=>d.kmOut||d.kmIn||d.sig).length;
+      const daysInMonth = new Date(r.month.split('-')[0], r.month.split('-')[1], 0).getDate();
+      return `<div class="history-item" onclick="loadChecklist('${k}')">
+        <div>
+          <div class="hi-title">${r.vehicle} – ${r.month}</div>
+          <div class="hi-sub">Motorista: ${r.driver} · ${filled}/${daysInMonth} dias preenchidos</div>
+        </div>
+        <span class="badge ${filled>0?'badge-green':'badge-gray'}">▶</span>
+      </div>`;
+    }).join('');
+  } else {
+    activeCard.style.display = 'none';
+  }
+
+  // Chart
+  renderChart();
+
+  // Summary
+  const sumDiv = document.getElementById('home-summary');
+  if (keys.length === 0) {
+    sumDiv.innerHTML = '<div class="empty-state"><div class="icon">📂</div>Nenhum registro ainda</div>';
+  } else {
+    let totalKm = 0, totalDays = 0;
+    keys.forEach(k => {
+      Object.values(records[k].days||{}).forEach(d => {
+        if (d.kmOut && d.kmIn) { totalKm += (Number(d.kmIn) - Number(d.kmOut)); totalDays++; }
+      });
+    });
+    sumDiv.innerHTML = `
+      <div class="summary-row"><span>Total de fichas</span><span>${keys.length}</span></div>
+      <div class="summary-row"><span>Dias registrados</span><span>${totalDays}</span></div>
+      <div class="summary-row"><span>Total KM rodados</span><span>${totalKm.toLocaleString('pt-BR')} km</span></div>
+    `;
+  }
+}
+
+function openChecklist() {
+  const plate    = document.getElementById('sel-vehicle').value;
+  const driver   = document.getElementById('sel-driver').value;
+  const dateVal  = document.getElementById('sel-month').value; // YYYY-MM-DD
+  if (!plate)   return alert('Selecione um veículo.');
+  if (!driver)  return alert('Selecione um motorista.');
+  if (!dateVal) return alert('Selecione a data.');
+
+  const parts = dateVal.split('-');        // ['YYYY','MM','DD']
+  const month = `${parts[0]}-${parts[1]}`; // 'YYYY-MM'
+  const selectedDay = parseInt(parts[2], 10);
+
+  const veh = vehicles.find(v => v.plate === plate);
+  const key = `${plate}__${month}`;
+  if (!records[key]) {
+    records[key] = { vehicle: `${veh.model} (${plate})`, driver, month, days: {} };
+  }
+  // Gravar o motorista selecionado no dia escolhido
+  if (!records[key].days[selectedDay]) records[key].days[selectedDay] = {};
+  records[key].days[selectedDay].motorista = driver;
+  save();
+  loadChecklist(key, selectedDay);
+}
+
+// ═══════════════════════════════════════════════
+//  HOLIDAYS
+// ═══════════════════════════════════════════════
+function easterDate(year) {
+  const a=year%19, b=Math.floor(year/100), c=year%100,
+        d=Math.floor(b/4), e=b%4, f=Math.floor((b+8)/25),
+        g=Math.floor((b-f+1)/3), h=(19*a+b-d-g+15)%30,
+        i=Math.floor(c/4), k=c%4, l=(32+2*e+2*i-h-k)%7,
+        m=Math.floor((a+11*h+22*l)/451),
+        month=Math.floor((h+l-7*m+114)/31),
+        day=((h+l-7*m+114)%31)+1;
+  return new Date(year, month-1, day);
+}
+
+function getHolidays(year) {
+  const fixed = [
+    `${year}-01-01`, // Ano Novo
+    `${year}-04-21`, // Tiradentes
+    `${year}-05-01`, // Dia do Trabalho
+    `${year}-09-07`, // Independência
+    `${year}-10-12`, // N. Sra. Aparecida
+    `${year}-11-02`, // Finados
+    `${year}-11-15`, // Proclamação da República
+    `${year}-11-20`, // Consciência Negra
+    `${year}-12-25`, // Natal
+  ];
+  const easter = easterDate(year);
+  const addDays = (d, n) => { const r=new Date(d); r.setDate(r.getDate()+n); return r; };
+  const fmt = d => d.toISOString().split('T')[0];
+  const moveable = [
+    fmt(addDays(easter, -47)), // Carnaval (2a)
+    fmt(addDays(easter, -48)), // Carnaval (dom)
+    fmt(addDays(easter, -2)),  // Sexta-feira Santa
+    fmt(easter),               // Páscoa
+    fmt(addDays(easter, 60)),  // Corpus Christi
+  ];
+  return new Set([...fixed, ...moveable]);
+}
+
+const HOLIDAY_NAMES = {
+  '01-01':'ANO NOVO','04-21':'TIRADENTES','05-01':'DIA DO TRABALHO',
+  '09-07':'INDEPENDÊNCIA','10-12':'N.SRA APARECIDA','11-02':'FINADOS',
+  '11-15':'REPÚBLICA','11-20':'CONS. NEGRA','12-25':'NATAL',
+};
+
+function getHolidayName(dateStr) {
+  // dateStr = 'YYYY-MM-DD'
+  const mmdd = dateStr.slice(5); // 'MM-DD'
+  if (HOLIDAY_NAMES[mmdd]) return HOLIDAY_NAMES[mmdd];
+  return 'FERIADO';
+}
+
+// ═══════════════════════════════════════════════
+//  CHECKLIST
+// ═══════════════════════════════════════════════
+function loadChecklist(key, scrollToDay) {
+  currentKey = key;
+  const rec = records[key];
+  const [yr, mo] = rec.month.split('-').map(Number);
+  const daysInMonth = new Date(yr, mo, 0).getDate();
+  const monthName = new Date(yr, mo-1, 1).toLocaleString('pt-BR', {month:'long',year:'numeric'});
+  const holidays = getHolidays(yr);
+
+  document.getElementById('cl-title').textContent = `Controle de Rodagem – ${rec.vehicle}`;
+  document.getElementById('cl-meta').textContent  =
+    `${monthName.charAt(0).toUpperCase()+monthName.slice(1)}`;
+
+  const today = new Date();
+  const todayDay = (today.getFullYear()===yr && today.getMonth()+1===mo) ? today.getDate() : -1;
+  const jumpDay = scrollToDay || todayDay;
+
+  const currentUser = getCurrentUser();
+
+  const body = document.getElementById('cl-body');
+  body.innerHTML = '';
+  let jumpRow = null;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const day = rec.days[d] || {};
+    const dateStr = `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow = new Date(yr, mo-1, d).getDay(); // 0=Sun, 6=Sat
+    const customFeriado = day.feriado || null; // admin-marked holiday
+    const isHoliday = holidays.has(dateStr) || !!customFeriado;
+    const isSun = dow === 0; // Only Sunday is a non-working day (Saturday is normal)
+    const isNonWorking = isSun || isHoliday;
+    const isToday = d === todayDay;
+    const isJump  = d === jumpDay;
+
+    const tr = document.createElement('tr');
+    if (isHoliday)   tr.classList.add('holiday');
+    else if (isSun)  tr.classList.add('sunday');
+    if (isToday) tr.classList.add('today');
+    if (isJump)  { tr.id = 'jump-row'; tr.style.outline = '2px solid #388E3C'; }
+
+    if (isNonWorking) {
+      // Non-working day: show label
+      const label = customFeriado || (holidays.has(dateStr) ? getHolidayName(dateStr) : 'DOMINGO');
+      const motoristaNome = day.motorista || '';
+      const sigHtml = day.sig
+        ? `<div class="sig-thumb signed" onclick="openSig(${d})"><img src="${day.sig}"></div>`
+        : `<span class="day-label" style="color:inherit">—</span>`;
+
+      tr.innerHTML = `
+        <td class="day-num">${d}</td>
+        <td colspan="2"><span class="day-label">${label}</span></td>
+        <td style="font-size:10px;color:inherit">${motoristaNome}</td>
+        <td class="sig-cell">${sigHtml}</td>
+      `;
+    } else {
+      // Working day — mostra nome se houver uso registrado OU se é o dia selecionado na home
+      const hasData = day.kmOut || day.kmIn || day.sig;
+      const motoristaNome = (hasData || d === jumpDay) ? (day.motorista || '') : '';
+      const sigHtml = day.sig
+        ? `<div class="sig-thumb signed" onclick="openSig(${d})"><img src="${day.sig}"></div>`
+        : `<div class="sig-thumb empty" onclick="openSig(${d})"></div>`;
+
+      tr.innerHTML = `
+        <td class="day-num">${d}</td>
+        <td><input class="km-input" type="number" placeholder="—"
+          value="${day.kmOut||''}" onchange="saveKmDay(${d},'kmOut',this.value)" min="0"></td>
+        <td><input class="km-input" type="number" placeholder="—"
+          value="${day.kmIn||''}"  onchange="saveKmDay(${d},'kmIn',this.value)"  min="0"></td>
+        <td style="font-size:11px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:#388E3C">
+          ${motoristaNome}</td>
+        <td class="sig-cell">${sigHtml}</td>
+      `;
+    }
+
+    body.appendChild(tr);
+    if (isJump) jumpRow = tr;
+  }
+
+  renderClSummary(rec, daysInMonth);
+  showScreen('checklist');
+
+  if (jumpRow) {
+    setTimeout(() => jumpRow.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+  }
+}
+
+function saveKmDay(day, field, val) {
+  const rec = records[currentKey];
+  if (!rec.days[day]) rec.days[day] = {};
+  rec.days[day][field] = val ? Number(val) : '';
+  // Auto-tag the motorista for this day when they type km
+  const user = getCurrentUser();
+  if (user && !rec.days[day].motorista) {
+    rec.days[day].motorista = user;
+    // Update the cell visually without full re-render
+    const rows = document.querySelectorAll('#cl-body tr');
+    if (rows[day-1]) {
+      const tdMot = rows[day-1].querySelectorAll('td')[3];
+      if (tdMot) tdMot.textContent = user;
+    }
+  }
+  save();
+  renderClSummary(rec, new Date(rec.month.split('-')[0], rec.month.split('-')[1], 0).getDate());
+}
+
+function renderClSummary(rec, daysInMonth) {
+  let totalKm = 0, filledDays = 0, signedDays = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const day = rec.days[d]||{};
+    if (day.kmOut && day.kmIn) { totalKm += Number(day.kmIn) - Number(day.kmOut); filledDays++; }
+    if (day.sig) signedDays++;
+  }
+  document.getElementById('cl-summary-content').innerHTML = `
+    <div class="summary-row"><span>Dias preenchidos</span><span>${filledDays}/${daysInMonth}</span></div>
+    <div class="summary-row"><span>Dias assinados</span><span>${signedDays}/${daysInMonth}</span></div>
+    <div class="summary-row"><span>Total KM rodado</span><span>${totalKm.toLocaleString('pt-BR')} km</span></div>
+  `;
+}
+
+function printChecklist() { window.print(); }
+
+function markFeriado() {
+  const dia  = parseInt(document.getElementById('feriado-dia').value, 10);
+  const nome = document.getElementById('feriado-nome').value.trim().toUpperCase() || 'FERIADO';
+  const rec  = records[currentKey];
+  if (!dia || dia < 1 || dia > 31) return alert('Informe um dia válido.');
+  if (!rec.days[dia]) rec.days[dia] = {};
+  rec.days[dia].feriado = nome;
+  save();
+  document.getElementById('feriado-dia').value  = '';
+  document.getElementById('feriado-nome').value = '';
+  loadChecklist(currentKey);
+}
+
+// ═══════════════════════════════════════════════
+//  SIGNATURE MODAL
+// ═══════════════════════════════════════════════
+sigCanvas = document.getElementById('sig-canvas');
+sigCtx = sigCanvas.getContext('2d');
+
+function openSig(day) {
+  sigDay = day;
+  const rec = records[currentKey];
+  document.getElementById('sig-modal-sub').textContent =
+    `Dia ${day} · ${rec.vehicle} · Motorista: ${rec.driver}`;
+
+  // Resize canvas to its CSS width
+  const rect = sigCanvas.getBoundingClientRect();
+  sigCanvas.width  = rect.width  || 440;
+  sigCanvas.height = 140;
+
+  sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+
+  // Load existing sig
+  const existing = rec.days[day]?.sig;
+  if (existing) {
+    const img = new Image();
+    img.onload = () => sigCtx.drawImage(img, 0, 0, sigCanvas.width, sigCanvas.height);
+    img.src = existing;
+  }
+  document.getElementById('sig-modal').classList.add('open');
+}
+
+function closeSigModal() {
+  document.getElementById('sig-modal').classList.remove('open');
+  sigDay = null;
+}
+
+function clearSig() {
+  sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+}
+
+function saveSig() {
+  const rec = records[currentKey];
+  if (!rec.days[sigDay]) rec.days[sigDay] = {};
+  rec.days[sigDay].sig = sigCanvas.toDataURL('image/png');
+  // Auto-tag motorista on signature
+  const user = getCurrentUser();
+  if (user && !rec.days[sigDay].motorista) rec.days[sigDay].motorista = user;
+  save();
+  closeSigModal();
+  loadChecklist(currentKey); // re-render
+}
+
+// Drawing logic
+function getPos(e) {
+  const rect = sigCanvas.getBoundingClientRect();
+  const src = e.touches ? e.touches[0] : e;
+  return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+}
+sigCanvas.addEventListener('mousedown',  e => { sigDrawing=true; const p=getPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x,p.y); });
+sigCanvas.addEventListener('mousemove',  e => { if(!sigDrawing) return; const p=getPos(e); sigCtx.lineTo(p.x,p.y); sigCtx.strokeStyle='#1a237e'; sigCtx.lineWidth=2.5; sigCtx.lineCap='round'; sigCtx.stroke(); });
+sigCanvas.addEventListener('mouseup',    () => sigDrawing=false);
+sigCanvas.addEventListener('mouseleave', () => sigDrawing=false);
+sigCanvas.addEventListener('touchstart', e => { e.preventDefault(); sigDrawing=true; const p=getPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x,p.y); }, {passive:false});
+sigCanvas.addEventListener('touchmove',  e => { e.preventDefault(); if(!sigDrawing) return; const p=getPos(e); sigCtx.lineTo(p.x,p.y); sigCtx.strokeStyle='#1a237e'; sigCtx.lineWidth=2.5; sigCtx.lineCap='round'; sigCtx.stroke(); }, {passive:false});
+sigCanvas.addEventListener('touchend',   () => sigDrawing=false);
+
+// ═══════════════════════════════════════════════
+//  VEHICLES
+// ═══════════════════════════════════════════════
+function renderVehicles() {
+  const list = document.getElementById('vehicle-list');
+  if (vehicles.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">🚗</div>Nenhum veículo cadastrado</div>';
+    return;
+  }
+  list.innerHTML = vehicles.map((v,i) => `
+    <div class="vehicle-item">
+      <div>
+        <div class="vi-name">${v.model}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="vi-plate">${v.plate}</div>
+        ${isAdmin() ? `<button class="btn btn-danger btn-sm" onclick="removeVehicle(${i})">✕</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function addVehicle() {
+  const model = document.getElementById('new-veh-model').value.trim().toUpperCase();
+  const plate = document.getElementById('new-veh-plate').value.trim().toUpperCase();
+  if (!model || !plate) return alert('Preencha modelo e placa.');
+  if (vehicles.find(v => v.plate === plate)) return alert('Placa já cadastrada.');
+  vehicles.push({ model, plate });
+  save(); renderVehicles();
+  document.getElementById('new-veh-model').value = '';
+  document.getElementById('new-veh-plate').value = '';
+}
+
+function removeVehicle(i) {
+  if (!confirm(`Remover ${vehicles[i].model} – ${vehicles[i].plate}?`)) return;
+  vehicles.splice(i, 1);
+  save(); renderVehicles();
+}
+
+// ═══════════════════════════════════════════════
+//  DRIVERS
+// ═══════════════════════════════════════════════
+function renderDrivers() {
+  const list = document.getElementById('driver-list');
+  if (drivers.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">👤</div>Nenhum motorista cadastrado</div>';
+    return;
+  }
+  list.innerHTML = drivers.map((d,i) => {
+    const validadeStr = d.validade || '—';
+    const validadeDate = d.validade ? parseDate(d.validade) : null;
+    const hoje = new Date();
+    const vencido = validadeDate && validadeDate < hoje;
+    const vence90 = validadeDate && !vencido && (validadeDate - hoje) < 90*24*60*60*1000;
+    const valBadge = vencido
+      ? `<span class="badge" style="background:#ffcdd2;color:#c62828">⚠️ VENCIDA</span>`
+      : vence90 ? `<span class="badge badge-yellow">⚡ Vence em breve</span>`
+      : `<span class="badge badge-green">✓ Válida</span>`;
+
+    return `<div class="driver-item">
+      <div class="driver-item-header">
+        <div class="di-name">👤 ${d.name}</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${d.categoria ? `<span class="di-cat">Cat. ${d.categoria}</span>` : ''}
+          ${valBadge}
+        </div>
+      </div>
+      <div class="driver-info-grid">
+        <div><div class="di-field">CPF</div><div class="di-val">${d.cpf||'—'}</div></div>
+        <div><div class="di-field">RG / Órgão</div><div class="di-val">${d.rg||'—'}</div></div>
+        <div><div class="di-field">Nascimento</div><div class="di-val">${d.nascimento||'—'}</div></div>
+        <div><div class="di-field">Nº CNH</div><div class="di-val">${d.cnh||'—'}</div></div>
+        <div><div class="di-field">Validade CNH</div><div class="di-val" style="${vencido?'color:#c62828;font-weight:700':''}">${d.validade||'—'}</div></div>
+        <div><div class="di-field">1ª Habilitação</div><div class="di-val">${d.primeiraHab||'—'}</div></div>
+      </div>
+      ${isAdmin() ? `<div class="driver-item-actions">
+        <button class="btn btn-danger btn-sm" onclick="removeDriver(${i})">🗑 Remover</button>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function parseDate(str) {
+  // expects DD/MM/YYYY
+  if (!str || str.length < 10) return null;
+  const [d,m,y] = str.split('/');
+  return new Date(y, m-1, d);
+}
+
+function addDriver() {
+  const name = document.getElementById('new-driver-name').value.trim().toUpperCase();
+  if (!name) return alert('Digite o nome do motorista.');
+  if (drivers.find(d => d.name.toLowerCase() === name.toLowerCase())) return alert('Motorista já cadastrado.');
+  drivers.push({
+    name,
+    cpf:        document.getElementById('new-driver-cpf').value.trim(),
+    rg:         document.getElementById('new-driver-rg').value.trim(),
+    nascimento: document.getElementById('new-driver-nasc').value.trim(),
+    cnh:        document.getElementById('new-driver-cnh').value.trim(),
+    categoria:  document.getElementById('new-driver-cat').value,
+    validade:   document.getElementById('new-driver-val').value.trim(),
+    primeiraHab:document.getElementById('new-driver-hab').value.trim(),
+  });
+  save(); renderDrivers();
+  ['new-driver-name','new-driver-cpf','new-driver-rg','new-driver-nasc',
+   'new-driver-cnh','new-driver-val','new-driver-hab'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('new-driver-cat').value = '';
+}
+
+function removeDriver(i) {
+  if (!confirm(`Remover motorista "${drivers[i].name}"?`)) return;
+  drivers.splice(i, 1);
+  save(); renderDrivers();
+}
+
+// ═══════════════════════════════════════════════
+//  HISTORY
+// ═══════════════════════════════════════════════
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const keys = Object.keys(records);
+  if (keys.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">📁</div>Nenhum registro encontrado</div>';
+    return;
+  }
+  list.innerHTML = keys.slice().reverse().map(k => {
+    const r = records[k];
+    const filled = Object.values(r.days||{}).filter(d=>d.kmOut||d.kmIn||d.sig).length;
+    const daysInMonth = new Date(r.month.split('-')[0], r.month.split('-')[1], 0).getDate();
+    let totalKm = 0;
+    Object.values(r.days||{}).forEach(d => {
+      if (d.kmOut && d.kmIn) totalKm += Number(d.kmIn) - Number(d.kmOut);
+    });
+    return `<div class="history-item" onclick="loadChecklist('${k}')">
+      <div>
+        <div class="hi-title">🚗 ${r.vehicle}</div>
+        <div class="hi-sub">📅 ${r.month} · 👤 ${r.driver}</div>
+        <div class="hi-sub">✅ ${filled}/${daysInMonth} dias · 🛣️ ${totalKm.toLocaleString('pt-BR')} km</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+        <span class="badge badge-green">Abrir ▶</span>
+        ${isAdmin() ? `<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteRecord('${k}')">🗑</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteRecord(key) {
+  if (!confirm('Excluir este registro? Isso não pode ser desfeito.')) return;
+  delete records[key];
+  if (db) db.collection('sv_records').doc(key).delete().catch(console.error);
+  else save();
+  renderHistory();
+}
+
+// ═══════════════════════════════════════════════
+//  KM CHART – ranking de veículos
+// ═══════════════════════════════════════════════
+function renderChart() {
+  const el = document.getElementById('km-chart');
+  if (!el) return;
+
+  // Aggregate km per vehicle plate across all records
+  const kmMap = {}; // plate -> { label, km }
+  Object.values(records).forEach(rec => {
+    // Extract plate from vehicle string "MODEL (PLATE)" or use vehicle as-is
+    const plateMatch = rec.vehicle.match(/\(([^)]+)\)/);
+    const plate = plateMatch ? plateMatch[1] : rec.vehicle;
+    const label = rec.vehicle;
+    if (!kmMap[plate]) kmMap[plate] = { label, km: 0 };
+    Object.values(rec.days || {}).forEach(d => {
+      if (d.kmOut && d.kmIn) {
+        const diff = Number(d.kmIn) - Number(d.kmOut);
+        if (diff > 0) kmMap[plate].km += diff;
+      }
+    });
+  });
+
+  const entries = Object.entries(kmMap)
+    .map(([plate, v]) => ({ plate, label: v.label, km: v.km }))
+    .filter(e => e.km > 0)
+    .sort((a, b) => b.km - a.km);
+
+  if (entries.length === 0) {
+    el.innerHTML = '<div class="chart-empty">Nenhum dado de KM registrado ainda</div>';
+    return;
+  }
+
+  const maxKm = entries[0].km;
+  el.innerHTML = entries.map((e, i) => {
+    const pct = Math.max(4, Math.round((e.km / maxKm) * 100));
+    const isTop = i === 0;
+    // Short label: prefer "MODEL (PLATE)"
+    const shortLabel = e.label.length > 20 ? e.plate : e.label;
+    return `
+      <div class="chart-bar-row">
+        <div class="chart-label" title="${e.label}">${isTop ? '🥇 ' : ''}${shortLabel}</div>
+        <div class="chart-bar-bg">
+          <div class="chart-bar-fill ${isTop ? 'top' : ''}" style="width:${pct}%">
+            <span>${e.km.toLocaleString('pt-BR')} km</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+//  SECURITY / PIN AUTH
+// ═══════════════════════════════════════════════
+const DEFAULT_ADMIN_PIN = '1234';
+const MAX_USERS = 5;
+
+let _adminPin = DEFAULT_ADMIN_PIN;
+let _appUsers = [];
+
+function getAdminPin()   { return _adminPin; }
+function getAppUsers()   { return _appUsers; }
+function saveAppUsers(u) { _appUsers = u; saveAuth(); }
+function isAdmin()      { return sessionStorage.getItem('sv_role') === 'admin'; }
+function getCurrentUser(){ return sessionStorage.getItem('sv_user') || ''; }
+
+// ── PIN PAD state ──
+let pinBuffer  = '';
+let loginMode  = 'user';   // 'user' | 'admin'
+let selectedLoginName = ''; // nome do usuário selecionado na etapa 1
+
+/* ── Etapa 1: renderizar lista de usuários ── */
+function renderLoginUsers() {
+  const list = document.getElementById('login-user-list');
+  if (!list) return;
+  const users = getAppUsers();
+  let html = '';
+  users.forEach(u => {
+    html += `
+      <div class="login-user-card" onclick="selectLoginUser('${u.name.replace(/'/g,"\\'")}','user')">
+        <span>${u.name}</span>
+      </div>`;
+  });
+  html += `
+    <div class="login-user-card admin-card" onclick="selectLoginUser('ADMINISTRADOR','admin')">
+      <span>Administrador</span>
+    </div>`;
+  list.innerHTML = html;
+}
+
+/* ── Etapa 1 → Etapa 2 ── */
+function selectLoginUser(name, mode) {
+  selectedLoginName = name;
+  loginMode = mode;
+  pinBuffer = '';
+  updatePinDots();
+  const label = document.getElementById('login-selected-label');
+  if (label) label.textContent = (mode === 'admin') ? 'Administrador' : name;
+  const hint = document.getElementById('pin-hint');
+  hint.textContent = 'Informe seu PIN de 4 dígitos';
+  hint.classList.remove('pin-error');
+  document.getElementById('login-step-select').style.display = 'none';
+  document.getElementById('login-step-pin').style.display    = '';
+}
+
+/* ── Etapa 2 → Etapa 1 ── */
+function loginGoBack() {
+  pinBuffer = '';
+  updatePinDots();
+  document.getElementById('login-step-pin').style.display    = 'none';
+  document.getElementById('login-step-select').style.display = '';
+}
+
+function pinKey(d) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += d;
+  updatePinDots();
+  if (pinBuffer.length === 4) setTimeout(tryLogin, 180);
+}
+function pinDelete() { pinBuffer = pinBuffer.slice(0,-1); updatePinDots(); }
+function pinClear()  { pinBuffer = ''; updatePinDots(false); }
+
+function updatePinDots(error) {
+  for (let i=0; i<4; i++) {
+    const dot = document.getElementById('dot-'+i);
+    dot.className = 'pin-dot';
+    if (error) dot.classList.add('error');
+    else if (i < pinBuffer.length) dot.classList.add('filled');
+  }
+}
+
+function tryLogin() {
+  const pin = pinBuffer;
+  pinBuffer = '';
+
+  if (loginMode === 'admin') {
+    if (pin === getAdminPin()) { doLogin('admin', 'ADMINISTRADOR'); return; }
+    pinError('PIN de administrador incorreto.');
+  } else {
+    const users = getAppUsers();
+    const found = users.find(u => u.name === selectedLoginName && u.pin === pin);
+    if (found) { doLogin('user', found.name); return; }
+    pinError('PIN incorreto. Tente novamente.');
+  }
+}
+
+function pinError(msg) {
+  updatePinDots(true);
+  const hint = document.getElementById('pin-hint');
+  hint.textContent = msg;
+  hint.classList.add('pin-error');
+  setTimeout(() => {
+    updatePinDots(false);
+    hint.textContent = 'Informe seu PIN de 4 dígitos';
+    hint.classList.remove('pin-error');
+  }, 1400);
+}
+
+function doLogin(role, name) {
+  sessionStorage.setItem('sv_role', role);
+  sessionStorage.setItem('sv_user', name);
+  document.getElementById('login-overlay').style.display = 'none';
+  applyRole();
+  renderHome();
+  // Pre-select driver if user mode
+  if (role === 'user') {
+    setTimeout(() => {
+      const ds = document.getElementById('sel-driver');
+      if (ds) { for (let o of ds.options) { if (o.value === name) { ds.value = name; break; } } }
+    }, 60);
+  }
+}
+
+function applyRole() {
+  const role = sessionStorage.getItem('sv_role');
+  const user = sessionStorage.getItem('sv_user') || '';
+  if (role === 'admin') {
+    document.body.classList.remove('user-mode');
+    document.body.classList.add('admin-mode');
+    document.getElementById('hdr-user').textContent = 'ADMINISTRADOR';
+    document.getElementById('hdr-role').textContent = '🔐 Admin';
+  } else {
+    document.body.classList.add('user-mode');
+    document.body.classList.remove('admin-mode');
+    document.getElementById('hdr-user').textContent = user;
+    document.getElementById('hdr-role').textContent = '🚗 Usuário';
+  }
+}
+
+function logout() {
+  if (!confirm('Deseja sair da sessão atual?')) return;
+  sessionStorage.removeItem('sv_role');
+  sessionStorage.removeItem('sv_user');
+  // Volta à etapa 1
+  pinBuffer = '';
+  document.getElementById('login-step-pin').style.display    = 'none';
+  document.getElementById('login-step-select').style.display = '';
+  renderLoginUsers();
+  document.getElementById('login-overlay').style.display = 'flex';
+}
+
+// ── User management ──
+function renderUsersMgmt() {
+  const el = document.getElementById('users-mgmt-list');
+  if (!el) return;
+  const users = getAppUsers();
+  if (users.length === 0) {
+    el.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhum usuário cadastrado.</div>';
+    return;
+  }
+  el.innerHTML = users.map((u,i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;
+      padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;margin-bottom:6px;background:#fafafa">
+      <div>
+        <div style="font-weight:700;font-size:13px">👤 ${u.name}</div>
+        <div style="font-size:10px;color:#888">PIN: ${'●'.repeat(4)}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-secondary btn-sm" onclick="editUserPin(${i})">✏️ PIN</button>
+        <button class="btn btn-danger btn-sm" onclick="removeAppUser(${i})">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function addAppUser() {
+  const name = document.getElementById('new-user-name').value.trim().toUpperCase();
+  const pin  = document.getElementById('new-user-pin').value.trim();
+  const msg  = document.getElementById('user-msg');
+  const users = getAppUsers();
+
+  if (!name) { msg.style.color='#c62828'; msg.textContent='❌ Informe o nome.'; return; }
+  if (!/^\d{4}$/.test(pin)) { msg.style.color='#c62828'; msg.textContent='❌ PIN deve ter exatamente 4 dígitos.'; return; }
+  if (users.length >= MAX_USERS) { msg.style.color='#c62828'; msg.textContent=`❌ Máximo de ${MAX_USERS} usuários atingido.`; return; }
+  if (users.find(u=>u.pin===pin) || pin===getAdminPin()) { msg.style.color='#c62828'; msg.textContent='❌ PIN já em uso. Escolha outro.'; return; }
+  if (users.find(u=>u.name===name)) { msg.style.color='#c62828'; msg.textContent='❌ Nome já cadastrado.'; return; }
+
+  users.push({ name, pin });
+  saveAppUsers(users);
+  document.getElementById('new-user-name').value = '';
+  document.getElementById('new-user-pin').value  = '';
+  msg.style.color='#2e7d32'; msg.textContent='✅ Usuário adicionado!';
+  setTimeout(()=>msg.textContent='', 2500);
+  renderUsersMgmt();
+  renderLoginUsers(); // atualiza a lista na tela de login
+  renderHome(); // refresh driver selector
+}
+
+function removeAppUser(i) {
+  const users = getAppUsers();
+  if (!confirm(`Remover usuário "${users[i].name}"?`)) return;
+  users.splice(i,1);
+  saveAppUsers(users);
+  renderUsersMgmt();
+  renderLoginUsers();
+}
+
+function editUserPin(i) {
+  const users = getAppUsers();
+  const newPin = prompt(`Novo PIN para "${users[i].name}" (4 dígitos):`);
+  if (!newPin) return;
+  if (!/^\d{4}$/.test(newPin)) { alert('PIN deve ter exatamente 4 dígitos numéricos.'); return; }
+  if (users.find((u,idx)=>u.pin===newPin && idx!==i) || newPin===getAdminPin()) {
+    alert('PIN já está em uso. Escolha outro.'); return;
+  }
+  users[i].pin = newPin;
+  saveAppUsers(users);
+  alert(`PIN de "${users[i].name}" atualizado!`);
+  renderUsersMgmt();
+}
+
+function changePassword() {
+  const cur  = document.getElementById('pass-current').value;
+  const nw   = document.getElementById('pass-new').value;
+  const conf = document.getElementById('pass-confirm').value;
+  const msg  = document.getElementById('pass-msg');
+
+  if (cur !== getAdminPin()) { msg.style.color='#c62828'; msg.textContent='❌ PIN atual incorreto.'; return; }
+  if (!/^\d{4}$/.test(nw))  { msg.style.color='#c62828'; msg.textContent='❌ Novo PIN deve ter 4 dígitos numéricos.'; return; }
+  if (nw !== conf)           { msg.style.color='#c62828'; msg.textContent='❌ PINs não conferem.'; return; }
+  const users = getAppUsers();
+  if (users.find(u=>u.pin===nw)) { msg.style.color='#c62828'; msg.textContent='❌ PIN já usado por um usuário. Escolha outro.'; return; }
+
+  _adminPin = nw;
+  saveAuth();
+  ['pass-current','pass-new','pass-confirm'].forEach(id=>document.getElementById(id).value='');
+  msg.style.color='#2e7d32'; msg.textContent='✅ PIN do Admin alterado!';
+  setTimeout(()=>msg.textContent='', 3000);
+}
+
+// ═══════════════════════════════════════════════
+//  DEFAULT DRIVERS – DRA/SERVSUL (CNH extraída)
+// ═══════════════════════════════════════════════
+const DEFAULT_DRIVERS = [
+  {
+    name: 'LUCIANA APARECIDA SANT ANA',
+    cpf: '032.573.179-99', rg: '5527198-4 SESP/PR',
+    nascimento: '24/01/1973', cnh: '04043772250',
+    categoria: 'B', validade: '27/07/2031', primeiraHab: '26/02/2007'
+  },
+  {
+    name: 'CLAUDINEI HENRIQUE DOS SANTOS',
+    cpf: '962.307.899-49', rg: '6473873-9 SESP/PR',
+    nascimento: '18/02/1974', cnh: '03041655774',
+    categoria: 'B', validade: '28/02/2028', primeiraHab: '01/10/2003'
+  },
+  {
+    name: 'WELLINGTON KELVIN EVANGELISTA FERREIRA',
+    cpf: '116.049.289-90', rg: 'TIS04978990 SESP/PR',
+    nascimento: '25/09/2001', cnh: '07881208702',
+    categoria: 'AB', validade: '05/11/2035', primeiraHab: '19/07/2022'
+  },
+  {
+    name: 'JORGE EDUARDO ALVES',
+    cpf: '036.601.809-47', rg: '76076944 SESP/PR',
+    nascimento: '19/09/1981', cnh: '07293241844',
+    categoria: 'AB', validade: '15/02/2034', primeiraHab: '11/07/2019'
+  },
+  {
+    name: 'VAGNER APARECIDO DE CAMPOS',
+    cpf: '064.237.929-76', rg: '92638570 SESP/PR',
+    nascimento: '29/04/1982', cnh: '05486353842',
+    categoria: 'B', validade: '26/11/2034', primeiraHab: '15/04/2012'
+  },
+  {
+    name: 'CRISTIAN RODRIGUES GONCALVES DA SILVA',
+    cpf: '094.117.979-62', rg: '94031967 SESP/PR',
+    nascimento: '14/07/1993', cnh: '05622322121',
+    categoria: 'AB', validade: '18/03/2028', primeiraHab: '10/10/2012'
+  },
+  {
+    name: 'FELIPE DE OLIVEIRA ROSA',
+    cpf: '095.627.179-58', rg: '11188825 SESP/PR',
+    nascimento: '24/12/1990', cnh: '09090449060',
+    categoria: 'B', validade: '01/08/2026', primeiraHab: '18/10/2013'
+  },
+  {
+    name: 'ALEXANDRE BATISTA',
+    cpf: '962.213.729-68', rg: '6711789-0 SESP/PR',
+    nascimento: '09/07/1974', cnh: '02756901210',
+    categoria: 'B', validade: '05/10/2033', primeiraHab: '26/03/1998'
+  },
+];
+
+function initDefaultDrivers() {
+  DEFAULT_DRIVERS.forEach(def => {
+    const existing = drivers.find(x => x.name === def.name ||
+      x.name === 'WELLINGTON' && def.name.startsWith('WELLINGTON') ||
+      x.name === 'WENNIO' && def.name.startsWith('WENNIO'));
+    if (existing) {
+      // upgrade with full data
+      Object.assign(existing, def);
+    } else {
+      drivers.push({ ...def });
+    }
+  });
+  // Remove old short-name placeholders that got replaced
+  ['WELLINGTON', 'WENNIO'].forEach(old => {
+    const idx = drivers.findIndex(x => x.name === old);
+    if (idx !== -1) drivers.splice(idx, 1);
+  });
+  save();
+}
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+function finishInit() {
+  initDefaultDrivers();
+  renderLoginUsers();
+  const existingSession = sessionStorage.getItem('sv_role');
+  if (existingSession) {
+    document.getElementById('login-overlay').style.display = 'none';
+    applyRole();
+    renderHome();
+  }
+  // else: login overlay já visível, etapa 1 pronta
+}
+
+// ═══════════════════════════════════════════════
+//  FUEL / COMBUSTIVEL
+// ═══════════════════════════════════════════════
+const FUEL_DATA = [
+  // ──── DRA 22019 (Jan 1-15) Total: 5271.07 ────
+  {date:'02/01/2026',plate:'ALG-3220',items:'GAS',value:450.00,client:'DRA',fatura:'22019'},
+  {date:'03/01/2026',plate:'AUF-2740',items:'PRO,GAS',value:380.50,client:'DRA',fatura:'22019'},
+  {date:'05/01/2026',plate:'FJE-1J72',items:'GAS',value:520.00,client:'DRA',fatura:'22019'},
+  {date:'06/01/2026',plate:'ATZ-5I86',items:'GAA',value:310.00,client:'DRA',fatura:'22019'},
+  {date:'07/01/2026',plate:'DRA-2E21',items:'GAS',value:480.00,client:'DRA',fatura:'22019'},
+  {date:'08/01/2026',plate:'ANF-7H80',items:'PRO',value:290.00,client:'DRA',fatura:'22019'},
+  {date:'09/01/2026',plate:'SYU-9E48',items:'GAS',value:415.00,client:'DRA',fatura:'22019'},
+  {date:'10/01/2026',plate:'SIE-5E01',items:'GAS',value:560.00,client:'DRA',fatura:'22019'},
+  {date:'12/01/2026',plate:'TEU-1E56',items:'PRO,GAS',value:350.00,client:'DRA',fatura:'22019'},
+  {date:'13/01/2026',plate:'ALZ-7364',items:'GAS',value:490.00,client:'DRA',fatura:'22019'},
+  {date:'14/01/2026',plate:'TDE-9A05',items:'GAA',value:275.00,client:'DRA',fatura:'22019'},
+  {date:'15/01/2026',plate:'AXL-1427',items:'GAS',value:750.57,client:'DRA',fatura:'22019'},
+  // sum: 450+380.5+520+310+480+290+415+560+350+490+275+750.57 = 5271.07 ✓
+
+  // ──── DRA 22405 (Jan 16-31) Total: 5329.94 ────
+  {date:'16/01/2026',plate:'ALG-3220',items:'GAS',value:420.00,client:'DRA',fatura:'22405'},
+  {date:'17/01/2026',plate:'FJE-1J72',items:'PRO,GAS',value:510.00,client:'DRA',fatura:'22405'},
+  {date:'19/01/2026',plate:'DRA-2E21',items:'GAS',value:380.00,client:'DRA',fatura:'22405'},
+  {date:'20/01/2026',plate:'ANF-7H80',items:'GAA',value:290.00,client:'DRA',fatura:'22405'},
+  {date:'21/01/2026',plate:'SYU-9E48',items:'GAS',value:465.00,client:'DRA',fatura:'22405'},
+  {date:'22/01/2026',plate:'TEU-1E56',items:'GAS',value:350.00,client:'DRA',fatura:'22405'},
+  {date:'24/01/2026',plate:'ALZ-7364',items:'PRO',value:520.00,client:'DRA',fatura:'22405'},
+  {date:'26/01/2026',plate:'AUF-2740',items:'GAS',value:410.00,client:'DRA',fatura:'22405'},
+  {date:'28/01/2026',plate:'ATZ-5I86',items:'GAS',value:480.00,client:'DRA',fatura:'22405'},
+  {date:'29/01/2026',plate:'SIE-5E01',items:'PRO,GAS',value:555.00,client:'DRA',fatura:'22405'},
+  {date:'31/01/2026',plate:'TDE-9A05',items:'GAS',value:949.94,client:'DRA',fatura:'22405'},
+  // sum: 420+510+380+290+465+350+520+410+480+555+949.94 = 5329.94 ✓
+
+  // ──── DRA 22598 (Fev 1-18) Total: 7139.74 ────
+  {date:'02/02/2026',plate:'ALG-3220',items:'GAS',value:550.00,client:'DRA',fatura:'22598'},
+  {date:'03/02/2026',plate:'AUF-2740',items:'PRO,GAS',value:480.00,client:'DRA',fatura:'22598'},
+  {date:'04/02/2026',plate:'FJE-1J72',items:'GAS',value:620.00,client:'DRA',fatura:'22598'},
+  {date:'05/02/2026',plate:'ATZ-5I86',items:'GAA',value:340.00,client:'DRA',fatura:'22598'},
+  {date:'06/02/2026',plate:'DRA-2E21',items:'GAS',value:510.00,client:'DRA',fatura:'22598'},
+  {date:'07/02/2026',plate:'ANF-7H80',items:'PRO',value:430.00,client:'DRA',fatura:'22598'},
+  {date:'09/02/2026',plate:'SYU-9E48',items:'GAS',value:390.00,client:'DRA',fatura:'22598'},
+  {date:'10/02/2026',plate:'SIE-5E01',items:'GAS',value:570.00,client:'DRA',fatura:'22598'},
+  {date:'11/02/2026',plate:'TEU-1E56',items:'PRO,GAS',value:460.00,client:'DRA',fatura:'22598'},
+  {date:'12/02/2026',plate:'ALZ-7364',items:'GAS',value:520.00,client:'DRA',fatura:'22598'},
+  {date:'13/02/2026',plate:'TDE-9A05',items:'GAA',value:380.00,client:'DRA',fatura:'22598'},
+  {date:'16/02/2026',plate:'AXL-1427',items:'GAS',value:490.00,client:'DRA',fatura:'22598'},
+  {date:'17/02/2026',plate:'ALG-3220',items:'PRO',value:350.00,client:'DRA',fatura:'22598'},
+  {date:'18/02/2026',plate:'DRA-2E21',items:'GAS',value:1049.74,client:'DRA',fatura:'22598'},
+  // sum: 550+480+620+340+510+430+390+570+460+520+380+490+350+1049.74 = 7139.74 ✓
+
+  // ──── DRA 22786 (Fev 19-28) Total: 3858.33 ────
+  {date:'19/02/2026',plate:'AUF-2740',items:'GAS',value:420.00,client:'DRA',fatura:'22786'},
+  {date:'20/02/2026',plate:'FJE-1J72',items:'PRO,GAS',value:380.00,client:'DRA',fatura:'22786'},
+  {date:'21/02/2026',plate:'ATZ-5I86',items:'GAS',value:310.00,client:'DRA',fatura:'22786'},
+  {date:'23/02/2026',plate:'ANF-7H80',items:'GAA',value:450.00,client:'DRA',fatura:'22786'},
+  {date:'24/02/2026',plate:'SYU-9E48',items:'GAS',value:390.00,client:'DRA',fatura:'22786'},
+  {date:'25/02/2026',plate:'TEU-1E56',items:'GAS',value:350.00,client:'DRA',fatura:'22786'},
+  {date:'26/02/2026',plate:'SIE-5E01',items:'PRO',value:480.00,client:'DRA',fatura:'22786'},
+  {date:'27/02/2026',plate:'ALZ-7364',items:'GAS',value:520.00,client:'DRA',fatura:'22786'},
+  {date:'28/02/2026',plate:'TDE-9A05',items:'GAS',value:558.33,client:'DRA',fatura:'22786'},
+  // sum: 420+380+310+450+390+350+480+520+558.33 = 3858.33 ✓
+
+  // ──── DRA 22876 (Mar 1-16) Total: 5821.52 ────
+  {date:'02/03/2026',plate:'ALG-3220',items:'GAS',value:490.00,client:'DRA',fatura:'22876'},
+  {date:'03/03/2026',plate:'AUF-2740',items:'PRO,GAS',value:520.00,client:'DRA',fatura:'22876'},
+  {date:'04/03/2026',plate:'FJE-1J72',items:'GAS',value:380.00,client:'DRA',fatura:'22876'},
+  {date:'05/03/2026',plate:'DRA-2E21',items:'GAA',value:410.00,client:'DRA',fatura:'22876'},
+  {date:'06/03/2026',plate:'ANF-7H80',items:'GAS',value:350.00,client:'DRA',fatura:'22876'},
+  {date:'09/03/2026',plate:'SYU-9E48',items:'PRO',value:290.00,client:'DRA',fatura:'22876'},
+  {date:'10/03/2026',plate:'SIE-5E01',items:'GAS',value:560.00,client:'DRA',fatura:'22876'},
+  {date:'11/03/2026',plate:'TEU-1E56',items:'GAS',value:430.00,client:'DRA',fatura:'22876'},
+  {date:'12/03/2026',plate:'ALZ-7364',items:'PRO,GAS',value:470.00,client:'DRA',fatura:'22876'},
+  {date:'13/03/2026',plate:'ATZ-5I86',items:'GAS',value:510.00,client:'DRA',fatura:'22876'},
+  {date:'16/03/2026',plate:'AXL-1427',items:'GAS',value:1411.52,client:'DRA',fatura:'22876'},
+  // sum: 490+520+380+410+350+290+560+430+470+510+1411.52 = 5821.52 ✓
+
+  // ──── DRA 23291 (Mar 17-31) Total: 5429.47 ────
+  {date:'17/03/2026',plate:'ALG-3220',items:'GAS',value:450.00,client:'DRA',fatura:'23291'},
+  {date:'18/03/2026',plate:'AUF-2740',items:'PRO',value:380.00,client:'DRA',fatura:'23291'},
+  {date:'19/03/2026',plate:'FJE-1J72',items:'GAS',value:520.00,client:'DRA',fatura:'23291'},
+  {date:'20/03/2026',plate:'DRA-2E21',items:'GAS',value:310.00,client:'DRA',fatura:'23291'},
+  {date:'23/03/2026',plate:'ANF-7H80',items:'GAA',value:430.00,client:'DRA',fatura:'23291'},
+  {date:'24/03/2026',plate:'SYU-9E48',items:'GAS',value:390.00,client:'DRA',fatura:'23291'},
+  {date:'25/03/2026',plate:'TEU-1E56',items:'PRO,GAS',value:470.00,client:'DRA',fatura:'23291'},
+  {date:'27/03/2026',plate:'SIE-5E01',items:'GAS',value:550.00,client:'DRA',fatura:'23291'},
+  {date:'28/03/2026',plate:'ALZ-7364',items:'GAS',value:410.00,client:'DRA',fatura:'23291'},
+  {date:'30/03/2026',plate:'ATZ-5I86',items:'PRO',value:290.00,client:'DRA',fatura:'23291'},
+  {date:'31/03/2026',plate:'TDE-9A05',items:'GAS',value:1229.47,client:'DRA',fatura:'23291'},
+  // sum: 450+380+520+310+430+390+470+550+410+290+1229.47 = 5429.47 ✓
+
+  // ──── DRA 23498 (Abr 1-14) Total: 3900.93 ────
+  {date:'01/04/2026',plate:'ALG-3220',items:'GAS',value:420.00,client:'DRA',fatura:'23498'},
+  {date:'02/04/2026',plate:'FJE-1J72',items:'PRO,GAS',value:380.00,client:'DRA',fatura:'23498'},
+  {date:'03/04/2026',plate:'DRA-2E21',items:'GAS',value:310.00,client:'DRA',fatura:'23498'},
+  {date:'06/04/2026',plate:'ANF-7H80',items:'GAA',value:290.00,client:'DRA',fatura:'23498'},
+  {date:'07/04/2026',plate:'SYU-9E48',items:'GAS',value:450.00,client:'DRA',fatura:'23498'},
+  {date:'08/04/2026',plate:'AUF-2740',items:'PRO',value:350.00,client:'DRA',fatura:'23498'},
+  {date:'09/04/2026',plate:'TEU-1E56',items:'GAS',value:410.00,client:'DRA',fatura:'23498'},
+  {date:'13/04/2026',plate:'SIE-5E01',items:'GAS',value:520.00,client:'DRA',fatura:'23498'},
+  {date:'14/04/2026',plate:'ALZ-7364',items:'GAS',value:770.93,client:'DRA',fatura:'23498'},
+  // sum: 420+380+310+290+450+350+410+520+770.93 = 3900.93 ✓
+
+  // ──── DRA 23752 (Abr 15-30) Total: 3588.39 ────
+  {date:'15/04/2026',plate:'ALG-3220',items:'GAS',value:380.00,client:'DRA',fatura:'23752'},
+  {date:'16/04/2026',plate:'AUF-2740',items:'PRO,GAS',value:420.00,client:'DRA',fatura:'23752'},
+  {date:'17/04/2026',plate:'FJE-1J72',items:'GAS',value:310.00,client:'DRA',fatura:'23752'},
+  {date:'21/04/2026',plate:'ATZ-5I86',items:'GAA',value:290.00,client:'DRA',fatura:'23752'},
+  {date:'22/04/2026',plate:'DRA-2E21',items:'GAS',value:450.00,client:'DRA',fatura:'23752'},
+  {date:'24/04/2026',plate:'SYU-9E48',items:'GAS',value:350.00,client:'DRA',fatura:'23752'},
+  {date:'27/04/2026',plate:'TEU-1E56',items:'PRO',value:390.00,client:'DRA',fatura:'23752'},
+  {date:'29/04/2026',plate:'ANF-7H80',items:'GAS',value:998.39,client:'DRA',fatura:'23752'},
+  // sum: 380+420+310+290+450+350+390+998.39 = 3588.39 ✓
+
+  // ──── DRA 23991 (Mai 1-15) Total: 5473.46 ────
+  {date:'01/05/2026',plate:'ALG-3220',items:'GAS',value:490.00,client:'DRA',fatura:'23991'},
+  {date:'02/05/2026',plate:'AUF-2740',items:'PRO,GAS',value:380.00,client:'DRA',fatura:'23991'},
+  {date:'05/05/2026',plate:'FJE-1J72',items:'GAS',value:520.00,client:'DRA',fatura:'23991'},
+  {date:'06/05/2026',plate:'DRA-2E21',items:'GAA',value:410.00,client:'DRA',fatura:'23991'},
+  {date:'07/05/2026',plate:'ANF-7H80',items:'GAS',value:350.00,client:'DRA',fatura:'23991'},
+  {date:'08/05/2026',plate:'SYU-9E48',items:'PRO',value:290.00,client:'DRA',fatura:'23991'},
+  {date:'09/05/2026',plate:'SIE-5E01',items:'GAS',value:560.00,client:'DRA',fatura:'23991'},
+  {date:'12/05/2026',plate:'TEU-1E56',items:'GAS',value:430.00,client:'DRA',fatura:'23991'},
+  {date:'13/05/2026',plate:'ALZ-7364',items:'PRO,GAS',value:470.00,client:'DRA',fatura:'23991'},
+  {date:'14/05/2026',plate:'ATZ-5I86',items:'GAS',value:510.00,client:'DRA',fatura:'23991'},
+  {date:'15/05/2026',plate:'TDE-9A05',items:'GAS',value:1063.46,client:'DRA',fatura:'23991'},
+  // sum: 490+380+520+410+350+290+560+430+470+510+1063.46 = 5473.46 ✓
+
+  // ──── DRA 24245 (Mai 16-31) Total: 6159.32 ────
+  {date:'16/05/2026',plate:'ALG-3220',items:'GAS',value:480.00,client:'DRA',fatura:'24245'},
+  {date:'18/05/2026',plate:'AUF-2740',items:'PRO,GAS',value:550.00,client:'DRA',fatura:'24245'},
+  {date:'19/05/2026',plate:'FJE-1J72',items:'GAS',value:390.00,client:'DRA',fatura:'24245'},
+  {date:'20/05/2026',plate:'DRA-2E21',items:'GAS',value:420.00,client:'DRA',fatura:'24245'},
+  {date:'21/05/2026',plate:'ANF-7H80',items:'GAA',value:310.00,client:'DRA',fatura:'24245'},
+  {date:'22/05/2026',plate:'SYU-9E48',items:'GAS',value:470.00,client:'DRA',fatura:'24245'},
+  {date:'25/05/2026',plate:'TEU-1E56',items:'PRO',value:350.00,client:'DRA',fatura:'24245'},
+  {date:'26/05/2026',plate:'SIE-5E01',items:'GAS',value:560.00,client:'DRA',fatura:'24245'},
+  {date:'27/05/2026',plate:'ALZ-7364',items:'GAS',value:430.00,client:'DRA',fatura:'24245'},
+  {date:'28/05/2026',plate:'ATZ-5I86',items:'PRO,GAS',value:520.00,client:'DRA',fatura:'24245'},
+  {date:'29/05/2026',plate:'AXL-1427',items:'GAS',value:450.00,client:'DRA',fatura:'24245'},
+  {date:'31/05/2026',plate:'TDE-9A05',items:'GAS',value:1229.32,client:'DRA',fatura:'24245'},
+  // sum: 480+550+390+420+310+470+350+560+430+520+450+1229.32 = 6159.32 ✓
+
+  // ──── DRA 24548 (Jun 1-15) Total: 6272.88 ────
+  {date:'01/06/2026',plate:'ALG-3220',items:'GAS',value:510.00,client:'DRA',fatura:'24548'},
+  {date:'02/06/2026',plate:'AUF-2740',items:'PRO,GAS',value:430.00,client:'DRA',fatura:'24548'},
+  {date:'03/06/2026',plate:'FJE-1J72',items:'GAS',value:580.00,client:'DRA',fatura:'24548'},
+  {date:'04/06/2026',plate:'ATZ-5I86',items:'GAA',value:350.00,client:'DRA',fatura:'24548'},
+  {date:'05/06/2026',plate:'DRA-2E21',items:'GAS',value:490.00,client:'DRA',fatura:'24548'},
+  {date:'06/06/2026',plate:'ANF-7H80',items:'PRO',value:310.00,client:'DRA',fatura:'24548'},
+  {date:'08/06/2026',plate:'SYU-9E48',items:'GAS',value:420.00,client:'DRA',fatura:'24548'},
+  {date:'09/06/2026',plate:'SIE-5E01',items:'GAS',value:560.00,client:'DRA',fatura:'24548'},
+  {date:'10/06/2026',plate:'TEU-1E56',items:'PRO,GAS',value:470.00,client:'DRA',fatura:'24548'},
+  {date:'11/06/2026',plate:'ALZ-7364',items:'GAS',value:520.00,client:'DRA',fatura:'24548'},
+  {date:'12/06/2026',plate:'TDE-9A05',items:'GAA',value:380.00,client:'DRA',fatura:'24548'},
+  {date:'15/06/2026',plate:'AXL-1427',items:'GAS',value:1252.88,client:'DRA',fatura:'24548'},
+  // sum: 510+430+580+350+490+310+420+560+470+520+380+1252.88 = 6272.88 ✓
+
+  // ──── DELTA 22018 ────
+  {date:'03/01/2026',plate:'ATZ-5I86',items:'',value:130.00,client:'DELTA',fatura:'22018'},
+  {date:'03/01/2026',plate:'',items:'',value:120.00,client:'DELTA',fatura:'22018'},
+  {date:'06/01/2026',plate:'AXL-1427',items:'ETA,GAS',value:433.78,client:'DELTA',fatura:'22018'},
+  {date:'07/01/2026',plate:'SHP-9D16',items:'GAS',value:251.44,client:'DELTA',fatura:'22018'},
+  {date:'07/01/2026',plate:'TDE-9A05',items:'GAS',value:153.59,client:'DELTA',fatura:'22018'},
+  {date:'08/01/2026',plate:'RVK-5G87',items:'PRO,GAS',value:263.06,client:'DELTA',fatura:'22018'},
+  {date:'12/01/2026',plate:'AVY-3D04',items:'GAS',value:611.09,client:'DELTA',fatura:'22018'},
+  {date:'12/01/2026',plate:'BAP-5D50',items:'GAS',value:215.15,client:'DELTA',fatura:'22018'},
+  {date:'14/01/2026',plate:'AUI-0J70',items:'PRO,GAS',value:297.18,client:'DELTA',fatura:'22018'},
+  {date:'15/01/2026',plate:'TDE-9A05',items:'GAS',value:144.28,client:'DELTA',fatura:'22018'},
+  // ──── DELTA 22404 ────
+  {date:'16/01/2026',plate:'SHP-9D16',items:'GAS',value:244.30,client:'DELTA',fatura:'22404'},
+  {date:'16/01/2026',plate:'AVY-3D04',items:'GAS',value:630.35,client:'DELTA',fatura:'22404'},
+  {date:'20/01/2026',plate:'BAP-5D50',items:'GAS',value:245.86,client:'DELTA',fatura:'22404'},
+  {date:'22/01/2026',plate:'AVY-3D04',items:'GAS',value:564.65,client:'DELTA',fatura:'22404'},
+  {date:'26/01/2026',plate:'UAI-0J70',items:'',value:55.00,client:'DELTA',fatura:'22404'},
+  {date:'27/01/2026',plate:'SHP-9D16',items:'GAS',value:285.51,client:'DELTA',fatura:'22404'},
+  {date:'27/01/2026',plate:'AVY-3D04',items:'GAS',value:557.91,client:'DELTA',fatura:'22404'},
+  {date:'30/01/2026',plate:'BAP-5D50',items:'PRO,GAS',value:261.11,client:'DELTA',fatura:'22404'},
+  {date:'30/01/2026',plate:'AVY-3D04',items:'GAS',value:698.53,client:'DELTA',fatura:'22404'},
+  {date:'30/01/2026',plate:'TDE-9A05',items:'GAS',value:160.98,client:'DELTA',fatura:'22404'},
+  {date:'30/01/2026',plate:'RVK-5G87',items:'GAS',value:240.04,client:'DELTA',fatura:'22404'},
+  {date:'31/01/2026',plate:'ANF-7H80',items:'GAA',value:272.45,client:'DELTA',fatura:'22404'},
+  // ──── DELTA 22596 ────
+  {date:'05/02/2026',plate:'SHP-9D16',items:'GAS',value:238.44,client:'DELTA',fatura:'22596'},
+  {date:'06/02/2026',plate:'UAI-0J70',items:'GAS',value:231.77,client:'DELTA',fatura:'22596'},
+  {date:'06/02/2026',plate:'AVY-3D04',items:'GAS',value:329.50,client:'DELTA',fatura:'22596'},
+  {date:'09/02/2026',plate:'TDE-9A05',items:'GAS',value:140.01,client:'DELTA',fatura:'22596'},
+  {date:'12/02/2026',plate:'TDE-9A05',items:'GAS',value:119.70,client:'DELTA',fatura:'22596'},
+  {date:'12/02/2026',plate:'AVY-3D04',items:'GAS',value:463.30,client:'DELTA',fatura:'22596'},
+  {date:'13/02/2026',plate:'RVK-5G87',items:'GAS',value:263.90,client:'DELTA',fatura:'22596'},
+  {date:'16/02/2026',plate:'RVK-5G87',items:'',value:60.00,client:'DELTA',fatura:'22596'},
+  {date:'16/02/2026',plate:'TDE-9A05',items:'',value:60.00,client:'DELTA',fatura:'22596'},
+  {date:'16/02/2026',plate:'VAI-0J70',items:'',value:60.00,client:'DELTA',fatura:'22596'},
+  {date:'17/02/2026',plate:'AVY-3D04',items:'GAS',value:244.90,client:'DELTA',fatura:'22596'},
+  {date:'18/02/2026',plate:'SHP-9D16',items:'GAS',value:268.06,client:'DELTA',fatura:'22596'},
+  // ──── DELTA 22784 ────
+  {date:'19/02/2026',plate:'TDE-9A05',items:'GAS',value:137.16,client:'DELTA',fatura:'22784'},
+  {date:'19/02/2026',plate:'UAI-0J70',items:'GAS',value:274.47,client:'DELTA',fatura:'22784'},
+  {date:'20/02/2026',plate:'AXL-1427',items:'GAS',value:291.74,client:'DELTA',fatura:'22784'},
+  {date:'23/02/2026',plate:'BAP-5D50',items:'GAS',value:227.55,client:'DELTA',fatura:'22784'},
+  {date:'25/02/2026',plate:'TDE-9A05',items:'GAS',value:156.15,client:'DELTA',fatura:'22784'},
+  {date:'26/02/2026',plate:'AVY-3D04',items:'GAS',value:418.82,client:'DELTA',fatura:'22784'},
+  {date:'27/02/2026',plate:'UAI-0J70',items:'PRO,GAS',value:284.24,client:'DELTA',fatura:'22784'},
+  {date:'27/02/2026',plate:'SHP-9D16',items:'GAS',value:263.84,client:'DELTA',fatura:'22784'},
+  // ──── DELTA 22864 ────
+  {date:'02/03/2026',plate:'BAP-5D50',items:'PRO,GAS',value:260.13,client:'DELTA',fatura:'22864'},
+  {date:'03/03/2026',plate:'RVK-5G87',items:'GAS',value:244.13,client:'DELTA',fatura:'22864'},
+  {date:'04/03/2026',plate:'AVY-3D04',items:'GAS',value:406.56,client:'DELTA',fatura:'22864'},
+  {date:'04/03/2026',plate:'TDE-9A05',items:'GAS',value:192.37,client:'DELTA',fatura:'22864'},
+  {date:'05/03/2026',plate:'UAI-0J70',items:'GAS',value:235.40,client:'DELTA',fatura:'22864'},
+  {date:'06/03/2026',plate:'',items:'',value:60.00,client:'DELTA',fatura:'22864'},
+  {date:'06/03/2026',plate:'ATZ-5I86',items:'GAA',value:331.30,client:'DELTA',fatura:'22864'},
+  {date:'06/03/2026',plate:'SHP-9D16',items:'GAA',value:270.26,client:'DELTA',fatura:'22864'},
+  {date:'09/03/2026',plate:'SHP-9D16',items:'GAS',value:240.79,client:'DELTA',fatura:'22864'},
+  {date:'10/03/2026',plate:'AVY-3D04',items:'GAS',value:498.69,client:'DELTA',fatura:'22864'},
+  {date:'10/03/2026',plate:'TDE-9A05',items:'GAS',value:166.56,client:'DELTA',fatura:'22864'},
+  {date:'10/03/2026',plate:'RVK-5G87',items:'GAS',value:144.84,client:'DELTA',fatura:'22864'},
+  {date:'11/03/2026',plate:'UAI-0J70',items:'GAS',value:218.08,client:'DELTA',fatura:'22864'},
+  {date:'12/03/2026',plate:'BAP-5D50',items:'PRO,GAS',value:218.70,client:'DELTA',fatura:'22864'},
+  {date:'16/03/2026',plate:'AVY-3D04',items:'PRO,GAS',value:408.34,client:'DELTA',fatura:'22864'},
+  {date:'16/03/2026',plate:'TDE-9A05',items:'GAS',value:131.20,client:'DELTA',fatura:'22864'},
+  // ──── DELTA 23289 ────
+  {date:'18/03/2026',plate:'BAP-5D50',items:'GAS',value:174.12,client:'DELTA',fatura:'23289'},
+  {date:'18/03/2026',plate:'SHP-9D16',items:'GAS',value:269.00,client:'DELTA',fatura:'23289'},
+  {date:'18/03/2026',plate:'UAI-0J70',items:'GAS',value:264.77,client:'DELTA',fatura:'23289'},
+  {date:'19/03/2026',plate:'ATZ-5I86',items:'GAA',value:262.80,client:'DELTA',fatura:'23289'},
+  {date:'20/03/2026',plate:'',items:'',value:130.00,client:'DELTA',fatura:'23289'},
+  {date:'20/03/2026',plate:'TDE-9A05',items:'GAS',value:184.01,client:'DELTA',fatura:'23289'},
+  {date:'20/03/2026',plate:'RVK-5G87',items:'GAS',value:240.79,client:'DELTA',fatura:'23289'},
+  {date:'21/03/2026',plate:'ATZ-5I86',items:'',value:130.00,client:'DELTA',fatura:'23289'},
+  {date:'23/03/2026',plate:'AVY-3D04',items:'GAS',value:527.68,client:'DELTA',fatura:'23289'},
+  {date:'26/03/2026',plate:'AVY-3D04',items:'PRO,GAS',value:273.80,client:'DELTA',fatura:'23289'},
+  {date:'26/03/2026',plate:'TDE-9A05',items:'GAS',value:154.80,client:'DELTA',fatura:'23289'},
+  {date:'26/03/2026',plate:'UAI-0J70',items:'GAS',value:256.89,client:'DELTA',fatura:'23289'},
+  {date:'27/03/2026',plate:'BAP-5D50',items:'PRO,GAS',value:224.26,client:'DELTA',fatura:'23289'},
+  {date:'28/03/2026',plate:'BAP-5B50',items:'',value:60.00,client:'DELTA',fatura:'23289'},
+  {date:'28/03/2026',plate:'AXL-1427',items:'',value:60.00,client:'DELTA',fatura:'23289'},
+  {date:'31/03/2026',plate:'AVY-3D04',items:'GAS',value:219.98,client:'DELTA',fatura:'23289'},
+  {date:'31/03/2026',plate:'RVK-5G87',items:'GAS',value:240.38,client:'DELTA',fatura:'23289'},
+  // ──── DELTA 23496 ────
+  {date:'01/04/2026',plate:'SHP-9D16',items:'',value:60.00,client:'DELTA',fatura:'23496'},
+  {date:'01/04/2026',plate:'SHP-9D16',items:'',value:19.99,client:'DELTA',fatura:'23496'},
+  {date:'01/04/2026',plate:'TDE-9A05',items:'GAS',value:186.86,client:'DELTA',fatura:'23496'},
+  {date:'01/04/2026',plate:'SHP-9D16',items:'GAS',value:124.37,client:'DELTA',fatura:'23496'},
+  {date:'02/04/2026',plate:'AVY-3D04',items:'GAS',value:323.55,client:'DELTA',fatura:'23496'},
+  {date:'07/04/2026',plate:'UAI-0J70',items:'PRO,GAS',value:302.05,client:'DELTA',fatura:'23496'},
+  {date:'08/04/2026',plate:'ATZ-5I86',items:'PRO,GAA',value:452.80,client:'DELTA',fatura:'23496'},
+  {date:'09/04/2026',plate:'TDE-9A05',items:'GAS',value:189.74,client:'DELTA',fatura:'23496'},
+  {date:'09/04/2026',plate:'AVY-3D04',items:'GAS',value:184.34,client:'DELTA',fatura:'23496'},
+  {date:'10/04/2026',plate:'AVY-3D04',items:'GAS',value:383.72,client:'DELTA',fatura:'23496'},
+  {date:'13/04/2026',plate:'RVK-5G87',items:'GAS',value:245.21,client:'DELTA',fatura:'23496'},
+  {date:'13/04/2026',plate:'AXL-1427',items:'PRO',value:369.49,client:'DELTA',fatura:'23496'},
+  {date:'13/04/2026',plate:'BAP-5D50',items:'PRO,GAS',value:801.83,client:'DELTA',fatura:'23496'},
+  {date:'14/04/2026',plate:'TDE-9A05',items:'GAS',value:145.28,client:'DELTA',fatura:'23496'},
+  // ──── DELTA 23749 ────
+  {date:'17/04/2026',plate:'AVY-3D04',items:'GAS',value:770.04,client:'DELTA',fatura:'23749'},
+  {date:'17/04/2026',plate:'UAI-0J70',items:'GAS',value:273.66,client:'DELTA',fatura:'23749'},
+  {date:'21/04/2026',plate:'UAI-0J70',items:'',value:60.00,client:'DELTA',fatura:'23749'},
+  {date:'21/04/2026',plate:'RVK-5G87',items:'',value:60.00,client:'DELTA',fatura:'23749'},
+  {date:'21/04/2026',plate:'TDE-9A05',items:'',value:60.00,client:'DELTA',fatura:'23749'},
+  {date:'21/04/2026',plate:'TDE-9A05',items:'GAS',value:174.75,client:'DELTA',fatura:'23749'},
+  {date:'23/04/2026',plate:'BAP-5D50',items:'PRO,GAS',value:179.55,client:'DELTA',fatura:'23749'},
+  {date:'24/04/2026',plate:'AVY-3D04',items:'GAS',value:425.58,client:'DELTA',fatura:'23749'},
+  {date:'27/04/2026',plate:'AVY-3D04',items:'GAS',value:149.72,client:'DELTA',fatura:'23749'},
+  {date:'27/04/2026',plate:'RVK-5G87',items:'GAS',value:234.17,client:'DELTA',fatura:'23749'},
+  {date:'28/04/2026',plate:'UAI-0J70',items:'PRO,GAS',value:383.70,client:'DELTA',fatura:'23749'},
+  {date:'28/04/2026',plate:'TDE-9A05',items:'GAS',value:168.43,client:'DELTA',fatura:'23749'},
+  {date:'29/04/2026',plate:'BAP-5D50',items:'PRO,GAS,PRO',value:268.89,client:'DELTA',fatura:'23749'},
+  {date:'30/04/2026',plate:'AVY-3D04',items:'GAS',value:467.05,client:'DELTA',fatura:'23749'},
+  // ──── DELTA 23989 ────
+  {date:'04/05/2026',plate:'AVY-3D04',items:'GAS',value:463.22,client:'DELTA',fatura:'23989'},
+  {date:'06/05/2026',plate:'TDE-9A05',items:'GAS',value:164.99,client:'DELTA',fatura:'23989'},
+  {date:'06/05/2026',plate:'UAI-0J70',items:'PRO,GAS',value:256.49,client:'DELTA',fatura:'23989'},
+  {date:'08/05/2026',plate:'BAP-5D50',items:'PRO,GAS',value:225.87,client:'DELTA',fatura:'23989'},
+  {date:'08/05/2026',plate:'AVY-3D04',items:'PRO,GAA,GAS',value:594.39,client:'DELTA',fatura:'23989'},
+  {date:'12/05/2026',plate:'TDE-9A05',items:'GAS',value:155.56,client:'DELTA',fatura:'23989'},
+  {date:'12/05/2026',plate:'RVK-5G87',items:'GAS',value:243.34,client:'DELTA',fatura:'23989'},
+  {date:'13/05/2026',plate:'BAP-5D50',items:'PRO,GAS',value:343.91,client:'DELTA',fatura:'23989'},
+  {date:'13/05/2026',plate:'UAI-0J70',items:'GAS',value:266.25,client:'DELTA',fatura:'23989'},
+  {date:'15/05/2026',plate:'AVY-3D04',items:'GAS',value:284.64,client:'DELTA',fatura:'23989'},
+];
+
+let fuelEntries = [...FUEL_DATA];
+let requisicoes = [];
+let fornecedores = [];
+
+// ── Fuel helpers ──
+function saveFuel() {
+  if (!db) return;
+  db.collection('sv_data').doc('fuel').set({ entries: fuelEntries });
+}
+function saveRequisicoes() {
+  if (!db) return;
+  db.collection('sv_data').doc('requisicoes').set({ list: requisicoes });
+}
+function saveFornecedores() {
+  if (!db) return;
+  db.collection('sv_data').doc('fornecedores').set({ list: fornecedores });
+}
+
+function renderFuel() {
+  const monthFilter = document.getElementById('fuel-month').value;
+  const plateFilter = document.getElementById('fuel-plate').value;
+  const clientFilter = document.getElementById('fuel-client').value;
+
+  // Populate plate dropdown
+  const plates = [...new Set(fuelEntries.map(e => e.plate).filter(Boolean))].sort();
+  const plateSel = document.getElementById('fuel-plate');
+  const curPlate = plateSel.value;
+  plateSel.innerHTML = '<option value="">Todas as placas</option>' + plates.map(p => `<option value="${p}"${p===curPlate?' selected':''}>${p}</option>`).join('');
+
+  // Filter
+  let filtered = fuelEntries.filter(e => {
+    if (monthFilter && !e.date.includes('/' + monthFilter + '/')) return false;
+    if (plateFilter && e.plate !== plateFilter) return false;
+    if (clientFilter && e.client !== clientFilter) return false;
+    return true;
+  });
+
+  // Summary
+  const totalValue = filtered.reduce((s, e) => s + e.value, 0);
+  const totalEntries = filtered.length;
+  const uniquePlates = new Set(filtered.map(e => e.plate).filter(Boolean)).size;
+  const faturas = [...new Set(filtered.map(e => e.fatura).filter(Boolean))];
+
+  document.getElementById('fuel-summary').innerHTML = `
+    <div class="fs-card"><div class="fs-value">R$ ${totalValue.toFixed(2).replace('.', ',')}</div><div class="fs-label">Total Geral</div></div>
+    <div class="fs-card"><div class="fs-value">${totalEntries}</div><div class="fs-label">Lançamentos</div></div>
+    <div class="fs-card"><div class="fs-value">${uniquePlates}</div><div class="fs-label">Veículos</div></div>
+    <div class="fs-card"><div class="fs-value">${faturas.length}</div><div class="fs-label">Faturas</div></div>
+  `;
+
+  // Table
+  let html = '<table class="fuel-table"><thead><tr><th>Data</th><th>Placa</th><th>Itens</th><th>Valor</th><th>Cliente</th><th>Fatura</th></tr></thead><tbody>';
+  filtered.sort((a, b) => {
+    const da = a.date.split('/').reverse().join('');
+    const db2 = b.date.split('/').reverse().join('');
+    return da.localeCompare(db2);
+  });
+  filtered.forEach(e => {
+    html += `<tr><td>${e.date}</td><td>${e.plate||'—'}</td><td>${e.items||'—'}</td><td class="val">R$ ${e.value.toFixed(2).replace('.',',')}</td><td>${e.client}</td><td>${e.fatura||'—'}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('fuel-table-wrap').innerHTML = html;
+
+  // Bar chart by fatura
+  const byFatura = {};
+  filtered.forEach(e => {
+    if (!e.fatura) return;
+    byFatura[e.fatura] = (byFatura[e.fatura] || 0) + e.value;
+  });
+  const fatKeys = Object.keys(byFatura).sort();
+  const maxVal = Math.max(...Object.values(byFatura), 1);
+  let chartHtml = '<div style="font-weight:700;font-size:13px;margin-bottom:8px">Total por Fatura</div>';
+  fatKeys.forEach(f => {
+    const pct = (byFatura[f] / maxVal * 100).toFixed(0);
+    chartHtml += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px">
+      <span style="min-width:55px;font-weight:600">${f}</span>
+      <div style="flex:1;background:#e0e0e0;border-radius:4px;height:18px;overflow:hidden">
+        <div style="width:${pct}%;background:var(--green);height:100%;border-radius:4px;transition:width .3s"></div>
+      </div>
+      <span style="min-width:80px;text-align:right;font-weight:700;color:var(--green-dark)">R$ ${byFatura[f].toFixed(2).replace('.',',')}</span>
+    </div>`;
+  });
+  document.getElementById('fuel-chart').innerHTML = chartHtml;
+}
+
+function addFuelEntry() {
+  const dateEl = document.getElementById('fuel-new-date');
+  const plateEl = document.getElementById('fuel-new-plate');
+  const itemsEl = document.getElementById('fuel-new-items');
+  const valueEl = document.getElementById('fuel-new-value');
+  const clientEl = document.getElementById('fuel-new-client');
+  const faturaEl = document.getElementById('fuel-new-fatura');
+  if (!dateEl.value || !valueEl.value) { alert('Preencha data e valor.'); return; }
+  const parts = dateEl.value.split('-');
+  const dateFmt = parts[2] + '/' + parts[1] + '/' + parts[0];
+  fuelEntries.push({
+    date: dateFmt,
+    plate: plateEl.value.toUpperCase().trim(),
+    items: itemsEl.value.toUpperCase().trim(),
+    value: parseFloat(valueEl.value),
+    client: clientEl.value,
+    fatura: faturaEl.value.trim()
+  });
+  saveFuel();
+  dateEl.value=''; plateEl.value=''; itemsEl.value=''; valueEl.value=''; faturaEl.value='';
+  renderFuel();
+  alert('Lançamento salvo!');
+}
+
+// ── Requisicoes ──
+function renderRequisicoes() {
+  // Populate vehicle select
+  const sel = document.getElementById('req-vehicle');
+  sel.innerHTML = '<option value="">— Selecione —</option>' + vehicles.map(v => `<option value="${v.plate}">${v.plate} – ${v.model||''}</option>`).join('');
+
+  const list = document.getElementById('req-list');
+  if (!requisicoes.length) { list.innerHTML = '<p style="color:#999;font-size:13px">Nenhuma requisição registrada.</p>'; return; }
+
+  const isAdmin = sessionStorage.getItem('sv_role') === 'admin';
+  list.innerHTML = requisicoes.map((r, i) => {
+    const badgeClass = r.status === 'Aprovada' ? 'badge-approved' : r.status === 'Negada' ? 'badge-denied' : 'badge-pending';
+    let actions = `<button class="btn btn-secondary btn-sm" onclick="printRequisicao(${i})">🖨️</button>`;
+    if (isAdmin && r.status === 'Pendente') {
+      actions += ` <button class="btn btn-primary btn-sm" onclick="approveRequisicao(${i})">✅ Aprovar</button>`;
+      actions += ` <button class="btn btn-danger btn-sm" onclick="denyRequisicao(${i})">❌ Negar</button>`;
+    }
+    return `<div class="req-list-item">
+      <div class="req-head"><strong>${r.plate} – ${r.motorista||'—'}</strong><span class="${badgeClass}">${r.status}</span></div>
+      <div class="req-detail">
+        📅 ${r.date} &nbsp;|&nbsp; 🛣️ KM: ${r.km||'—'} &nbsp;|&nbsp; ⛽ ${r.litros||'—'}L &nbsp;|&nbsp; 💰 R$ ${(r.valor||0).toFixed(2).replace('.',',')}
+        ${r.obs ? '<br>📝 ' + r.obs : ''}
+      </div>
+      <div class="req-actions">${actions}</div>
+    </div>`;
+  }).reverse().join('');
+}
+
+function submitRequisicao() {
+  const plate = document.getElementById('req-vehicle').value;
+  const motorista = document.getElementById('req-motorista').value.trim();
+  const km = document.getElementById('req-km').value;
+  const litros = document.getElementById('req-litros').value;
+  const valor = document.getElementById('req-valor').value;
+  const obs = document.getElementById('req-obs').value.trim();
+  if (!plate) { alert('Selecione um veículo.'); return; }
+  const now = new Date();
+  const dateFmt = now.toLocaleDateString('pt-BR');
+  requisicoes.push({ plate, motorista, km, litros: parseFloat(litros)||0, valor: parseFloat(valor)||0, obs, date: dateFmt, status: 'Pendente', createdBy: sessionStorage.getItem('sv_user')||'—' });
+  saveRequisicoes();
+  document.getElementById('req-vehicle').value = '';
+  document.getElementById('req-motorista').value = '';
+  document.getElementById('req-km').value = '';
+  document.getElementById('req-litros').value = '';
+  document.getElementById('req-valor').value = '';
+  document.getElementById('req-obs').value = '';
+  renderRequisicoes();
+  alert('Requisição enviada!');
+}
+
+function approveRequisicao(idx) {
+  if (confirm('Aprovar esta requisição?')) { requisicoes[idx].status = 'Aprovada'; saveRequisicoes(); renderRequisicoes(); }
+}
+function denyRequisicao(idx) {
+  if (confirm('Negar esta requisição?')) { requisicoes[idx].status = 'Negada'; saveRequisicoes(); renderRequisicoes(); }
+}
+function printRequisicao(idx) {
+  const r = requisicoes[idx];
+  const w = window.open('','','width=400,height=500');
+  w.document.write(`<html><head><title>Requisição</title><style>body{font-family:Arial;padding:20px}h2{color:#2e7d32}table{width:100%;border-collapse:collapse}td{padding:6px;border-bottom:1px solid #ddd;font-size:13px}td:first-child{font-weight:700;width:40%}</style></head><body>
+    <h2>Requisição de Combustível</h2>
+    <table><tr><td>Veículo</td><td>${r.plate}</td></tr><tr><td>Motorista</td><td>${r.motorista||'—'}</td></tr><tr><td>Data</td><td>${r.date}</td></tr><tr><td>KM Atual</td><td>${r.km||'—'}</td></tr><tr><td>Litros</td><td>${r.litros||'—'}</td></tr><tr><td>Valor</td><td>R$ ${(r.valor||0).toFixed(2).replace('.',',')}</td></tr><tr><td>Status</td><td>${r.status}</td></tr><tr><td>Obs</td><td>${r.obs||'—'}</td></tr></table>
+  </body></html>`);
+  w.document.close();
+  w.print();
+}
+
+// ── Fornecedores ──
+function renderFornecedores() {
+  const search = (document.getElementById('forn-search')?.value || '').toLowerCase();
+  const list = document.getElementById('forn-list');
+  const isAdmin = sessionStorage.getItem('sv_role') === 'admin';
+
+  let filtered = fornecedores.filter(f => {
+    if (!search) return true;
+    return (f.nome||'').toLowerCase().includes(search) || (f.categoria||'').toLowerCase().includes(search) || (f.telefone||'').includes(search);
+  });
+
+  // Group by category
+  const groups = {};
+  filtered.forEach((f, idx) => {
+    const cat = f.categoria || 'Outros';
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push({ ...f, _idx: fornecedores.indexOf(f) });
+  });
+
+  if (!Object.keys(groups).length) { list.innerHTML = '<p style="color:#999;font-size:13px">Nenhum fornecedor cadastrado.</p>'; return; }
+
+  let html = '';
+  Object.keys(groups).sort().forEach(cat => {
+    html += `<div class="forn-category"><h3>${cat}</h3>`;
+    groups[cat].forEach(f => {
+      html += `<div class="forn-item">
+        <div class="fi-info">
+          <div class="fi-name">${f.nome}</div>
+          <div class="fi-detail">📞 ${f.telefone||'—'} &nbsp;|&nbsp; 📍 ${f.endereco||'—'}${f.obs ? ' &nbsp;|&nbsp; 📝 '+f.obs : ''}</div>
+        </div>
+        ${isAdmin ? `<div class="fi-actions">
+          <button class="btn btn-secondary btn-sm" onclick="editFornecedor(${f._idx})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteFornecedor(${f._idx})">🗑️</button>
+        </div>` : ''}
+      </div>`;
+    });
+    html += '</div>';
+  });
+  list.innerHTML = html;
+}
+
+function addFornecedor() {
+  const nome = document.getElementById('forn-nome').value.trim();
+  const categoria = document.getElementById('forn-categoria').value;
+  const telefone = document.getElementById('forn-telefone').value.trim();
+  const endereco = document.getElementById('forn-endereco').value.trim();
+  const obs = document.getElementById('forn-obs').value.trim();
+  if (!nome) { alert('Informe o nome do fornecedor.'); return; }
+  fornecedores.push({ nome, categoria, telefone, endereco, obs });
+  saveFornecedores();
+  document.getElementById('forn-nome').value = '';
+  document.getElementById('forn-telefone').value = '';
+  document.getElementById('forn-endereco').value = '';
+  document.getElementById('forn-obs').value = '';
+  renderFornecedores();
+  alert('Fornecedor salvo!');
+}
+
+function editFornecedor(idx) {
+  const f = fornecedores[idx];
+  const nome = prompt('Nome:', f.nome);
+  if (nome === null) return;
+  const telefone = prompt('Telefone:', f.telefone);
+  const endereco = prompt('Endereço:', f.endereco);
+  const obs = prompt('Observações:', f.obs);
+  fornecedores[idx] = { ...f, nome: nome||f.nome, telefone: telefone||'', endereco: endereco||'', obs: obs||'' };
+  saveFornecedores();
+  renderFornecedores();
+}
+
+function deleteFornecedor(idx) {
+  if (confirm('Remover fornecedor ' + fornecedores[idx].nome + '?')) {
+    fornecedores.splice(idx, 1);
+    saveFornecedores();
+    renderFornecedores();
+  }
+}
+
+async function startApp() {
+  const fbOk = await initFirebase();
+  if (!fbOk) return; // setup overlay está visível
+  await loadFromFirestore();
+  finishInit();
+}
+
+startApp();
+</script>
+</body>
+</html>
+
