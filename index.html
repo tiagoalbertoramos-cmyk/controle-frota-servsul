@@ -2,8 +2,15 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Controle de Frota – SERVSUL</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#2E7D32">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Frota SERVSUL">
+<link rel="apple-touch-icon" sizes="180x180" href="/icon-apple.png">
 <style>
   :root {
     --green: #4CAF50;
@@ -17,7 +24,7 @@
     --shadow: 0 2px 8px rgba(0,0,0,.15);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; background: #e8f5e9; min-height: 100vh; }
+  body { font-family: -apple-system, 'Segoe UI', Arial, sans-serif; background: #e8f5e9; min-height: 100vh; min-height: 100dvh; padding-bottom: env(safe-area-inset-bottom); }
 
   /* ── HEADER ── */
   .header {
@@ -63,7 +70,7 @@
   .form-group label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; }
   .form-group select, .form-group input {
     width: 100%; padding: 10px 12px; border: 1.5px solid var(--border);
-    border-radius: 8px; font-size: 14px; background: #fafafa;
+    border-radius: 8px; font-size: 16px; background: #fafafa;
     transition: border-color .2s;
   }
   .form-group select:focus, .form-group input:focus {
@@ -132,7 +139,7 @@
 
   .km-input {
     width: 80px; padding: 4px 6px; border: 1px solid #ccc;
-    border-radius: 6px; font-size: 12px; text-align: center;
+    border-radius: 6px; font-size: 16px; text-align: center;
   }
   .km-input:focus { outline: none; border-color: var(--green); }
 
@@ -241,14 +248,27 @@
   .chart-empty { text-align:center; color:#bbb; font-size:12px; padding:16px 0; }
 
   /* ── SECURITY / ROLES ── */
-  /* Admin-only elements hidden for regular users */
   body.user-mode .admin-only { display: none !important; }
   body.user-mode .readonly-msg { display: block !important; }
+  /* Motorista e Almox não acessam Fornecedores; Gestora acessa só leitura */
+  body.role-motorista #screen-fornecedores,
+  body.role-almox     #screen-fornecedores { display: none !important; }
   .readonly-msg {
     display: none; background: #fff3e0; color: #e65100;
     border: 1px solid #ffcc80; border-radius: 8px;
     padding: 8px 12px; font-size: 12px; text-align: center; margin-bottom: 8px;
   }
+
+  /* ── MOTORISTA ROLE ── */
+  body.role-motorista .admin-only      { display: none !important; }
+  body.role-motorista .not-motorista   { display: none !important; }
+  body.role-motorista .motorista-only  { display: block !important; }
+  .motorista-only { display: none; }
+
+  /* Card estilo motorista na tela de login */
+  .login-user-card.motorista-card { border-color: #E65100; }
+  .login-user-card.motorista-card:hover { background: #fff3e0; color: #E65100; }
+  .login-user-card.motorista-card .luc-avatar { background: #fff3e0; }
 
   /* ── LOGIN OVERLAY ── */
   #login-overlay {
@@ -299,6 +319,18 @@
     text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px;
   }
   .login-user-list { display:flex; flex-direction:column; gap:8px; max-height:240px; overflow-y:auto; }
+  /* Grade 2×2 para a tela inicial de seleção de perfil */
+  .login-role-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .login-role-grid .login-user-card {
+    flex-direction:column; justify-content:center; padding:18px 8px 14px;
+    gap:8px; text-align:center; min-height:90px;
+  }
+  .login-role-grid .login-user-card .luc-avatar {
+    width:46px; height:46px; font-size:22px;
+  }
+  .login-role-grid .login-user-card .luc-label {
+    font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
+  }
   .login-user-card {
     display:flex; align-items:center; gap:12px; padding:11px 14px;
     border:1.5px solid #e0e0e0; border-radius:12px; background:#fafafa;
@@ -313,6 +345,12 @@
   .login-user-card.admin-card { border-color:#1565C0; }
   .login-user-card.admin-card:hover { background:#e3f2fd; color:#1565C0; }
   .login-user-card.admin-card .luc-avatar { background:#e3f2fd; }
+  .login-user-card.gestora-card { border-color:#8E24AA; }
+  .login-user-card.gestora-card:hover { background:#f3e5f5; color:#8E24AA; }
+  .login-user-card.gestora-card .luc-avatar { background:#f3e5f5; }
+  .login-user-card.almox-card { border-color:#00838F; }
+  .login-user-card.almox-card:hover { background:#e0f7fa; color:#00838F; }
+  .login-user-card.almox-card .luc-avatar { background:#e0f7fa; }
   /* Login — step 2: PIN */
   .login-back-btn {
     display:inline-flex; align-items:center; gap:4px;
@@ -389,7 +427,7 @@
 
   /* ── FUEL TAB ── */
   .fuel-filters { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-  .fuel-filters select { padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; background: #fafafa; }
+  .fuel-filters select { padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 16px; background: #fafafa; }
   .fuel-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
   .fuel-summary .fs-card { background: #e8f5e9; border-radius: 10px; padding: 12px; text-align: center; }
   .fuel-summary .fs-card .fs-value { font-size: 20px; font-weight: 800; color: var(--green-dark); }
@@ -408,7 +446,108 @@
   .badge-pending { background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
   .badge-approved { background: #c8e6c9; color: #2e7d32; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
   .badge-denied { background: #ffcdd2; color: #c62828; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-  .req-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .req-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+
+  /* ── COMPROVANTE FOTO ── */
+  .comp-thumb {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 8px; padding: 8px 10px;
+    background: #e8f5e9; border-radius: 8px; cursor: pointer;
+    border: 1.5px solid #a5d6a7;
+  }
+  .comp-thumb img { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid #ccc; }
+  .comp-thumb .ct-text { font-size: 12px; color: #2e7d32; font-weight: 600; }
+  .comp-thumb .ct-sub  { font-size: 10px; color: #666; }
+  .comp-no-photo {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 8px;
+    font-size: 12px; color: #888;
+  }
+
+  /* ── CONFIRM PIN MODAL ── */
+  #confirm-pin-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65);
+    z-index: 10700; align-items: center; justify-content: center;
+  }
+  #confirm-pin-overlay.open { display: flex; }
+  .confirm-pin-box {
+    background: #fff; border-radius: 16px; padding: 24px 20px; width: 300px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.25); text-align: center;
+  }
+  .confirm-pin-box h3 { font-size: 15px; margin-bottom: 4px; color: #333; }
+  .confirm-pin-box .cpb-sub { font-size: 12px; color: #888; margin-bottom: 16px; }
+  .confirm-pin-box .pin-dots { justify-content: center; margin-bottom: 14px; }
+
+  /* Modal visualizar foto */
+  #photo-modal {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.92);
+    z-index: 10600; align-items: center; justify-content: center; flex-direction: column;
+  }
+  #photo-modal.open { display: flex; }
+  #photo-modal img { max-width: 96vw; max-height: 85vh; border-radius: 8px; object-fit: contain; }
+  #photo-modal .pm-bar {
+    display: flex; gap: 10px; margin-top: 14px;
+  }
+  #photo-modal .pm-bar button {
+    padding: 10px 20px; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+
+  /* ── VOUCHER MODAL ── */
+  #req-voucher-modal .modal { width: min(96vw, 400px); padding: 0; overflow: hidden; }
+  .voucher-step { padding: 20px; }
+  .voucher-card {
+    background: #fff; font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .vc-header {
+    background: linear-gradient(135deg, #1B5E20, #2E7D32);
+    color: #fff; padding: 16px 18px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .vc-logo { font-size: 20px; font-weight: 900; letter-spacing: 3px; }
+  .vc-subtitle { font-size: 10px; opacity: .75; margin-top: 2px; }
+  .vc-num { text-align: right; font-size: 11px; opacity: .85; line-height: 1.5; }
+  .vc-body { padding: 14px 18px; }
+  .vc-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;
+  }
+  .vc-row:last-child { border: none; }
+  .vc-row .lbl { color: #888; font-size: 12px; }
+  .vc-row .val { font-weight: 700; color: #222; text-align: right; }
+  .vc-footer {
+    padding: 12px 18px; border-top: 1px solid #e8e8e8;
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .vc-sig-box { text-align: center; }
+  .vc-sig-img { height: 44px; max-width: 140px; object-fit: contain; margin-bottom: 4px; }
+  .vc-sig-line { width: 140px; border-top: 1.5px solid #333; margin: 0 auto; }
+  .vc-sig-label { font-size: 10px; color: #555; margin-top: 3px; }
+  .vc-valid {
+    background: #c8e6c9; color: #1B5E20; border-radius: 8px;
+    padding: 10px 14px; margin: 0 18px 14px; text-align: center;
+    font-weight: 700; font-size: 13px;
+  }
+  .vc-valid small { display: block; font-size: 10px; font-weight: 400; margin-top: 2px; color: #2e7d32; }
+  .vc-share-bar {
+    display: flex; gap: 8px; padding: 12px 18px; background: #f5f5f5;
+    border-top: 1px solid #e0e0e0;
+  }
+  .btn-whatsapp { background: #25D366; color: #fff; }
+  .btn-fullscreen { background: #1565C0; color: #fff; }
+
+  /* Fullscreen voucher overlay */
+  #voucher-fullscreen {
+    display: none; position: fixed; inset: 0; background: #fff;
+    z-index: 10500; overflow-y: auto;
+  }
+  #voucher-fullscreen.open { display: block; }
+  .vfs-close {
+    position: fixed; top: 12px; right: 12px;
+    background: rgba(0,0,0,.5); color: #fff; border: none;
+    border-radius: 50%; width: 36px; height: 36px;
+    font-size: 18px; cursor: pointer; z-index: 10501;
+    display: flex; align-items: center; justify-content: center;
+  }
 
   /* ── FORNECEDORES TAB ── */
   .forn-category { margin-bottom: 18px; }
@@ -419,13 +558,184 @@
   .forn-item .fi-detail { font-size: 11px; color: #666; margin-top: 2px; }
   .forn-item .fi-actions { display: flex; gap: 4px; }
   .forn-search { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; background: #fafafa; margin-bottom: 12px; }
+  .forn-row { display: flex; gap: 10px; }
+  .forn-row .form-group { flex: 1; }
+  .forn-map-link { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--blue); text-decoration: none; margin-top: 4px; font-weight: 600; }
+  .forn-map-link:hover { text-decoration: underline; }
+
+  /* ── AUTOCOMPLETE MOTORISTA ── */
+  .ac-wrap { position: relative; }
+  .ac-wrap input { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; background: #fafafa; }
+  .ac-wrap input:focus { outline: none; border-color: var(--green); background: #fff; }
+  .ac-list { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1.5px solid var(--green); border-top: none; border-radius: 0 0 8px 8px; max-height: 180px; overflow-y: auto; z-index: 200; display: none; }
+  .ac-list.open { display: block; }
+  .ac-list div { padding: 10px 12px; font-size: 14px; cursor: pointer; }
+  .ac-list div:hover, .ac-list div.ac-active { background: #e8f5e9; color: var(--green-dark); font-weight: 600; }
 
   @media print {
     #screen-fuel .fuel-filters, #screen-fuel .admin-only, #screen-requisicao .admin-only, #screen-fornecedores { display: none !important; }
   }
+
+  /* ── KPI CARDS ── */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    margin-bottom: 16px;
+  }
+  .kpi-card {
+    background: #fff; border-radius: 12px; padding: 14px 10px;
+    text-align: center; box-shadow: var(--shadow);
+    border-top: 4px solid var(--green-dark);
+  }
+  .kpi-card.kpi-blue  { border-top-color: var(--blue); }
+  .kpi-card.kpi-amber { border-top-color: #F57F17; }
+  .kpi-value { font-size: 22px; font-weight: 900; color: var(--green-dark); line-height: 1.1; }
+  .kpi-card.kpi-blue  .kpi-value { color: var(--blue); }
+  .kpi-card.kpi-amber .kpi-value { color: #E65100; }
+  .kpi-label { font-size: 10px; color: #777; margin-top: 3px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+  .kpi-icon  { font-size: 20px; margin-bottom: 4px; }
+
+  /* ── PWA INSTALL BANNER ── */
+  #pwa-banner {
+    display: none; position: fixed; bottom: 0; left: 0; right: 0;
+    background: #1B5E20; color: #fff; padding: 14px 16px;
+    z-index: 9000; box-shadow: 0 -4px 16px rgba(0,0,0,.3);
+    align-items: center; gap: 12px;
+  }
+  #pwa-banner.show { display: flex; }
+  #pwa-banner .pb-text { flex: 1; font-size: 13px; line-height: 1.4; }
+  #pwa-banner .pb-text strong { display: block; font-size: 14px; }
+  #pwa-banner .pb-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .pb-btn-install {
+    background: #FDD835; color: #1B5E20; border: none;
+    padding: 9px 16px; border-radius: 8px; font-weight: 800; font-size: 13px;
+    cursor: pointer; white-space: nowrap;
+  }
+  .pb-btn-close {
+    background: rgba(255,255,255,.15); color: #fff; border: none;
+    padding: 9px 12px; border-radius: 8px; font-size: 13px; cursor: pointer;
+  }
+
+  /* ── iOS INSTALL HINT (legacy, kept for auto-show) ── */
+  #ios-hint { display: none; }
+
+  /* ── BOTÃO INSTALAR NA TELA DE LOGIN ── */
+  #login-install-btn {
+    display: none;
+    position: fixed; bottom: calc(20px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+    z-index: 10000; white-space: nowrap;
+    background: #FDD835; color: #1B5E20;
+    border: none; border-radius: 14px;
+    padding: 13px 24px; font-size: 15px; font-weight: 800;
+    cursor: pointer; align-items: center; gap: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.35); transition: transform .15s, box-shadow .15s;
+  }
+  #login-install-btn.visible { display: flex; }
+  #login-install-btn:active { transform: translateX(-50%) scale(.97); box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+
+  /* ── MODAL INSTALAÇÃO iOS ── */
+  #ios-install-modal {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75);
+    z-index: 11000; align-items: flex-end; justify-content: center;
+  }
+  #ios-install-modal.open { display: flex; }
+  #ios-install-modal .iim-box {
+    background: #1B5E20; color: #fff; width: 100%; max-width: 480px;
+    border-radius: 20px 20px 0 0; padding: 24px 20px 32px;
+    text-align: center; position: relative;
+  }
+  #ios-install-modal .iim-box::after {
+    content: ''; position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%);
+    width: 40%; height: 4px; background: rgba(255,255,255,.35); border-radius: 4px;
+  }
+  #ios-install-modal h3 { font-size: 18px; margin: 0 0 6px; }
+  #ios-install-modal .iim-steps {
+    display: flex; flex-direction: column; gap: 14px; margin: 18px 0;
+  }
+  #ios-install-modal .iim-step {
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(255,255,255,.12); border-radius: 12px; padding: 12px 14px;
+    text-align: left;
+  }
+  #ios-install-modal .iim-step-icon { font-size: 28px; flex-shrink: 0; }
+  #ios-install-modal .iim-step-text { font-size: 14px; line-height: 1.5; }
+  #ios-install-modal .iim-step-text strong { display: block; font-size: 15px; }
+  .iim-arrow { font-size: 32px; animation: iim-bounce .9s ease-in-out infinite; }
+  @keyframes iim-bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
+  #ios-install-modal button.iim-close {
+    background: rgba(255,255,255,.2); color: #fff; border: none;
+    padding: 11px 32px; border-radius: 10px; font-size: 15px;
+    font-weight: 700; cursor: pointer; margin-top: 4px;
+  }
+
+  /* ── BOTÃO TUTORIAL ── */
+  #login-tutorial-btn {
+    display: flex; position: fixed;
+    bottom: calc(70px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+    z-index: 10000; white-space: nowrap;
+    background: rgba(255,255,255,0.18); color: #fff;
+    border: 1.5px solid rgba(255,255,255,0.5); border-radius: 14px;
+    padding: 10px 22px; font-size: 14px; font-weight: 700;
+    cursor: pointer; align-items: center; gap: 7px;
+    backdrop-filter: blur(4px);
+  }
+  #login-tutorial-btn:hover { background: rgba(255,255,255,0.28); }
+
+  /* ── MODAL TUTORIAL ── */
+  #tutorial-modal {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.82);
+    z-index: 12000; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  #tutorial-modal.open { display: flex; }
+  #tutorial-modal .tm-box {
+    background: #111; border-radius: 20px; width: 100%; max-width: 340px;
+    padding: 0; overflow: hidden; position: relative;
+  }
+  #tutorial-modal .tm-header {
+    background: #1B5E20; color: #fff; padding: 14px 16px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  #tutorial-modal .tm-header h3 { font-size: 15px; font-weight: 700; margin: 0; }
+  #tutorial-modal .tm-close {
+    background: rgba(255,255,255,.2); border: none; color: #fff;
+    border-radius: 50%; width: 28px; height: 28px; font-size: 16px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 700;
+  }
+  #tutorial-modal iframe {
+    width: 100%; border: none; display: block;
+    height: 620px;
+  }
+
+  /* ── BOTÃO INSTALAR NO HEADER ── */
+  #hdr-install-btn {
+    display: none; background: #FDD835; color: #1B5E20; border: none;
+    padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 800;
+    cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  }
+  #hdr-install-btn.visible { display: block; }
 </style>
 </head>
 <body>
+
+<!-- ════════════ PWA INSTALL BANNER (Android/Chrome) ════════════ -->
+<div id="pwa-banner">
+  <div style="font-size:28px;flex-shrink:0">📲</div>
+  <div class="pb-text">
+    <strong>Instalar App</strong>
+    Acesso rápido na tela inicial do celular
+  </div>
+  <div class="pb-actions">
+    <button class="pb-btn-install" id="pwa-install-btn">Instalar</button>
+    <button class="pb-btn-close" id="pwa-close-btn">✕</button>
+  </div>
+</div>
+
+<!-- ════════════ iOS INSTALL HINT ════════════ -->
+<div id="ios-hint">
+  <strong>📲 Instalar App no iPhone/iPad</strong>
+  <p>Toque em <strong>⎋ Compartilhar</strong> no Safari e depois em<br><strong>"Adicionar à Tela de Início"</strong></p>
+  <button onclick="document.getElementById('ios-hint').classList.remove('show')">Entendi</button>
+</div>
 
 <!-- ════════════ LOADING OVERLAY ════════════ -->
 <div id="loading-overlay" style="display:none">
@@ -446,7 +756,7 @@
     <!-- ETAPA 1: Seleção de usuário -->
     <div id="login-step-select">
       <div class="login-select-title">Quem vai acessar?</div>
-      <div class="login-user-list" id="login-user-list">
+      <div class="login-role-grid" id="login-user-list">
         <!-- preenchido dinamicamente -->
       </div>
     </div>
@@ -478,6 +788,81 @@
         <button class="pin-key del" onclick="pinDelete()">⌫</button>
       </div>
     </div>
+
+    <!-- ETAPA 3: seleção do motorista (CNH cadastrada) -->
+    <div id="login-step-driver" style="display:none">
+      <div class="login-back-btn" onclick="driverPickerGoBack()">← Voltar</div>
+      <div class="login-select-title">Qual motorista é você?</div>
+      <div class="login-user-list" id="login-driver-list">
+        <!-- preenchido dinamicamente -->
+      </div>
+    </div>
+
+    <!-- ETAPA 4: seleção do usuário Almox -->
+    <div id="login-step-almox" style="display:none">
+      <div class="login-back-btn" onclick="almoxPickerGoBack()">← Voltar</div>
+      <div class="login-select-title">Qual usuário é você?</div>
+      <div class="login-user-list" id="login-almox-list"></div>
+    </div>
+
+    <!-- ETAPA 5: seleção do Gestor -->
+    <div id="login-step-gestora" style="display:none">
+      <div class="login-back-btn" onclick="gestoraPickerGoBack()">← Voltar</div>
+      <div class="login-select-title">Qual gestor é você?</div>
+      <div class="login-user-list" id="login-gestora-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- BOTÃO INSTALAR APP (fora da caixa branca, no overlay verde) -->
+<button id="login-install-btn" onclick="triggerInstall()">📲 Instalar App no celular</button>
+
+<!-- BOTÃO TUTORIAL (sempre visível na tela de login) -->
+<button id="login-tutorial-btn" onclick="openTutorial()">▶ Como usar o app</button>
+
+<!-- MODAL TUTORIAL -->
+<div id="tutorial-modal">
+  <div class="tm-box">
+    <div class="tm-header">
+      <h3>▶ Como usar o app</h3>
+      <button class="tm-close" onclick="closeTutorial()">✕</button>
+    </div>
+    <iframe id="tutorial-iframe" src="about:blank" scrolling="no"></iframe>
+  </div>
+</div>
+
+<!-- MODAL INSTALAÇÃO iOS -->
+<div id="ios-install-modal">
+  <div class="iim-box">
+    <h3>📲 Instalar no iPhone / iPad</h3>
+    <p style="font-size:13px;opacity:.85;margin:0">Siga os passos abaixo no Safari</p>
+    <div class="iim-steps">
+      <div class="iim-step">
+        <div class="iim-step-icon">1️⃣</div>
+        <div class="iim-step-text">
+          <strong>Toque em Compartilhar</strong>
+          Botão <strong>⎋</strong> na barra inferior do Safari
+        </div>
+      </div>
+      <div class="iim-step">
+        <div class="iim-step-icon">2️⃣</div>
+        <div class="iim-step-text">
+          <strong>Role para baixo</strong>
+          Procure a opção <strong>"Adicionar à Tela de Início"</strong>
+        </div>
+      </div>
+      <div class="iim-step">
+        <div class="iim-step-icon">3️⃣</div>
+        <div class="iim-step-text">
+          <strong>Toque em "Adicionar"</strong>
+          O ícone do app aparece na sua tela inicial 🎉
+        </div>
+      </div>
+    </div>
+    <div class="iim-arrow">👇</div>
+    <p style="font-size:12px;opacity:.7;margin:6px 0 14px">Toque no botão ⎋ lá embaixo</p>
+    <button class="iim-close" onclick="document.getElementById('ios-install-modal').classList.remove('open')">Entendi</button>
   </div>
 </div>
 
@@ -494,6 +879,7 @@
         <div class="ub-role" id="hdr-role">—</div>
       </div>
     </div>
+    <button id="hdr-install-btn" onclick="triggerInstall()" title="Instalar app">📲</button>
     <button class="ub-logout" onclick="logout()">Sair</button>
   </div>
 </div>
@@ -508,10 +894,31 @@
   <button onclick="showScreen('fuel')">⛽ Combustível</button>
   <button onclick="showScreen('requisicao')">📝 Requisição</button>
   <button class="admin-only" onclick="showScreen('fornecedores')">🔧 Fornecedores</button>
+  <button class="admin-only" onclick="showScreen('relatorios')">📊 Relatórios</button>
 </div>
 
 <!-- ════════════════════ HOME ════════════════════ -->
 <div class="screen active" id="screen-home">
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon">🚙</div>
+      <div class="kpi-value" id="kpi-vehicles">0</div>
+      <div class="kpi-label">Veículos</div>
+    </div>
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-icon">📋</div>
+      <div class="kpi-value" id="kpi-records">0</div>
+      <div class="kpi-label">Fichas Ativas</div>
+    </div>
+    <div class="kpi-card kpi-amber">
+      <div class="kpi-icon">🛣️</div>
+      <div class="kpi-value" id="kpi-km">0</div>
+      <div class="kpi-label">KM Este Mês</div>
+    </div>
+  </div>
+
   <div class="card">
     <h2>📋 Novo Controle Mensal</h2>
     <div class="form-group">
@@ -536,22 +943,35 @@
   </div>
 
   <div class="card" id="active-card" style="display:none">
-    <h2>📌 Controles Ativos</h2>
+    <h2 style="display:flex;justify-content:space-between;align-items:center">
+      📌 Controles Ativos
+    </h2>
     <div id="active-list"></div>
   </div>
 
   <div class="card">
-    <h2>📊 Resumo Geral</h2>
+    <h2 style="display:flex;justify-content:space-between;align-items:center">
+      📊 Resumo Geral
+      <button class="btn btn-danger btn-sm admin-only" onclick="clearAllRecords()" style="font-size:11px">🗑 Limpar tudo</button>
+    </h2>
     <div id="home-summary">
       <div class="empty-state"><div class="icon">📂</div>Nenhum registro ainda</div>
     </div>
   </div>
 
   <div class="card">
-    <h2>🏆 Veículos que Mais Circulam</h2>
+    <h2 style="display:flex;justify-content:space-between;align-items:center">
+      🏆 Veículos que Mais Circulam
+      <button class="btn btn-danger btn-sm admin-only" onclick="clearAllRecords()" style="font-size:11px">🗑 Limpar tudo</button>
+    </h2>
     <div class="chart-wrap" id="km-chart">
       <div class="chart-empty">Nenhum dado de KM registrado ainda</div>
     </div>
+  </div>
+
+  <div class="card not-motorista" id="req-report-card" style="display:none">
+    <h2>⛽ Relatório de Abastecimentos</h2>
+    <div id="req-report-content"></div>
   </div>
 </div>
 
@@ -700,6 +1120,26 @@
   </div>
 
   <div class="card admin-only">
+    <h2>📦 Usuários Almoxarifado</h2>
+    <div id="almox-mgmt-list"></div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
+      <div style="font-size:12px;font-weight:700;color:#555;margin-bottom:8px">+ Novo usuário Almox</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="form-group" style="flex:2;min-width:120px">
+          <label>Nome</label>
+          <input type="text" id="new-almox-name" placeholder="Nome do usuário" style="text-transform:uppercase">
+        </div>
+        <div class="form-group" style="flex:1;min-width:80px">
+          <label>PIN (4 dígitos)</label>
+          <input type="password" id="new-almox-pin" placeholder="0000" maxlength="4" inputmode="numeric">
+        </div>
+      </div>
+      <button class="btn btn-primary" style="background:#00838F" onclick="addAlmoxUser()">+ Adicionar Almox</button>
+      <div id="almox-msg" style="font-size:11px;margin-top:6px;"></div>
+    </div>
+  </div>
+
+  <div class="card admin-only">
     <h2>🔑 Alterar PIN do Admin</h2>
     <div class="form-group">
       <label>PIN atual</label>
@@ -748,6 +1188,7 @@
         <option value="DRA">DRA</option>
         <option value="DELTA">DELTA</option>
       </select>
+      <button class="btn btn-primary" onclick="exportFuelPDF()">📄 Gerar PDF</button>
     </div>
     <div class="fuel-summary" id="fuel-summary"></div>
     <div style="overflow-x:auto" id="fuel-table-wrap"></div>
@@ -769,15 +1210,20 @@
 
 <!-- ════════════════════ REQUISICAO ════════════════════ -->
 <div class="screen" id="screen-requisicao">
-  <div class="card">
+  <div class="card not-motorista">
     <h2>📝 Nova Requisição de Combustível</h2>
     <div class="form-group"><label>Veículo</label><select id="req-vehicle"></select></div>
-    <div class="form-group"><label>Motorista</label><input type="text" id="req-motorista" placeholder="Nome do motorista"></div>
+    <div class="form-group"><label>Motorista</label>
+      <div class="ac-wrap">
+        <input type="text" id="req-motorista" placeholder="Digite para filtrar motorista..." autocomplete="off" oninput="filterMotoristaAC()" onfocus="filterMotoristaAC()">
+        <div class="ac-list" id="ac-motorista-list"></div>
+      </div>
+    </div>
     <div class="form-group"><label>KM Atual</label><input type="number" id="req-km" placeholder="Quilometragem atual"></div>
     <div class="form-group"><label>Quantidade (litros)</label><input type="number" step="0.01" id="req-litros" placeholder="Litros solicitados"></div>
     <div class="form-group"><label>Valor Estimado (R$)</label><input type="number" step="0.01" id="req-valor" placeholder="Valor estimado"></div>
-    <div class="form-group"><label>Observações</label><textarea id="req-obs" rows="2" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:13px"></textarea></div>
-    <button class="btn btn-primary" onclick="submitRequisicao()">📝 Enviar Requisição</button>
+    <div class="form-group"><label>Observações</label><textarea id="req-obs" rows="2" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:16px"></textarea></div>
+    <button class="btn btn-primary" onclick="openReqSign()">✍️ Assinar e Enviar</button>
   </div>
   <div class="card">
     <h2>📋 Requisições</h2>
@@ -786,15 +1232,19 @@
 </div>
 
 <!-- ════════════════════ FORNECEDORES ════════════════════ -->
-<div class="screen admin-only" id="screen-fornecedores">
+<div class="screen" id="screen-fornecedores">
   <div class="card">
     <h2>🔧 Fornecedores</h2>
     <input class="forn-search" id="forn-search" placeholder="🔍 Buscar fornecedor..." oninput="renderFornecedores()">
     <div id="forn-list"></div>
   </div>
-  <div class="card">
+  <div class="card admin-only">
     <h2>➕ Novo Fornecedor</h2>
     <div class="form-group"><label>Nome</label><input type="text" id="forn-nome" placeholder="Nome do fornecedor"></div>
+    <div class="forn-row">
+      <div class="form-group"><label>CNPJ</label><input type="text" id="forn-cnpj" placeholder="00.000.000/0000-00"></div>
+      <div class="form-group"><label>Inscrição Estadual</label><input type="text" id="forn-inscricao" placeholder="Inscrição estadual"></div>
+    </div>
     <div class="form-group"><label>Categoria</label>
       <select id="forn-categoria">
         <option value="Mecânico">Mecânico</option>
@@ -805,11 +1255,153 @@
         <option value="Outros">Outros</option>
       </select>
     </div>
-    <div class="form-group"><label>Telefone</label><input type="text" id="forn-telefone" placeholder="(00) 00000-0000"></div>
-    <div class="form-group"><label>Endereço</label><input type="text" id="forn-endereco" placeholder="Endereço"></div>
-    <div class="form-group"><label>Observações</label><textarea id="forn-obs" rows="2" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:13px"></textarea></div>
+    <div class="forn-row">
+      <div class="form-group"><label>Telefone</label><input type="text" id="forn-telefone" placeholder="(00) 00000-0000"></div>
+      <div class="form-group"><label>Contato</label><input type="text" id="forn-contato" placeholder="Nome do contato"></div>
+    </div>
+    <div class="form-group"><label>Endereço</label><input type="text" id="forn-endereco" placeholder="Endereço completo"></div>
+    <div class="form-group"><label>Link Google Maps</label><input type="url" id="forn-maps" placeholder="https://maps.google.com/..."></div>
+    <div class="form-group"><label>Observações</label><textarea id="forn-obs" rows="2" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:16px"></textarea></div>
     <button class="btn btn-primary" onclick="addFornecedor()">💾 Salvar</button>
   </div>
+</div>
+
+<!-- ════════════════════ RELATÓRIOS ════════════════════ -->
+<div class="screen admin-only" id="screen-relatorios">
+  <div class="card">
+    <h2>📊 Relatórios</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
+      <div class="form-group" style="flex:2;min-width:180px;margin:0">
+        <label>Tipo de relatório</label>
+        <select id="rel-tipo" onchange="renderRelatorios()">
+          <option value="abastecimento">⛽ Análise de Abastecimento (comprovantes)</option>
+          <option value="veiculos">🚙 Combustível por Veículo (ranking de gasto)</option>
+          <option value="motoristas">👤 Combustível/Requisições por Motorista</option>
+          <option value="requisicoes">📝 Requisições por Status</option>
+          <option value="checklist">📋 KM Rodado por Veículo (checklist)</option>
+          <option value="fornecedores">🔧 Fornecedores por Categoria</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex:1;min-width:130px;margin:0" id="rel-periodo-wrap">
+        <label>Período</label>
+        <select id="rel-periodo" onchange="renderRelatorios()">
+          <option value="todos">Todos</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="exportRelatorioPDF()">📄 Gerar PDF</button>
+    <div id="rel-content" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- ════════════════════ CONFIRM PIN MODAL ════════════════════ -->
+<div id="confirm-pin-overlay">
+  <div class="confirm-pin-box">
+    <h3 id="cpb-title">🔐 Confirmar identidade</h3>
+    <div class="cpb-sub" id="cpb-sub">Informe seu PIN para continuar</div>
+    <div class="pin-dots" style="display:flex;gap:10px;justify-content:center;margin-bottom:14px">
+      <div class="pin-dot" id="cpb-dot-0"></div>
+      <div class="pin-dot" id="cpb-dot-1"></div>
+      <div class="pin-dot" id="cpb-dot-2"></div>
+      <div class="pin-dot" id="cpb-dot-3"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-key" onclick="cpbKey('1')">1</button>
+      <button class="pin-key" onclick="cpbKey('2')">2</button>
+      <button class="pin-key" onclick="cpbKey('3')">3</button>
+      <button class="pin-key" onclick="cpbKey('4')">4</button>
+      <button class="pin-key" onclick="cpbKey('5')">5</button>
+      <button class="pin-key" onclick="cpbKey('6')">6</button>
+      <button class="pin-key" onclick="cpbKey('7')">7</button>
+      <button class="pin-key" onclick="cpbKey('8')">8</button>
+      <button class="pin-key" onclick="cpbKey('9')">9</button>
+      <button class="pin-key del" onclick="cpbDel()">⌫</button>
+      <button class="pin-key" onclick="cpbKey('0')">0</button>
+      <button class="pin-key del" onclick="cpbCancel()">✕</button>
+    </div>
+    <div class="pin-hint" id="cpb-hint"></div>
+  </div>
+</div>
+
+<!-- ════════════════════ REQUISIÇÃO — SIGN + VOUCHER MODAL ════════════════════ -->
+<div class="modal-overlay" id="req-voucher-modal">
+  <div class="modal">
+
+    <!-- ETAPA 1: Assinatura -->
+    <div class="voucher-step" id="req-sign-step">
+      <h3 style="color:var(--green-dark);margin-bottom:4px">✍️ Assinar e Autorizar</h3>
+      <div style="font-size:11px;color:#888;margin-bottom:12px">Assine para autorizar a requisição de combustível</div>
+      <canvas id="req-sig-canvas" width="340" height="120"
+        style="border:2px solid var(--green);border-radius:10px;touch-action:none;background:#fafafa;display:block;width:100%"></canvas>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-secondary" style="flex:1" onclick="clearReqSig()">🗑 Limpar</button>
+        <button class="btn btn-danger btn-sm" onclick="cancelReqVoucher()">✕ Cancelar</button>
+        <button class="btn btn-primary" style="flex:1" onclick="saveReqSig()">✔ Confirmar</button>
+      </div>
+    </div>
+
+    <!-- ETAPA 2: Voucher -->
+    <div id="req-voucher-step" style="display:none">
+      <div class="voucher-card" id="voucher-card-content">
+        <div class="vc-header">
+          <div>
+            <div class="vc-logo">SERVSUL</div>
+            <div class="vc-subtitle">Autorização de Abastecimento</div>
+          </div>
+          <div class="vc-num">
+            <div id="vc-num-label" style="font-weight:700"></div>
+            <div id="vc-date-label"></div>
+          </div>
+        </div>
+        <div class="vc-body">
+          <div class="vc-row"><span class="lbl">🚙 Veículo</span><span class="val" id="vc-plate"></span></div>
+          <div class="vc-row"><span class="lbl">👤 Motorista</span><span class="val" id="vc-motorista"></span></div>
+          <div class="vc-row"><span class="lbl">🛣️ KM Atual</span><span class="val" id="vc-km"></span></div>
+          <div class="vc-row"><span class="lbl">⛽ Qtd. Autorizada</span><span class="val" id="vc-litros"></span></div>
+          <div class="vc-row"><span class="lbl">💰 Valor Máximo</span><span class="val" id="vc-valor"></span></div>
+          <div class="vc-row" id="vc-obs-row"><span class="lbl">📝 Obs.</span><span class="val" id="vc-obs"></span></div>
+        </div>
+        <div class="vc-footer">
+          <div class="vc-sig-box">
+            <img class="vc-sig-img" id="vc-sig-img" src="" alt="assinatura">
+            <div class="vc-sig-line"></div>
+            <div class="vc-sig-label" id="vc-sig-label">Gestor / Admin</div>
+          </div>
+          <div style="text-align:right;font-size:10px;color:#aaa;max-width:100px">
+            Válido para<br><strong>1 abastecimento</strong><br>nesta data
+          </div>
+        </div>
+        <div class="vc-valid">✅ AUTORIZADO
+          <small>Apresentar esta tela no posto de combustível</small>
+        </div>
+      </div>
+      <div class="vc-share-bar">
+        <button class="btn btn-whatsapp" style="flex:1" onclick="shareVoucherWhatsApp()">📤 WhatsApp</button>
+        <button class="btn btn-fullscreen" style="flex:1" onclick="showVoucherFullscreen()">📱 Tela Cheia</button>
+        <button class="btn btn-secondary" onclick="cancelReqVoucher()">✕</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════ INPUT CÂMERA (oculto) ════════════ -->
+<input type="file" id="comp-file-input" accept="image/*" capture="environment"
+  style="display:none" onchange="handleComprovanteFile(event)">
+
+<!-- ════════════ MODAL VISUALIZAR FOTO ════════════ -->
+<div id="photo-modal">
+  <img id="photo-modal-img" src="" alt="Comprovante">
+  <div class="pm-bar">
+    <button class="admin-only" style="background:#e53935;color:#fff" onclick="deleteComprovante()">🗑 Excluir</button>
+    <button style="background:#fff;color:#333" onclick="closePhotoModal()">✕ Fechar</button>
+  </div>
+</div>
+
+<!-- ════════════ VOUCHER TELA CHEIA (motorista mostra no posto) ════════════ -->
+<div id="voucher-fullscreen">
+  <button class="vfs-close" onclick="closeVoucherFullscreen()">✕</button>
+  <div id="voucher-fullscreen-content" style="max-width:480px;margin:0 auto;padding:20px 12px 40px"></div>
 </div>
 
 <!-- ════════════════════ SIGNATURE MODAL ════════════════════ -->
@@ -826,6 +1418,7 @@
   </div>
 </div>
 
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
@@ -923,6 +1516,7 @@ async function loadFromFirestore() {
       const a = authSnap.data();
       _appUsers = a.appUsers || [];
       _adminPin = a.adminPin || DEFAULT_ADMIN_PIN;
+      if (_adminPin === '1234') { _adminPin = DEFAULT_ADMIN_PIN; saveAuth(); }
     }
     records = {};
     recordsSnap.forEach(doc => { records[doc.id] = doc.data(); });
@@ -930,6 +1524,18 @@ async function loadFromFirestore() {
     if (fuelSnap.exists && fuelSnap.data().entries) { fuelEntries = fuelSnap.data().entries; }
     if (reqSnap.exists && reqSnap.data().list) { requisicoes = reqSnap.data().list; }
     if (fornSnap.exists && fornSnap.data().list) { fornecedores = fornSnap.data().list; }
+
+    // Mescla fotos de comprovante (docs separados com id "comp_{num}") de volta nas requisições
+    try {
+      const allDataDocs = await db.collection('sv_data').get();
+      allDataDocs.forEach(doc => {
+        if (!doc.id.startsWith('comp_')) return;
+        const num = doc.id.slice(5); // remove "comp_"
+        const data = doc.data();
+        const match = requisicoes.find(r => r.num === num);
+        if (match) { match.comprovante = data.image; match.comprovanteBy = data.by; match.comprovanteDate = data.date; }
+      });
+    } catch (e) { console.error('Erro ao carregar comprovantes:', e); }
 
     // Listeners em tempo real
     db.collection('sv_records').onSnapshot(snap => {
@@ -942,6 +1548,14 @@ async function loadFromFirestore() {
       snap.docChanges().forEach(ch => {
         if (ch.doc.id === 'settings') { const s=ch.doc.data(); vehicles=s.vehicles||vehicles; drivers=s.drivers||drivers; }
         if (ch.doc.id === 'auth')     { const a=ch.doc.data(); _appUsers=a.appUsers||_appUsers; _adminPin=a.adminPin||_adminPin; renderLoginUsers(); }
+        if (ch.doc.id.startsWith('comp_')) {
+          const num = ch.doc.id.slice(5);
+          const match = requisicoes.find(r => r.num === num);
+          if (!match) return;
+          if (ch.type === 'removed') { delete match.comprovante; delete match.comprovanteBy; delete match.comprovanteDate; }
+          else { const data = ch.doc.data(); match.comprovante = data.image; match.comprovanteBy = data.by; match.comprovanteDate = data.date; }
+          if (document.getElementById('screen-requisicao')?.classList.contains('active')) renderRequisicoes();
+        }
       });
     });
     setLoadingOverlay(false);
@@ -965,6 +1579,7 @@ function useLocalMode() {
   records  = JSON.parse(localStorage.getItem('sv_records')  || '{}');
   _appUsers = JSON.parse(localStorage.getItem('sv_app_users') || '[]');
   _adminPin = localStorage.getItem('sv_admin_pin') || DEFAULT_ADMIN_PIN;
+  if (_adminPin === '1234') { _adminPin = DEFAULT_ADMIN_PIN; saveAuth(); }
   finishInit();
 }
 
@@ -986,15 +1601,16 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('screen-' + id).classList.add('active');
-  const idx = {home:0,checklist:1,vehicles:2,drivers:3,history:4,fuel:5,requisicao:6,fornecedores:7}[id];
+  const idx = {home:0,checklist:1,vehicles:2,drivers:3,history:4,fuel:5,requisicao:6,fornecedores:7,relatorios:8}[id];
   document.querySelectorAll('.nav button')[idx].classList.add('active');
   if (id === 'home')      renderHome();
   if (id === 'vehicles')  renderVehicles();
-  if (id === 'drivers')   { renderDrivers(); renderUsersMgmt(); }
+  if (id === 'drivers')   { renderDrivers(); renderUsersMgmt(); renderAlmoxMgmt(); }
   if (id === 'history')   renderHistory();
   if (id === 'fuel')        renderFuel();
   if (id === 'requisicao')  renderRequisicoes();
   if (id === 'fornecedores') renderFornecedores();
+  if (id === 'relatorios')   renderRelatorios();
 }
 
 // ═══════════════════════════════════════════════
@@ -1025,16 +1641,18 @@ function renderHome() {
   if (keys.length > 0) {
     activeCard.style.display = '';
     const recent = keys.slice(-6).reverse();
+    const isAdm = sessionStorage.getItem('sv_role') === 'admin';
     activeList.innerHTML = recent.map(k => {
       const r = records[k];
       const filled = Object.values(r.days||{}).filter(d=>d.kmOut||d.kmIn||d.sig).length;
       const daysInMonth = new Date(r.month.split('-')[0], r.month.split('-')[1], 0).getDate();
-      return `<div class="history-item" onclick="loadChecklist('${k}')">
-        <div>
+      return `<div class="history-item" style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1" onclick="loadChecklist('${k}')" style="cursor:pointer">
           <div class="hi-title">${r.vehicle} – ${r.month}</div>
           <div class="hi-sub">Motorista: ${r.driver} · ${filled}/${daysInMonth} dias preenchidos</div>
         </div>
-        <span class="badge ${filled>0?'badge-green':'badge-gray'}">▶</span>
+        <span class="badge ${filled>0?'badge-green':'badge-gray'}" onclick="loadChecklist('${k}')" style="cursor:pointer">▶</span>
+        ${isAdm ? `<button class="btn btn-danger btn-sm" style="padding:4px 8px;font-size:11px" onclick="deleteRecordHome('${k}')">🗑</button>` : ''}
       </div>`;
     }).join('');
   } else {
@@ -1496,6 +2114,27 @@ function deleteRecord(key) {
   renderHistory();
 }
 
+function deleteRecordHome(key) {
+  if (!confirm('Excluir este controle? Esta ação não pode ser desfeita.')) return;
+  delete records[key];
+  if (db) db.collection('sv_records').doc(key).delete().catch(console.error);
+  else save();
+  renderHome();
+}
+
+function clearAllRecords() {
+  const count = Object.keys(records).length;
+  if (!count) { alert('Nenhum registro para excluir.'); return; }
+  if (!confirm(`Excluir TODOS os ${count} registros de histórico? Esta ação não pode ser desfeita.`)) return;
+  const keys = Object.keys(records);
+  keys.forEach(k => {
+    delete records[k];
+    if (db) db.collection('sv_records').doc(k).delete().catch(console.error);
+  });
+  if (!db) save();
+  renderHome();
+}
+
 // ═══════════════════════════════════════════════
 //  KM CHART – ranking de veículos
 // ═══════════════════════════════════════════════
@@ -1550,7 +2189,7 @@ function renderChart() {
 // ═══════════════════════════════════════════════
 //  SECURITY / PIN AUTH
 // ═══════════════════════════════════════════════
-const DEFAULT_ADMIN_PIN = '1234';
+const DEFAULT_ADMIN_PIN = '2291';
 const MAX_USERS = 5;
 
 let _adminPin = DEFAULT_ADMIN_PIN;
@@ -1571,23 +2210,28 @@ let selectedLoginName = ''; // nome do usuário selecionado na etapa 1
 function renderLoginUsers() {
   const list = document.getElementById('login-user-list');
   if (!list) return;
-  const users = getAppUsers();
-  let html = '';
-  users.forEach(u => {
-    html += `
-      <div class="login-user-card" onclick="selectLoginUser('${u.name.replace(/'/g,"\\'")}','user')">
-        <span>${u.name}</span>
-      </div>`;
-  });
-  html += `
-    <div class="login-user-card admin-card" onclick="selectLoginUser('ADMINISTRADOR','admin')">
-      <span>Administrador</span>
+  const card = (cls, icon, label, action) =>
+    `<div class="login-user-card ${cls}" onclick="${action}">
+      <span class="luc-avatar">${icon}</span>
+      <span class="luc-label">${label}</span>
     </div>`;
-  list.innerHTML = html;
+
+  list.innerHTML =
+    card('admin-card',    '🔐', 'Administrador', "selectLoginUser('ADMINISTRADOR','admin')") +
+    card('almox-card',    '📦', 'Almox',          "showAlmoxPicker()") +
+    card('gestora-card',  '👩‍💼', 'Gestor',          "showGestoraPicker()") +
+    card('motorista-card','🚗', 'Motorista',      "selectLoginUser('MOTORISTA','motorista')");
 }
+
+/* ── loginMode agora pode ser 'user', 'motorista' ou 'admin' ── */
 
 /* ── Etapa 1 → Etapa 2 ── */
 function selectLoginUser(name, mode) {
+  if (mode === 'motorista') {
+    // Motorista: primeiro escolhe quem é, depois digita o PIN (CPF) dele
+    showDriverPicker();
+    return;
+  }
   selectedLoginName = name;
   loginMode = mode;
   pinBuffer = '';
@@ -1601,12 +2245,16 @@ function selectLoginUser(name, mode) {
   document.getElementById('login-step-pin').style.display    = '';
 }
 
-/* ── Etapa 2 → Etapa 1 ── */
+/* ── Etapa 2 → Etapa 1 (ou Etapa 3, se vier do fluxo motorista) ── */
 function loginGoBack() {
   pinBuffer = '';
   updatePinDots();
-  document.getElementById('login-step-pin').style.display    = 'none';
-  document.getElementById('login-step-select').style.display = '';
+  document.getElementById('login-step-pin').style.display = 'none';
+  if (loginMode === 'motorista-driver') {
+    document.getElementById('login-step-driver').style.display = '';
+  } else {
+    document.getElementById('login-step-select').style.display = '';
+  }
 }
 
 function pinKey(d) {
@@ -1627,6 +2275,11 @@ function updatePinDots(error) {
   }
 }
 
+/* PIN individual do motorista = 4 primeiros dígitos do CPF cadastrado */
+function driverCpfPin(cpf) {
+  return (cpf || '').replace(/\D/g, '').slice(0, 4);
+}
+
 function tryLogin() {
   const pin = pinBuffer;
   pinBuffer = '';
@@ -1634,12 +2287,52 @@ function tryLogin() {
   if (loginMode === 'admin') {
     if (pin === getAdminPin()) { doLogin('admin', 'ADMINISTRADOR'); return; }
     pinError('PIN de administrador incorreto.');
+  } else if (loginMode === 'motorista-driver') {
+    const driver = drivers.find(d => d.name === selectedLoginName);
+    const expected = driverCpfPin(driver && driver.cpf);
+    if (expected && pin === expected) { doLogin('motorista', selectedLoginName); return; }
+    pinError('PIN incorreto. Tente novamente.');
+  } else if (loginMode === 'almox-user') {
+    const users = getAppUsers();
+    const found = users.find(u => u.name === selectedLoginName && u.role === 'almox' && u.pin === pin);
+    if (found) { doLogin('almox', found.name); return; }
+    pinError('PIN incorreto. Tente novamente.');
   } else {
     const users = getAppUsers();
     const found = users.find(u => u.name === selectedLoginName && u.pin === pin);
-    if (found) { doLogin('user', found.name); return; }
+    if (found) { doLogin(found.role || 'user', found.name); return; }
     pinError('PIN incorreto. Tente novamente.');
   }
+}
+
+/* ── Etapa 3: escolher qual motorista (cadastrado com CNH) está acessando ── */
+function showDriverPicker() {
+  const list = document.getElementById('login-driver-list');
+  const cnhDrivers = drivers.filter(d => d.cnh);
+  list.innerHTML = cnhDrivers.map(d => `
+    <div class="login-user-card" onclick="selectDriverForLogin('${d.name.replace(/'/g,"\\'")}')">
+      <span class="luc-avatar">🚗</span>
+      <span>${d.name}</span>
+    </div>`).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhum motorista com CNH cadastrada.</div>';
+  document.getElementById('login-step-select').style.display = 'none';
+  document.getElementById('login-step-driver').style.display = '';
+}
+function selectDriverForLogin(name) {
+  selectedLoginName = name;
+  loginMode = 'motorista-driver';
+  pinBuffer = '';
+  updatePinDots();
+  const label = document.getElementById('login-selected-label');
+  if (label) label.textContent = name;
+  const hint = document.getElementById('pin-hint');
+  hint.textContent = 'Informe os 4 primeiros dígitos do seu CPF';
+  hint.classList.remove('pin-error');
+  document.getElementById('login-step-driver').style.display = 'none';
+  document.getElementById('login-step-pin').style.display = '';
+}
+function driverPickerGoBack() {
+  document.getElementById('login-step-driver').style.display = 'none';
+  document.getElementById('login-step-select').style.display = '';
 }
 
 function pinError(msg) {
@@ -1649,7 +2342,7 @@ function pinError(msg) {
   hint.classList.add('pin-error');
   setTimeout(() => {
     updatePinDots(false);
-    hint.textContent = 'Informe seu PIN de 4 dígitos';
+    hint.textContent = loginMode === 'motorista-driver' ? 'Informe os 4 primeiros dígitos do seu CPF' : 'Informe seu PIN de 4 dígitos';
     hint.classList.remove('pin-error');
   }, 1400);
 }
@@ -1659,29 +2352,62 @@ function doLogin(role, name) {
   sessionStorage.setItem('sv_user', name);
   document.getElementById('login-overlay').style.display = 'none';
   applyRole();
-  renderHome();
-  // Pre-select driver if user mode
-  if (role === 'user') {
-    setTimeout(() => {
-      const ds = document.getElementById('sel-driver');
-      if (ds) { for (let o of ds.options) { if (o.value === name) { ds.value = name; break; } } }
-    }, 60);
+  if (role === 'motorista' || role === 'gestora') {
+    showScreen('requisicao');
+  } else {
+    showScreen('home');
+    if (role === 'user') {
+      setTimeout(() => {
+        const ds = document.getElementById('sel-driver');
+        if (ds) { for (let o of ds.options) { if (o.value === name) { ds.value = name; break; } } }
+      }, 60);
+    }
   }
 }
 
 function applyRole() {
   const role = sessionStorage.getItem('sv_role');
   const user = sessionStorage.getItem('sv_user') || '';
+  document.body.classList.remove('user-mode', 'admin-mode', 'role-motorista', 'role-gestora');
+
   if (role === 'admin') {
-    document.body.classList.remove('user-mode');
     document.body.classList.add('admin-mode');
     document.getElementById('hdr-user').textContent = 'ADMINISTRADOR';
     document.getElementById('hdr-role').textContent = '🔐 Admin';
+    // Acesso total: garante que todas as abas estejam visíveis
+    document.querySelectorAll('.nav button').forEach(b => b.style.display = '');
+  } else if (role === 'motorista') {
+    document.body.classList.add('user-mode', 'role-motorista');
+    document.getElementById('hdr-user').textContent = user;
+    document.getElementById('hdr-role').textContent = '🚗 Motorista';
+    // Esconde todas as abas exceto Requisição
+    document.querySelectorAll('.nav button').forEach(b => b.style.display = 'none');
+    const reqBtn = document.querySelector('.nav button[onclick*="requisicao"]');
+    if (reqBtn) reqBtn.style.display = '';
+  } else if (role === 'gestora') {
+    document.body.classList.add('user-mode', 'role-gestora');
+    document.getElementById('hdr-user').textContent = user;
+    document.getElementById('hdr-role').textContent = '👩‍💼 Gestora';
+    document.querySelectorAll('.nav button').forEach(b => b.style.display = 'none');
+    ['requisicao', 'fornecedores'].forEach(id => {
+      const btn = document.querySelector(`.nav button[onclick*="'${id}'"]`);
+      if (btn) btn.style.display = '';
+    });
+  } else if (role === 'almox') {
+    document.body.classList.add('user-mode', 'role-almox');
+    document.getElementById('hdr-user').textContent = user;
+    document.getElementById('hdr-role').textContent = '📦 Almox';
+    // Acesso somente a Início e Checklist
+    document.querySelectorAll('.nav button').forEach(b => b.style.display = 'none');
+    ['home','checklist'].forEach(id => {
+      const btn = document.querySelector(`.nav button[onclick*="'${id}'"]`);
+      if (btn) btn.style.display = '';
+    });
   } else {
     document.body.classList.add('user-mode');
-    document.body.classList.remove('admin-mode');
     document.getElementById('hdr-user').textContent = user;
     document.getElementById('hdr-role').textContent = '🚗 Usuário';
+    document.querySelectorAll('.nav button').forEach(b => b.style.display = '');
   }
 }
 
@@ -1692,6 +2418,7 @@ function logout() {
   // Volta à etapa 1
   pinBuffer = '';
   document.getElementById('login-step-pin').style.display    = 'none';
+  document.getElementById('login-step-driver').style.display = 'none';
   document.getElementById('login-step-select').style.display = '';
   renderLoginUsers();
   document.getElementById('login-overlay').style.display = 'flex';
@@ -1862,16 +2589,170 @@ function initDefaultDrivers() {
 // ═══════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════
+function ensureDefaultMotoristUser() {
+  const exists = _appUsers.some(u => u.role === 'motorista');
+  if (!exists) {
+    _appUsers.push({ name: 'MOTORISTA', pin: '0000', role: 'motorista' });
+    saveAuth();
+  }
+}
+
+function ensureDefaultGestoraUser() {
+  const exists = _appUsers.some(u => u.role === 'gestora');
+  if (!exists) {
+    _appUsers.push({ name: 'MARIA GESTORA', pin: '1111', role: 'gestora' });
+    saveAuth();
+  }
+}
+
 function finishInit() {
   initDefaultDrivers();
+  ensureDefaultMotoristUser();
+  ensureDefaultGestoraUser();
   renderLoginUsers();
+  renderAlmoxMgmt();
   const existingSession = sessionStorage.getItem('sv_role');
   if (existingSession) {
     document.getElementById('login-overlay').style.display = 'none';
     applyRole();
-    renderHome();
+    if (existingSession === 'motorista' || existingSession === 'gestora') {
+      showScreen('requisicao');
+    } else {
+      showScreen('home');
+    }
   }
   // else: login overlay já visível, etapa 1 pronta
+}
+
+// ═══════════════════════════════════════════════
+//  ALMOX — picker de login
+// ═══════════════════════════════════════════════
+function showAlmoxPicker() {
+  const almoxUsers = getAppUsers().filter(u => u.role === 'almox');
+  const listEl = document.getElementById('login-almox-list');
+  listEl.innerHTML = almoxUsers.map(u => `
+    <div class="login-user-card almox-card" onclick="selectAlmoxUser('${u.name.replace(/'/g,"\\'")}')">
+      <span class="luc-avatar">📦</span>
+      <span>${u.name}</span>
+    </div>`).join('');
+  document.getElementById('login-step-select').style.display = 'none';
+  document.getElementById('login-step-almox').style.display  = '';
+}
+
+function almoxPickerGoBack() {
+  document.getElementById('login-step-almox').style.display = 'none';
+  document.getElementById('login-step-select').style.display = '';
+}
+
+function showGestoraPicker() {
+  const gestoras = getAppUsers().filter(u => u.role === 'gestora');
+  if (gestoras.length === 0) { alert('Nenhum gestor cadastrado.'); return; }
+  if (gestoras.length === 1) {
+    selectLoginUser(gestoras[0].name, 'gestora');
+    return;
+  }
+  const listEl = document.getElementById('login-gestora-list');
+  listEl.innerHTML = gestoras.map(u =>
+    `<div class="login-user-card gestora-card" onclick="selectLoginUser('${u.name.replace(/'/g,"\\'")}','gestora')">
+      <span class="luc-avatar">👩‍💼</span>
+      <span>${u.name}</span>
+    </div>`).join('');
+  document.getElementById('login-step-select').style.display  = 'none';
+  document.getElementById('login-step-gestora').style.display = '';
+}
+
+function gestoraPickerGoBack() {
+  document.getElementById('login-step-gestora').style.display = 'none';
+  document.getElementById('login-step-select').style.display  = '';
+}
+
+function selectAlmoxUser(name) {
+  selectedLoginName = name;
+  loginMode = 'almox-user';
+  pinBuffer = '';
+  updatePinDots();
+  const label = document.getElementById('login-selected-label');
+  if (label) label.textContent = name;
+  const hint = document.getElementById('pin-hint');
+  hint.textContent = 'Informe seu PIN de 4 dígitos';
+  hint.classList.remove('pin-error');
+  document.getElementById('login-step-almox').style.display = 'none';
+  document.getElementById('login-step-pin').style.display   = '';
+}
+
+// ═══════════════════════════════════════════════
+//  ALMOX — gerenciamento admin
+// ═══════════════════════════════════════════════
+const MAX_ALMOX_USERS = 5;
+
+function getAlmoxUsers() { return getAppUsers().filter(u => u.role === 'almox'); }
+
+function renderAlmoxMgmt() {
+  const el = document.getElementById('almox-mgmt-list');
+  if (!el) return;
+  const users = getAlmoxUsers();
+  if (!users.length) {
+    el.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhum usuário Almox cadastrado.</div>';
+    return;
+  }
+  el.innerHTML = users.map(u => {
+    const idx = getAppUsers().indexOf(u);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;
+        padding:8px 10px;border:1px solid #b2ebf2;border-radius:8px;margin-bottom:6px;background:#e0f7fa">
+      <div>
+        <div style="font-weight:700;font-size:13px">📦 ${u.name}</div>
+        <div style="font-size:10px;color:#888">PIN: ${'●'.repeat(4)}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-secondary btn-sm" onclick="editAlmoxPin(${idx})">✏️ PIN</button>
+        <button class="btn btn-danger btn-sm" onclick="removeAlmoxUser(${idx})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addAlmoxUser() {
+  const name = document.getElementById('new-almox-name').value.trim().toUpperCase();
+  const pin  = document.getElementById('new-almox-pin').value.trim();
+  const msg  = document.getElementById('almox-msg');
+  const allUsers = getAppUsers();
+  const almoxCount = allUsers.filter(u => u.role === 'almox').length;
+
+  if (!name) { msg.style.color='#c62828'; msg.textContent='❌ Informe o nome.'; return; }
+  if (!/^\d{4}$/.test(pin)) { msg.style.color='#c62828'; msg.textContent='❌ PIN deve ter exatamente 4 dígitos.'; return; }
+  if (almoxCount >= MAX_ALMOX_USERS) { msg.style.color='#c62828'; msg.textContent=`❌ Máximo de ${MAX_ALMOX_USERS} usuários Almox atingido.`; return; }
+  if (allUsers.find(u => u.pin === pin) || pin === getAdminPin()) { msg.style.color='#c62828'; msg.textContent='❌ PIN já em uso. Escolha outro.'; return; }
+  if (allUsers.find(u => u.name === name)) { msg.style.color='#c62828'; msg.textContent='❌ Nome já cadastrado.'; return; }
+
+  allUsers.push({ name, pin, role: 'almox' });
+  saveAppUsers(allUsers);
+  document.getElementById('new-almox-name').value = '';
+  document.getElementById('new-almox-pin').value  = '';
+  msg.style.color='#007c91'; msg.textContent='✅ Usuário Almox adicionado!';
+  setTimeout(() => msg.textContent='', 2500);
+  renderAlmoxMgmt();
+  renderLoginUsers();
+}
+
+function removeAlmoxUser(idx) {
+  const users = getAppUsers();
+  if (!confirm(`Remover usuário "${users[idx].name}"?`)) return;
+  users.splice(idx, 1);
+  saveAppUsers(users);
+  renderAlmoxMgmt();
+  renderLoginUsers();
+}
+
+function editAlmoxPin(idx) {
+  const users = getAppUsers();
+  const newPin = prompt(`Novo PIN para "${users[idx].name}" (4 dígitos):`);
+  if (!newPin) return;
+  if (!/^\d{4}$/.test(newPin)) { alert('PIN deve ter exatamente 4 dígitos numéricos.'); return; }
+  if (users.find((u, i) => u.pin === newPin && i !== idx) || newPin === getAdminPin()) { alert('PIN já está em uso. Escolha outro.'); return; }
+  users[idx].pin = newPin;
+  saveAppUsers(users);
+  alert(`PIN de "${users[idx].name}" atualizado!`);
+  renderAlmoxMgmt();
 }
 
 // ═══════════════════════════════════════════════
@@ -2166,11 +3047,80 @@ function saveFuel() {
 }
 function saveRequisicoes() {
   if (!db) return;
-  db.collection('sv_data').doc('requisicoes').set({ list: requisicoes });
+  // Salva a lista sem as fotos de comprovante: o documento principal tem limite de 1MB
+  // no Firestore e fotos em base64 facilmente estourariam esse limite com o tempo.
+  const lightList = requisicoes.map(r => {
+    if (!r.comprovante) return r;
+    const { comprovante, ...rest } = r;
+    return rest;
+  });
+  db.collection('sv_data').doc('requisicoes').set({ list: lightList })
+    .catch(e => { console.error('Erro ao salvar requisições:', e); alert('Erro ao salvar requisição: ' + e.message); });
+
+  // Fotos de comprovante vão em documentos próprios (1 por requisição), evitando
+  // que o documento principal cresça demais e pare de salvar.
+  requisicoes.forEach(r => {
+    if (r.comprovante && r.num) {
+      db.collection('sv_data').doc("comp_" + r.num).set({
+        image: r.comprovante, by: r.comprovanteBy || '', date: r.comprovanteDate || ''
+      }).catch(e => { console.error('Erro ao salvar comprovante:', e); alert('Erro ao salvar a foto do comprovante: ' + e.message); });
+    }
+  });
+}
+
+function deleteComprovanteDoc(num) {
+  if (!db || !num) return;
+  db.collection('sv_data').doc("comp_" + num).delete().catch(console.error);
+}
+function nextReqSeq() {
+  let max = 0;
+  requisicoes.forEach(r => { if (r.seq && r.seq > max) max = r.seq; });
+  return max + 1;
 }
 function saveFornecedores() {
   if (!db) return;
   db.collection('sv_data').doc('fornecedores').set({ list: fornecedores });
+}
+
+let _lastFuelReport = null;
+
+function exportFuelPDF() {
+  if (!_lastFuelReport || !_lastFuelReport.filtered.length) { alert('Não há lançamentos para gerar o relatório.'); return; }
+  const r = _lastFuelReport;
+  const now = new Date();
+  const rows = r.filtered.map(e => `
+    <tr><td>${e.date}</td><td>${e.plate||'—'}</td><td>${e.items||'—'}</td><td>R$ ${e.value.toFixed(2).replace('.',',')}</td><td>${e.client}</td><td>${e.fatura||'—'}</td></tr>`).join('');
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relatório de Combustível</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:24px}
+    h1{color:#1b5e20;font-size:18px;margin-bottom:4px}
+    .sub{font-size:12px;color:#555;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th{background:#1b5e20;color:#fff;padding:6px;text-align:left}
+    td{padding:6px;border-bottom:1px solid #ddd}
+    .summary{display:flex;gap:16px;margin:16px 0}
+    .summary div{border:1px solid #ccc;border-radius:6px;padding:8px 14px;text-align:center}
+    .summary .v{font-weight:700;color:#1b5e20;font-size:15px}
+    .summary .l{font-size:10px;color:#666}
+    @media print{ button{display:none} }
+  </style></head><body>
+    <h1>⛽ Relatório de Controle de Combustível — SERVSUL</h1>
+    <div class="sub">
+      Período: ${r.monthLabel} · Placa: ${r.plateLabel} · Cliente: ${r.clientLabel}<br>
+      Gerado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+    </div>
+    <div class="summary">
+      <div><div class="v">R$ ${r.totalValue.toFixed(2).replace('.',',')}</div><div class="l">TOTAL GERAL</div></div>
+      <div><div class="v">${r.totalEntries}</div><div class="l">LANÇAMENTOS</div></div>
+      <div><div class="v">${r.uniquePlates}</div><div class="l">VEÍCULOS</div></div>
+      <div><div class="v">${r.faturas.length}</div><div class="l">FATURAS</div></div>
+    </div>
+    <table><thead><tr><th>Data</th><th>Placa</th><th>Itens</th><th>Valor</th><th>Cliente</th><th>Fatura</th></tr></thead><tbody>${rows}</tbody></table>
+    <script>window.onload = () => { window.print(); };${'</' + 'script>'}
+  </body></html>`;
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
 }
 
 function renderFuel() {
@@ -2217,6 +3167,14 @@ function renderFuel() {
   });
   html += '</tbody></table>';
   document.getElementById('fuel-table-wrap').innerHTML = html;
+
+  // Guarda o relatório atual para geração de PDF
+  _lastFuelReport = {
+    filtered, totalValue, totalEntries, uniquePlates, faturas,
+    monthLabel: document.getElementById('fuel-month').selectedOptions[0]?.textContent || 'Todos os meses',
+    plateLabel: plateFilter || 'Todas as placas',
+    clientLabel: clientFilter || 'Todos os clientes'
+  };
 
   // Bar chart by fatura
   const byFatura = {};
@@ -2266,59 +3224,465 @@ function addFuelEntry() {
 
 // ── Requisicoes ──
 function renderRequisicoes() {
-  // Populate vehicle select
   const sel = document.getElementById('req-vehicle');
   sel.innerHTML = '<option value="">— Selecione —</option>' + vehicles.map(v => `<option value="${v.plate}">${v.plate} – ${v.model||''}</option>`).join('');
 
   const list = document.getElementById('req-list');
-  if (!requisicoes.length) { list.innerHTML = '<p style="color:#999;font-size:13px">Nenhuma requisição registrada.</p>'; return; }
+  const role     = sessionStorage.getItem('sv_role');
+  const curUser  = sessionStorage.getItem('sv_user') || '';
+  const isAdmin  = role === 'admin';
+  const isMoto   = role === 'motorista';
+  const isGestora = role === 'gestora';
+  const canManage = isAdmin || isGestora; // pode emitir, assinar e autorizar requisições
 
-  const isAdmin = sessionStorage.getItem('sv_role') === 'admin';
-  list.innerHTML = requisicoes.map((r, i) => {
-    const badgeClass = r.status === 'Aprovada' ? 'badge-approved' : r.status === 'Negada' ? 'badge-denied' : 'badge-pending';
-    let actions = `<button class="btn btn-secondary btn-sm" onclick="printRequisicao(${i})">🖨️</button>`;
-    if (isAdmin && r.status === 'Pendente') {
+  // Motorista vê só as requisições com seu nome
+  let listaVis = requisicoes;
+  if (isMoto) {
+    listaVis = requisicoes.filter(r =>
+      (r.motorista || '').toUpperCase() === curUser.toUpperCase()
+    );
+  }
+
+  if (!listaVis.length) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">📋</div>${isMoto ? 'Nenhuma requisição encontrada para você.' : 'Nenhuma requisição registrada.'}</div>`;
+    return;
+  }
+  list.innerHTML = listaVis.map(r => {
+    const i = requisicoes.indexOf(r); // índice real para os botões
+    const isSigned = r.status === 'Autorizada' && r.sig;
+    const badgeClass = isSigned ? 'badge-approved' : r.status === 'Aprovada' ? 'badge-approved' : r.status === 'Negada' ? 'badge-denied' : 'badge-pending';
+    const badgeLabel = isSigned ? '✅ Autorizada' : r.status;
+
+    let actions = '';
+    if (!isMoto) actions += `<button class="btn btn-secondary btn-sm" onclick="printRequisicao(${i})">🖨️</button>`;
+    if (isSigned || r.sig) {
+      if (!isMoto) actions += ` <button class="btn btn-primary btn-sm" onclick="openVoucherView(${i})">📄 Voucher</button>`;
+      if (!isMoto) actions += ` <button class="btn btn-whatsapp btn-sm" onclick="shareReqWhatsApp(${i})">📤 WApp</button>`;
+    }
+    if (canManage && r.status === 'Pendente') {
       actions += ` <button class="btn btn-primary btn-sm" onclick="approveRequisicao(${i})">✅ Aprovar</button>`;
       actions += ` <button class="btn btn-danger btn-sm" onclick="denyRequisicao(${i})">❌ Negar</button>`;
     }
-    return `<div class="req-list-item">
-      <div class="req-head"><strong>${r.plate} – ${r.motorista||'—'}</strong><span class="${badgeClass}">${r.status}</span></div>
+    if (canManage && (r.status === 'Pendente' || r.status === 'Aprovada') && !r.sig) {
+      actions += ` <button class="btn btn-blue btn-sm" onclick="signExistingReq(${i})">✍️ Assinar</button>`;
+    }
+    if (isAdmin) {
+      actions += ` <button class="btn btn-danger btn-sm" onclick="deleteRequisicao(${i})">🗑 Excluir</button>`;
+    }
+
+    // Comprovante (foto)
+    let compHtml = '';
+    if (r.comprovante) {
+      compHtml = `<div class="comp-thumb" onclick="viewComprovante(${i})">
+        <img src="${r.comprovante}" alt="comprovante">
+        <div><div class="ct-text">📎 Comprovante anexado</div>
+        <div class="ct-sub">${r.comprovanteDate || ''} ${r.comprovanteBy ? '· ' + r.comprovanteBy : ''}</div></div>
+      </div>`;
+    } else if (isSigned || r.sig) {
+      compHtml = `<div style="margin-top:8px">
+        <button class="btn btn-secondary btn-sm" onclick="attachComprovante(${i})">📷 Anexar Comprovante</button>
+        <span style="font-size:11px;color:#aaa;margin-left:6px">Aguardando foto</span>
+      </div>`;
+    }
+
+    return `<div class="req-list-item" style="${isSigned ? 'border-left:4px solid #2E7D32' : ''}">
+      <div class="req-head"><strong>${r.plate} – ${r.motorista||'—'}</strong><span class="${badgeClass}">${badgeLabel}</span></div>
       <div class="req-detail">
         📅 ${r.date} &nbsp;|&nbsp; 🛣️ KM: ${r.km||'—'} &nbsp;|&nbsp; ⛽ ${r.litros||'—'}L &nbsp;|&nbsp; 💰 R$ ${(r.valor||0).toFixed(2).replace('.',',')}
         ${r.obs ? '<br>📝 ' + r.obs : ''}
+        ${r.num ? `<br><span style="font-size:11px;color:#aaa">Req. ${r.num}</span>` : ''}
       </div>
-      <div class="req-actions">${actions}</div>
+      ${compHtml}
+      ${actions ? `<div class="req-actions">${actions}</div>` : ''}
     </div>`;
   }).reverse().join('');
 }
 
-function submitRequisicao() {
-  const plate = document.getElementById('req-vehicle').value;
+// ── Requisição: abrir modal de assinatura (nova req) ──
+let _reqPendingData = null;
+let _reqSigningIdx  = null;
+let _rqCanvas, _rqCtx, _rqDrawing = false;
+
+function openReqSign() {
+  const plate     = document.getElementById('req-vehicle').value;
   const motorista = document.getElementById('req-motorista').value.trim();
-  const km = document.getElementById('req-km').value;
-  const litros = document.getElementById('req-litros').value;
-  const valor = document.getElementById('req-valor').value;
-  const obs = document.getElementById('req-obs').value.trim();
-  if (!plate) { alert('Selecione um veículo.'); return; }
+  const km        = document.getElementById('req-km').value;
+  const litros    = document.getElementById('req-litros').value;
+  const valor     = document.getElementById('req-valor').value;
+  const obs       = document.getElementById('req-obs').value.trim();
+  if (!plate)   { alert('Selecione um veículo.'); return; }
+  if (!motorista) { alert('Informe o motorista.'); return; }
+
+  // ── Segurança/comprometimento: bloqueia nova requisição se a última
+  //    autorizada do motorista ainda não tem comprovante de abastecimento ──
+  const semComprovante = requisicoes.find(r =>
+    (r.motorista || '').toUpperCase() === motorista.toUpperCase() &&
+    r.status === 'Autorizada' && !r.comprovante
+  );
+  if (semComprovante) {
+    alert(`⚠️ ${motorista} possui a requisição ${semComprovante.num || ''} autorizada sem o comprovante de abastecimento anexado.\n\nAnexe a foto do comprovante antes de emitir uma nova requisição.`);
+    return;
+  }
+
   const now = new Date();
-  const dateFmt = now.toLocaleDateString('pt-BR');
-  requisicoes.push({ plate, motorista, km, litros: parseFloat(litros)||0, valor: parseFloat(valor)||0, obs, date: dateFmt, status: 'Pendente', createdBy: sessionStorage.getItem('sv_user')||'—' });
-  saveRequisicoes();
-  document.getElementById('req-vehicle').value = '';
-  document.getElementById('req-motorista').value = '';
-  document.getElementById('req-km').value = '';
-  document.getElementById('req-litros').value = '';
-  document.getElementById('req-valor').value = '';
-  document.getElementById('req-obs').value = '';
+  const dateFmt = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+  const seq = nextReqSeq();
+  const num = 'REQ-' + now.getFullYear() + '-' + String(seq).padStart(4, '0');
+
+  _reqPendingData = { plate, motorista, km, litros: parseFloat(litros)||0, valor: parseFloat(valor)||0, obs, date: dateFmt, num, seq, status: 'Autorizada', createdBy: sessionStorage.getItem('sv_user')||'—' };
+  _reqSigningIdx = null;
+  openReqVoucherModal();
+}
+
+// ── Requisição: assinar requisição já existente ──
+function signExistingReq(idx) {
+  _reqSigningIdx = idx;
+  _reqPendingData = null;
+  openReqVoucherModal();
+}
+
+function openReqVoucherModal() {
+  document.getElementById('req-sign-step').style.display = '';
+  document.getElementById('req-voucher-step').style.display = 'none';
+  document.getElementById('req-voucher-modal').classList.add('open');
+  initReqSigCanvas();
+}
+
+function cancelReqVoucher() {
+  document.getElementById('req-voucher-modal').classList.remove('open');
+  _reqPendingData = null;
+  _reqSigningIdx = null;
+}
+
+// ── Canvas de assinatura da requisição ──
+function initReqSigCanvas() {
+  _rqCanvas = document.getElementById('req-sig-canvas');
+  _rqCtx = _rqCanvas.getContext('2d');
+  _rqCtx.clearRect(0, 0, _rqCanvas.width, _rqCanvas.height);
+  _rqCanvas.removeEventListener('mousedown', _rqStart);
+  _rqCanvas.removeEventListener('mousemove', _rqMove);
+  _rqCanvas.removeEventListener('mouseup',   _rqEnd);
+  _rqCanvas.removeEventListener('touchstart', _rqTStart);
+  _rqCanvas.removeEventListener('touchmove',  _rqTMove);
+  _rqCanvas.removeEventListener('touchend',   _rqEnd);
+  _rqCanvas.addEventListener('mousedown', _rqStart);
+  _rqCanvas.addEventListener('mousemove', _rqMove);
+  _rqCanvas.addEventListener('mouseup',   _rqEnd);
+  _rqCanvas.addEventListener('touchstart', _rqTStart, {passive:false});
+  _rqCanvas.addEventListener('touchmove',  _rqTMove,  {passive:false});
+  _rqCanvas.addEventListener('touchend',   _rqEnd);
+}
+
+function _rqPt(e) {
+  const r = _rqCanvas.getBoundingClientRect();
+  const sx = _rqCanvas.width / r.width;
+  const sy = _rqCanvas.height / r.height;
+  const src = e.touches ? e.touches[0] : e;
+  return { x: (src.clientX - r.left)*sx, y: (src.clientY - r.top)*sy };
+}
+function _rqStart(e) { _rqDrawing=true; const p=_rqPt(e); _rqCtx.beginPath(); _rqCtx.moveTo(p.x,p.y); _rqCtx.strokeStyle='#1B5E20'; _rqCtx.lineWidth=2.5; _rqCtx.lineCap='round'; }
+function _rqMove(e)  { if(!_rqDrawing)return; e.preventDefault(); const p=_rqPt(e); _rqCtx.lineTo(p.x,p.y); _rqCtx.stroke(); }
+function _rqTStart(e){ e.preventDefault(); _rqStart(e); }
+function _rqTMove(e) { e.preventDefault(); _rqMove(e); }
+function _rqEnd()    { _rqDrawing=false; }
+function clearReqSig(){ _rqCtx.clearRect(0,0,_rqCanvas.width,_rqCanvas.height); }
+
+function saveReqSig() {
+  const blank = !_rqCtx.getImageData(0,0,_rqCanvas.width,_rqCanvas.height).data.some(v=>v!==0);
+  if (blank) { alert('Por favor, assine antes de confirmar.'); return; }
+  const sigData = _rqCanvas.toDataURL('image/png');
+
+  if (_reqPendingData) {
+    _reqPendingData.sig = sigData;
+    _reqPendingData.sigBy = sessionStorage.getItem('sv_user') || 'Admin';
+    requisicoes.push(_reqPendingData);
+    saveRequisicoes();
+    // Limpa formulário
+    ['req-vehicle','req-motorista','req-km','req-litros','req-valor','req-obs'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.value='';
+    });
+    showVoucherInModal(_reqPendingData);
+  } else if (_reqSigningIdx !== null) {
+    requisicoes[_reqSigningIdx].sig    = sigData;
+    requisicoes[_reqSigningIdx].sigBy  = sessionStorage.getItem('sv_user') || 'Admin';
+    requisicoes[_reqSigningIdx].status = 'Autorizada';
+    saveRequisicoes();
+    showVoucherInModal(requisicoes[_reqSigningIdx]);
+  }
+  document.getElementById('req-sign-step').style.display = 'none';
+  document.getElementById('req-voucher-step').style.display = '';
   renderRequisicoes();
-  alert('Requisição enviada!');
+}
+
+// ── Renderiza voucher dentro do modal ──
+function showVoucherInModal(r) {
+  document.getElementById('vc-num-label').textContent  = r.num || '—';
+  document.getElementById('vc-date-label').textContent = r.date || '—';
+  document.getElementById('vc-plate').textContent      = r.plate || '—';
+  document.getElementById('vc-motorista').textContent  = r.motorista || '—';
+  document.getElementById('vc-km').textContent         = r.km ? r.km + ' km' : '—';
+  document.getElementById('vc-litros').textContent     = r.litros ? r.litros + ' litros' : '—';
+  document.getElementById('vc-valor').textContent      = 'R$ ' + (r.valor||0).toFixed(2).replace('.',',');
+  const obsRow = document.getElementById('vc-obs-row');
+  if (r.obs) { document.getElementById('vc-obs').textContent = r.obs; obsRow.style.display=''; }
+  else obsRow.style.display = 'none';
+  document.getElementById('vc-sig-img').src    = r.sig || '';
+  document.getElementById('vc-sig-label').textContent = r.sigBy || 'Gestor';
+  // Guarda para share/fullscreen
+  window._voucherCurrent = r;
+}
+
+// ── Abrir voucher de req existente ──
+function openVoucherView(idx) {
+  const r = requisicoes[idx];
+  document.getElementById('req-sign-step').style.display = 'none';
+  document.getElementById('req-voucher-step').style.display = '';
+  document.getElementById('req-voucher-modal').classList.add('open');
+  showVoucherInModal(r);
+}
+
+// ── Tela cheia para mostrar no posto ──
+function showVoucherFullscreen() {
+  const r = window._voucherCurrent;
+  if (!r) return;
+  const html = `
+    <div style="background:#2E7D32;color:#fff;padding:20px;border-radius:0 0 16px 16px;margin-bottom:16px;text-align:center">
+      <div style="font-size:28px;font-weight:900;letter-spacing:4px">SERVSUL</div>
+      <div style="font-size:13px;opacity:.8;margin-top:4px">Autorização de Abastecimento</div>
+      <div style="font-size:12px;opacity:.7;margin-top:6px">${r.num||''} &nbsp;·&nbsp; ${r.date||''}</div>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.1)">
+      <table style="width:100%;border-collapse:collapse;font-size:15px">
+        <tr><td style="padding:10px 0;border-bottom:1px solid #f0f0f0;color:#888">🚙 Veículo</td><td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-weight:700;text-align:right">${r.plate||'—'}</td></tr>
+        <tr><td style="padding:10px 0;border-bottom:1px solid #f0f0f0;color:#888">👤 Motorista</td><td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-weight:700;text-align:right">${r.motorista||'—'}</td></tr>
+        <tr><td style="padding:10px 0;border-bottom:1px solid #f0f0f0;color:#888">🛣️ KM Atual</td><td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-weight:700;text-align:right">${r.km ? r.km+' km' : '—'}</td></tr>
+        <tr><td style="padding:10px 0;border-bottom:1px solid #f0f0f0;color:#888">⛽ Litros Autorizados</td><td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-weight:800;font-size:18px;text-align:right;color:#2E7D32">${r.litros||'—'} L</td></tr>
+        <tr><td style="padding:10px 0;color:#888">💰 Valor Máximo</td><td style="padding:10px 0;font-weight:800;font-size:18px;text-align:right;color:#1565C0">R$ ${(r.valor||0).toFixed(2).replace('.',',')}</td></tr>
+        ${r.obs ? `<tr><td style="padding:10px 0;border-top:1px solid #f0f0f0;color:#888">📝 Obs.</td><td style="padding:10px 0;border-top:1px solid #f0f0f0;text-align:right;font-size:13px">${r.obs}</td></tr>` : ''}
+      </table>
+      <div style="margin-top:16px;text-align:center">
+        <img src="${r.sig||''}" style="height:56px;max-width:200px;object-fit:contain">
+        <div style="border-top:2px solid #333;width:180px;margin:6px auto 4px"></div>
+        <div style="font-size:12px;color:#555">${r.sigBy||'Gestor'} — Autorizado</div>
+      </div>
+    </div>
+    <div style="background:#c8e6c9;border-radius:12px;padding:16px;text-align:center;margin-top:16px">
+      <div style="font-size:20px;font-weight:900;color:#1B5E20">✅ AUTORIZADO</div>
+      <div style="font-size:13px;color:#2E7D32;margin-top:4px">Válido para 1 abastecimento nesta data</div>
+    </div>`;
+  document.getElementById('voucher-fullscreen-content').innerHTML = html;
+  document.getElementById('voucher-fullscreen').classList.add('open');
+}
+function closeVoucherFullscreen() {
+  document.getElementById('voucher-fullscreen').classList.remove('open');
+}
+
+// ── WhatsApp share ──
+function _buildWhatsAppText(r) {
+  return encodeURIComponent(
+`✅ *AUTORIZAÇÃO DE ABASTECIMENTO – SERVSUL*
+━━━━━━━━━━━━━━━━━━━━
+📋 *${r.num||'REQ'}*
+📅 ${r.date||''}
+🚙 Veículo: *${r.plate||'—'}*
+👤 Motorista: *${r.motorista||'—'}*
+🛣️ KM Atual: *${r.km ? r.km+' km' : '—'}*
+⛽ Litros Autorizados: *${r.litros||'—'} L*
+💰 Valor Máximo: *R$ ${(r.valor||0).toFixed(2).replace('.',',')}*
+${r.obs ? '📝 Obs: '+r.obs : ''}
+━━━━━━━━━━━━━━━━━━━━
+✍️ Autorizado por: *${r.sigBy||'Admin'}*
+_Apresentar esta mensagem no posto de combustível_`
+  );
+}
+
+function _voucherCardHTML(r) {
+  return `<div class="voucher-card" style="width:340px">
+    <div class="vc-header">
+      <div>
+        <div class="vc-logo">SERVSUL</div>
+        <div class="vc-subtitle">Autorização de Abastecimento</div>
+      </div>
+      <div class="vc-num">
+        <div style="font-weight:700">${r.num || '—'}</div>
+        <div>${r.date || '—'}</div>
+      </div>
+    </div>
+    <div class="vc-body">
+      <div class="vc-row"><span class="lbl">🚙 Veículo</span><span class="val">${r.plate || '—'}</span></div>
+      <div class="vc-row"><span class="lbl">👤 Motorista</span><span class="val">${r.motorista || '—'}</span></div>
+      <div class="vc-row"><span class="lbl">🛣️ KM Atual</span><span class="val">${r.km ? r.km + ' km' : '—'}</span></div>
+      <div class="vc-row"><span class="lbl">⛽ Qtd. Autorizada</span><span class="val">${r.litros ? r.litros + ' litros' : '—'}</span></div>
+      <div class="vc-row"><span class="lbl">💰 Valor Máximo</span><span class="val">R$ ${(r.valor||0).toFixed(2).replace('.',',')}</span></div>
+      ${r.obs ? `<div class="vc-row"><span class="lbl">📝 Obs.</span><span class="val">${r.obs}</span></div>` : ''}
+    </div>
+    <div class="vc-footer">
+      <div class="vc-sig-box">
+        ${r.sig ? `<img class="vc-sig-img" src="${r.sig}" alt="assinatura">` : ''}
+        <div class="vc-sig-line"></div>
+        <div class="vc-sig-label">${r.sigBy || 'Gestor / Admin'}</div>
+      </div>
+      <div style="text-align:right;font-size:10px;color:#aaa;max-width:100px">
+        Válido para<br><strong>1 abastecimento</strong><br>nesta data
+      </div>
+    </div>
+    <div class="vc-valid">✅ AUTORIZADO
+      <small>Apresentar esta tela no posto de combustível</small>
+    </div>
+  </div>`;
+}
+
+// Gera a imagem do voucher (mesmo layout do card) preservando o formato visual
+async function _generateVoucherImageBlob(r) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff;';
+  wrap.innerHTML = _voucherCardHTML(r);
+  document.body.appendChild(wrap);
+  try {
+    const canvas = await html2canvas(wrap.firstElementChild, { scale: 2, backgroundColor: '#ffffff' });
+    return await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+  } finally {
+    document.body.removeChild(wrap);
+  }
+}
+
+async function _shareVoucherImage(r) {
+  if (typeof html2canvas === 'undefined') {
+    window.open('https://wa.me/?text=' + _buildWhatsAppText(r), '_blank');
+    return;
+  }
+  const blob = await _generateVoucherImageBlob(r);
+  const fileName = `requisicao-${(r.num||'').replace(/\W+/g,'') || Date.now()}.png`;
+  const file = new File([blob], fileName, { type: 'image/png' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'Autorização de Abastecimento – SERVSUL', text: 'Autorização de abastecimento SERVSUL' });
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return; // usuário cancelou
+    }
+  }
+  // Fallback: baixar a imagem (funciona no Android) ou mostrar para salvar (iOS)
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  // iOS não suporta download de blob — mostrar a imagem para o usuário salvar manualmente
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (isIOS) {
+    alert('iOS: toque e segure a imagem para salvar e depois envie pelo WhatsApp.');
+  }
+}
+
+function shareVoucherWhatsApp() {
+  const r = window._voucherCurrent;
+  if (!r) return;
+  _shareVoucherImage(r);
+}
+
+function shareReqWhatsApp(idx) {
+  const r = requisicoes[idx];
+  _shareVoucherImage(r);
+}
+
+function filterMotoristaAC() {
+  const input = document.getElementById('req-motorista');
+  const list = document.getElementById('ac-motorista-list');
+  const q = input.value.toLowerCase();
+  const filtered = drivers.filter(d => d.name.toLowerCase().includes(q));
+  if (!filtered.length) { list.classList.remove('open'); return; }
+  list.innerHTML = filtered.map(d => `<div onclick="selectMotorista('${d.name.replace(/'/g,"\\&#39;")}')">${d.name}</div>`).join('');
+  list.classList.add('open');
+}
+function selectMotorista(name) {
+  document.getElementById('req-motorista').value = name;
+  document.getElementById('ac-motorista-list').classList.remove('open');
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.ac-wrap')) document.getElementById('ac-motorista-list').classList.remove('open');
+});
+
+
+// ── Confirm-PIN modal state ──
+let _cpbBuffer = '';
+let _cpbCallback = null;
+
+function cpbKey(d) {
+  if (_cpbBuffer.length >= 4) return;
+  _cpbBuffer += d;
+  cpbUpdateDots();
+  if (_cpbBuffer.length === 4) setTimeout(cpbTryConfirm, 180);
+}
+function cpbDel() { _cpbBuffer = _cpbBuffer.slice(0, -1); cpbUpdateDots(); }
+function cpbUpdateDots(error) {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('cpb-dot-' + i);
+    dot.className = 'pin-dot';
+    if (error) dot.classList.add('error');
+    else if (i < _cpbBuffer.length) dot.classList.add('filled');
+  }
+}
+function cpbCancel() {
+  document.getElementById('confirm-pin-overlay').classList.remove('open');
+  _cpbBuffer = '';
+  _cpbCallback = null;
+}
+function cpbTryConfirm() {
+  const pin = _cpbBuffer;
+  _cpbBuffer = '';
+  const role = sessionStorage.getItem('sv_role');
+  const name = sessionStorage.getItem('sv_user');
+  let ok = false;
+  if (role === 'admin') {
+    ok = pin === getAdminPin();
+  } else {
+    const users = getAppUsers();
+    const found = users.find(u => u.name === name && u.pin === pin);
+    ok = !!found;
+  }
+  if (ok) {
+    document.getElementById('confirm-pin-overlay').classList.remove('open');
+    if (_cpbCallback) { _cpbCallback(); _cpbCallback = null; }
+  } else {
+    cpbUpdateDots(true);
+    const hint = document.getElementById('cpb-hint');
+    hint.textContent = 'PIN incorreto. Tente novamente.';
+    hint.classList.add('pin-error');
+    setTimeout(() => { cpbUpdateDots(false); hint.textContent = ''; hint.classList.remove('pin-error'); }, 1400);
+  }
+}
+function requirePinThen(title, sub, callback) {
+  _cpbBuffer = '';
+  _cpbCallback = callback;
+  document.getElementById('cpb-title').textContent = title;
+  document.getElementById('cpb-sub').textContent = sub;
+  document.getElementById('cpb-hint').textContent = '';
+  cpbUpdateDots();
+  document.getElementById('confirm-pin-overlay').classList.add('open');
 }
 
 function approveRequisicao(idx) {
-  if (confirm('Aprovar esta requisição?')) { requisicoes[idx].status = 'Aprovada'; saveRequisicoes(); renderRequisicoes(); }
+  requirePinThen('✅ Aprovar Requisição', 'Informe seu PIN para autorizar a aprovação', () => {
+    requisicoes[idx].status = 'Aprovada';
+    requisicoes[idx].approvedBy = sessionStorage.getItem('sv_user') || '';
+    requisicoes[idx].approvedAt = new Date().toLocaleString('pt-BR');
+    saveRequisicoes();
+    renderRequisicoes();
+  });
 }
 function denyRequisicao(idx) {
-  if (confirm('Negar esta requisição?')) { requisicoes[idx].status = 'Negada'; saveRequisicoes(); renderRequisicoes(); }
+  requirePinThen('❌ Negar Requisição', 'Informe seu PIN para confirmar a negação', () => {
+    requisicoes[idx].status = 'Negada';
+    requisicoes[idx].deniedBy = sessionStorage.getItem('sv_user') || '';
+    requisicoes[idx].deniedAt = new Date().toLocaleString('pt-BR');
+    saveRequisicoes();
+    renderRequisicoes();
+  });
 }
 function printRequisicao(idx) {
   const r = requisicoes[idx];
@@ -2359,7 +3723,9 @@ function renderFornecedores() {
       html += `<div class="forn-item">
         <div class="fi-info">
           <div class="fi-name">${f.nome}</div>
-          <div class="fi-detail">📞 ${f.telefone||'—'} &nbsp;|&nbsp; 📍 ${f.endereco||'—'}${f.obs ? ' &nbsp;|&nbsp; 📝 '+f.obs : ''}</div>
+          ${f.cnpj||f.inscricao ? `<div class="fi-detail">${f.cnpj ? '🏢 CNPJ: '+f.cnpj : ''}${f.cnpj&&f.inscricao?' &nbsp;|&nbsp; ':''}${f.inscricao ? 'IE: '+f.inscricao : ''}</div>` : ''}
+          <div class="fi-detail">📞 ${f.telefone||'—'}${f.contato ? ' ('+f.contato+')' : ''} &nbsp;|&nbsp; 📍 ${f.endereco||'—'}${f.obs ? ' &nbsp;|&nbsp; 📝 '+f.obs : ''}</div>
+          ${f.maps ? `<a class="forn-map-link" href="${f.maps}" target="_blank">📍 Abrir no Google Maps</a>` : ''}
         </div>
         ${isAdmin ? `<div class="fi-actions">
           <button class="btn btn-secondary btn-sm" onclick="editFornecedor(${f._idx})">✏️</button>
@@ -2375,15 +3741,23 @@ function renderFornecedores() {
 function addFornecedor() {
   const nome = document.getElementById('forn-nome').value.trim();
   const categoria = document.getElementById('forn-categoria').value;
+  const cnpj = document.getElementById('forn-cnpj').value.trim();
+  const inscricao = document.getElementById('forn-inscricao').value.trim();
   const telefone = document.getElementById('forn-telefone').value.trim();
+  const contato = document.getElementById('forn-contato').value.trim();
   const endereco = document.getElementById('forn-endereco').value.trim();
+  const maps = document.getElementById('forn-maps').value.trim();
   const obs = document.getElementById('forn-obs').value.trim();
   if (!nome) { alert('Informe o nome do fornecedor.'); return; }
-  fornecedores.push({ nome, categoria, telefone, endereco, obs });
+  fornecedores.push({ nome, categoria, cnpj, inscricao, telefone, contato, endereco, maps, obs });
   saveFornecedores();
   document.getElementById('forn-nome').value = '';
+  document.getElementById('forn-cnpj').value = '';
+  document.getElementById('forn-inscricao').value = '';
   document.getElementById('forn-telefone').value = '';
+  document.getElementById('forn-contato').value = '';
   document.getElementById('forn-endereco').value = '';
+  document.getElementById('forn-maps').value = '';
   document.getElementById('forn-obs').value = '';
   renderFornecedores();
   alert('Fornecedor salvo!');
@@ -2393,10 +3767,14 @@ function editFornecedor(idx) {
   const f = fornecedores[idx];
   const nome = prompt('Nome:', f.nome);
   if (nome === null) return;
+  const cnpj = prompt('CNPJ:', f.cnpj||'');
+  const inscricao = prompt('Inscrição Estadual:', f.inscricao||'');
   const telefone = prompt('Telefone:', f.telefone);
+  const contato = prompt('Contato:', f.contato||'');
   const endereco = prompt('Endereço:', f.endereco);
+  const maps = prompt('Link Google Maps:', f.maps||'');
   const obs = prompt('Observações:', f.obs);
-  fornecedores[idx] = { ...f, nome: nome||f.nome, telefone: telefone||'', endereco: endereco||'', obs: obs||'' };
+  fornecedores[idx] = { ...f, nome: nome||f.nome, cnpj: cnpj||'', inscricao: inscricao||'', telefone: telefone||'', contato: contato||'', endereco: endereco||'', maps: maps||'', obs: obs||'' };
   saveFornecedores();
   renderFornecedores();
 }
@@ -2416,7 +3794,645 @@ async function startApp() {
   finishInit();
 }
 
+// ═══════════════════════════════════════════════
+//  COMPROVANTE DE ABASTECIMENTO (foto)
+// ═══════════════════════════════════════════════
+let _compIdx = null;
+
+function attachComprovante(idx) {
+  const r = requisicoes[idx];
+  if (!r) return;
+
+  // Segurança: motorista só pode anexar na própria requisição
+  const role    = sessionStorage.getItem('sv_role') || '';
+  const curUser = sessionStorage.getItem('sv_user') || '';
+  if (role === 'motorista') {
+    if ((r.motorista || '').toUpperCase() !== curUser.toUpperCase()) {
+      alert('Você não tem permissão para anexar comprovante a esta requisição.');
+      return;
+    }
+  }
+
+  // Segurança: requisição precisa estar autorizada (com assinatura)
+  if (r.status !== 'Autorizada' || !r.sig) {
+    alert('Esta requisição ainda não está autorizada. Aguarde a autorização antes de anexar o comprovante.');
+    return;
+  }
+
+  // Segurança: comprovante já anexado não pode ser substituído
+  if (r.comprovante) {
+    alert('Esta requisição já possui um comprovante anexado.');
+    return;
+  }
+
+  _compIdx = idx;
+  document.getElementById('comp-file-input').value = '';
+  document.getElementById('comp-file-input').click();
+}
+
+function handleComprovanteFile(e) {
+  const file = e.target.files[0];
+  if (!file || _compIdx === null) return;
+
+  const r = requisicoes[_compIdx];
+
+  // Segunda camada de validação no momento do salvamento
+  const role    = sessionStorage.getItem('sv_role') || '';
+  const curUser = sessionStorage.getItem('sv_user') || '';
+
+  if (!r) { _compIdx = null; return; }
+
+  if (role === 'motorista' && (r.motorista || '').toUpperCase() !== curUser.toUpperCase()) {
+    alert('Operação não permitida: requisição pertence a outro motorista.');
+    _compIdx = null;
+    return;
+  }
+
+  if (r.status !== 'Autorizada' || !r.sig) {
+    alert('Operação não permitida: requisição não está autorizada.');
+    _compIdx = null;
+    return;
+  }
+
+  if (r.comprovante) {
+    alert('Operação não permitida: comprovante já existe nesta requisição.');
+    _compIdx = null;
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const img = new Image();
+    img.onload = function() {
+      // Redimensiona para max 1000px e comprime (Firestore 1MB limit)
+      const MAX = 1000;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else       { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.72);
+
+      requisicoes[_compIdx].comprovante     = compressed;
+      requisicoes[_compIdx].comprovanteBy   = curUser || sessionStorage.getItem('sv_user') || '—';
+      requisicoes[_compIdx].comprovanteDate = new Date().toLocaleString('pt-BR');
+      saveRequisicoes();
+      renderRequisicoes();
+      _compIdx = null;
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+let _viewingCompIdx = null;
+
+function viewComprovante(idx) {
+  _viewingCompIdx = idx;
+  const r = requisicoes[idx];
+  document.getElementById('photo-modal-img').src = r.comprovante;
+  document.getElementById('photo-modal').classList.add('open');
+}
+
+function closePhotoModal() {
+  document.getElementById('photo-modal').classList.remove('open');
+  _viewingCompIdx = null;
+}
+
+function deleteComprovante() {
+  if (sessionStorage.getItem('sv_role') !== 'admin') { alert('Apenas o administrador pode remover comprovantes.'); return; }
+  if (_viewingCompIdx === null) return;
+  if (!confirm('Remover o comprovante desta requisição?')) return;
+  deleteComprovanteDoc(requisicoes[_viewingCompIdx].num);
+  delete requisicoes[_viewingCompIdx].comprovante;
+  delete requisicoes[_viewingCompIdx].comprovanteBy;
+  delete requisicoes[_viewingCompIdx].comprovanteDate;
+  saveRequisicoes();
+  renderRequisicoes();
+  closePhotoModal();
+}
+
+// ── Excluir requisição (somente administrador, com confirmação por PIN) ──
+function deleteRequisicao(idx) {
+  if (sessionStorage.getItem('sv_role') !== 'admin') { alert('Apenas o administrador pode excluir requisições.'); return; }
+  requirePinThen('🗑 Excluir Requisição', 'Informe o PIN de administrador para excluir definitivamente', () => {
+    requisicoes.splice(idx, 1);
+    saveRequisicoes();
+    renderRequisicoes();
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  RELATÓRIOS
+// ═══════════════════════════════════════════════
+let _lastRelReport = null;
+
+function _populateRelPeriodo() {
+  const sel = document.getElementById('rel-periodo');
+  if (!sel) return;
+  // Coleta todos os meses/anos presentes nas requisições
+  const meses = new Set();
+  requisicoes.forEach(r => {
+    if (!r.date) return;
+    // date é no formato DD/MM/YYYY
+    const parts = r.date.split('/');
+    if (parts.length >= 3) meses.add(parts[1] + '/' + parts[2]);
+  });
+  const atual = sel.value;
+  sel.innerHTML = '<option value="todos">Todos</option>';
+  [...meses].sort().reverse().forEach(m => {
+    const [mm, yyyy] = m.split('/');
+    const label = new Date(yyyy, mm - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    sel.innerHTML += `<option value="${m}" ${atual === m ? 'selected' : ''}>${label.charAt(0).toUpperCase() + label.slice(1)}</option>`;
+  });
+}
+
+function _filtrarReqPorPeriodo(lista) {
+  const periodo = document.getElementById('rel-periodo')?.value || 'todos';
+  if (periodo === 'todos') return lista;
+  const [mm, yyyy] = periodo.split('/');
+  return lista.filter(r => {
+    if (!r.date) return false;
+    const parts = r.date.split('/');
+    return parts[1] === mm && parts[2] === yyyy;
+  });
+}
+
+function renderRelatorios() {
+  _populateRelPeriodo();
+  const tipo = document.getElementById('rel-tipo').value;
+  // O filtro de período aparece em todos exceto fornecedores e checklist
+  const showPeriodo = !['fornecedores', 'checklist'].includes(tipo);
+  const wrap = document.getElementById('rel-periodo-wrap');
+  if (wrap) wrap.style.display = showPeriodo ? '' : 'none';
+
+  let rep;
+  if (tipo === 'abastecimento')   rep = relAbastecimento();
+  else if (tipo === 'veiculos')   rep = relVeiculos();
+  else if (tipo === 'motoristas') rep = relMotoristas();
+  else if (tipo === 'requisicoes') rep = relRequisicoes();
+  else if (tipo === 'checklist')  rep = relChecklist();
+  else if (tipo === 'fornecedores') rep = relFornecedores();
+
+  _lastRelReport = rep;
+  document.getElementById('rel-content').innerHTML = relToHtml(rep);
+}
+
+function relToHtml(rep) {
+  if (!rep.rows.length) return '<div class="empty-state"><div class="icon">📊</div>Nenhum dado disponível para este relatório.</div>';
+  let html = `<h3 style="color:var(--green-dark);margin-bottom:8px">${rep.title}</h3>`;
+  if (rep.summary) {
+    html += `<div class="fuel-summary">${rep.summary.map(s => `<div class="fs-card"><div class="fs-value">${s.v}</div><div class="fs-label">${s.l}</div></div>`).join('')}</div>`;
+  }
+  html += `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="fuel-table"><thead><tr>${rep.headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+  rep.rows.forEach(row => { html += `<tr>${row.map(c=>`<td>${c}</td>`).join('')}</tr>`; });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+// ── Relatório: Análise de Abastecimento (somente com comprovante) ──
+function relAbastecimento() {
+  // Somente requisições com comprovante anexado (abastecimento confirmado pelo motorista)
+  const confirmadas = _filtrarReqPorPeriodo(
+    requisicoes.filter(r => r.comprovante && r.status === 'Autorizada' && r.km)
+  );
+
+  if (!confirmadas.length) {
+    return { title: '⛽ Análise de Abastecimento', headers: [], rows: [], summary: [] };
+  }
+
+  // Agrupa por placa e ordena cada grupo pelo odômetro (km) crescente
+  const byPlate = {};
+  confirmadas.forEach(r => {
+    const p = r.plate || '—';
+    byPlate[p] = byPlate[p] || [];
+    byPlate[p].push({ km: parseFloat(r.km) || 0, litros: r.litros || 0, valor: r.valor || 0,
+                      motorista: r.motorista || '—', date: r.date || '' });
+  });
+
+  const rows = [];
+  let totalKmGeral = 0, totalLitrosGeral = 0, totalValorGeral = 0;
+
+  Object.entries(byPlate).forEach(([plate, abasts]) => {
+    abasts.sort((a, b) => a.km - b.km);
+    const qtd = abasts.length;
+    const totalLitros = abasts.reduce((s, a) => s + a.litros, 0);
+    const totalValor  = abasts.reduce((s, a) => s + a.valor, 0);
+
+    // KM rodado = diferença entre maior e menor odômetro no período
+    const kmMin = abasts[0].km;
+    const kmMax = abasts[abasts.length - 1].km;
+    const kmRodado = kmMax > kmMin ? kmMax - kmMin : 0;
+
+    // km/litro: usa km rodado entre abastecimentos (exclui o primeiro pois não tem anterior)
+    // Soma litros dos abastecimentos do 2° em diante (os que "consumiram" o km anterior)
+    let kmCalc = 0, litrosCalc = 0;
+    for (let i = 1; i < abasts.length; i++) {
+      const diff = abasts[i].km - abasts[i - 1].km;
+      if (diff > 0) { kmCalc += diff; litrosCalc += abasts[i].litros; }
+    }
+    const kmPorLitro = litrosCalc > 0 ? (kmCalc / litrosCalc).toFixed(2).replace('.', ',') : '—';
+
+    totalKmGeral    += kmRodado;
+    totalLitrosGeral += totalLitros;
+    totalValorGeral  += totalValor;
+
+    rows.push({
+      plate, qtd, totalLitros, totalValor, kmRodado, kmPorLitro,
+      sort: kmRodado
+    });
+  });
+
+  // Ranking: veículo que mais rodou no topo
+  rows.sort((a, b) => b.sort - a.sort);
+
+  const medalhas = ['🥇', '🥈', '🥉'];
+  const mediaPorLitroGeral = totalLitrosGeral > 0
+    ? (totalKmGeral / totalLitrosGeral).toFixed(2).replace('.', ',')
+    : '—';
+
+  return {
+    title: '⛽ Análise de Abastecimento — Comprovantes Confirmados',
+    headers: ['#', 'Placa', 'Abastecimentos', 'Litros', 'Valor Total', 'KM Rodado', 'Média KM/L'],
+    rows: rows.map((r, i) => [
+      (medalhas[i] || (i + 1) + 'º'),
+      r.plate,
+      r.qtd,
+      r.totalLitros.toFixed(1).replace('.', ',') + ' L',
+      'R$ ' + r.totalValor.toFixed(2).replace('.', ','),
+      r.kmRodado > 0 ? r.kmRodado.toLocaleString('pt-BR') + ' km' : '—',
+      r.kmPorLitro !== '—' ? r.kmPorLitro + ' km/L' : '—'
+    ]),
+    summary: [
+      { v: rows.length, l: 'VEÍCULOS' },
+      { v: confirmadas.length, l: 'ABASTECIMENTOS' },
+      { v: totalKmGeral > 0 ? totalKmGeral.toLocaleString('pt-BR') + ' km' : '—', l: 'KM TOTAL' },
+      { v: totalLitrosGeral.toFixed(1).replace('.', ',') + ' L', l: 'LITROS TOTAL' },
+      { v: 'R$ ' + totalValorGeral.toFixed(2).replace('.', ','), l: 'VALOR TOTAL' },
+      { v: mediaPorLitroGeral !== '—' ? mediaPorLitroGeral + ' km/L' : '—', l: 'MÉDIA GERAL' }
+    ]
+  };
+}
+
+// ── Relatório: Combustível por Veículo (ranking de gasto) ──
+function relVeiculos() {
+  const byPlate = {};
+  fuelEntries.forEach(e => {
+    const p = e.plate || '—';
+    byPlate[p] = byPlate[p] || { abast: 0, valorFuel: 0, reqs: 0, litrosReq: 0, valorReq: 0 };
+    byPlate[p].abast++;
+    byPlate[p].valorFuel += e.value || 0;
+  });
+  requisicoes.forEach(r => {
+    const p = r.plate || '—';
+    byPlate[p] = byPlate[p] || { abast: 0, valorFuel: 0, reqs: 0, litrosReq: 0, valorReq: 0 };
+    byPlate[p].reqs++;
+    byPlate[p].litrosReq += r.litros || 0;
+    byPlate[p].valorReq += r.valor || 0;
+  });
+  const rows = Object.entries(byPlate)
+    .map(([plate, d]) => ({ plate, ...d, total: d.valorFuel + d.valorReq }))
+    .sort((a, b) => b.total - a.total);
+  return {
+    title: '🚙 Combustível por Veículo — Ranking de Gasto',
+    headers: ['Placa', 'Abastecimentos', 'Valor Combustível', 'Requisições', 'Litros (Req)', 'Valor Requisições', 'Total Geral'],
+    rows: rows.map(r => [
+      r.plate, r.abast, 'R$ ' + r.valorFuel.toFixed(2).replace('.', ','),
+      r.reqs, r.litrosReq.toFixed(1).replace('.', ','), 'R$ ' + r.valorReq.toFixed(2).replace('.', ','),
+      'R$ ' + r.total.toFixed(2).replace('.', ',')
+    ]),
+    summary: [
+      { v: rows.length, l: 'VEÍCULOS' },
+      { v: 'R$ ' + rows.reduce((s,r)=>s+r.total,0).toFixed(2).replace('.', ','), l: 'TOTAL GERAL' }
+    ]
+  };
+}
+
+// ── Relatório: Combustível/Requisições por Motorista ──
+function relMotoristas() {
+  const byDriver = {};
+  requisicoes.forEach(r => {
+    const m = r.motorista || '—';
+    byDriver[m] = byDriver[m] || { total: 0, autorizadas: 0, pendentes: 0, negadas: 0, litros: 0, valor: 0 };
+    byDriver[m].total++;
+    if (r.status === 'Autorizada') byDriver[m].autorizadas++;
+    else if (r.status === 'Pendente') byDriver[m].pendentes++;
+    else if (r.status === 'Negada') byDriver[m].negadas++;
+    byDriver[m].litros += r.litros || 0;
+    byDriver[m].valor += r.valor || 0;
+  });
+  const rows = Object.entries(byDriver).sort((a, b) => b[1].valor - a[1].valor);
+  return {
+    title: '👤 Combustível e Requisições por Motorista',
+    headers: ['Motorista', 'Requisições', 'Autorizadas', 'Pendentes', 'Negadas', 'Litros', 'Valor Total'],
+    rows: rows.map(([m, d]) => [
+      m, d.total, d.autorizadas, d.pendentes, d.negadas,
+      d.litros.toFixed(1).replace('.', ','), 'R$ ' + d.valor.toFixed(2).replace('.', ',')
+    ]),
+    summary: [
+      { v: rows.length, l: 'MOTORISTAS' },
+      { v: requisicoes.length, l: 'REQUISIÇÕES TOTAIS' }
+    ]
+  };
+}
+
+// ── Relatório: Requisições por Status ──
+function relRequisicoes() {
+  const byStatus = {};
+  requisicoes.forEach(r => {
+    const s = r.status || '—';
+    byStatus[s] = byStatus[s] || { count: 0, valor: 0, litros: 0 };
+    byStatus[s].count++;
+    byStatus[s].valor += r.valor || 0;
+    byStatus[s].litros += r.litros || 0;
+  });
+  const rows = Object.entries(byStatus).sort((a, b) => b[1].count - a[1].count);
+  return {
+    title: '📝 Requisições por Status',
+    headers: ['Status', 'Quantidade', 'Litros', 'Valor Total'],
+    rows: rows.map(([s, d]) => [s, d.count, d.litros.toFixed(1).replace('.', ','), 'R$ ' + d.valor.toFixed(2).replace('.', ',')]),
+    summary: [
+      { v: requisicoes.length, l: 'TOTAL DE REQUISIÇÕES' },
+      { v: 'R$ ' + requisicoes.reduce((s,r)=>s+(r.valor||0),0).toFixed(2).replace('.', ','), l: 'VALOR TOTAL' }
+    ]
+  };
+}
+
+// ── Relatório: KM Rodado por Veículo (checklist) ──
+function relChecklist() {
+  const byPlate = {};
+  Object.values(records).forEach(rec => {
+    const p = rec.vehicle || '—';
+    byPlate[p] = byPlate[p] || { km: 0, registros: 0, dias: 0 };
+    byPlate[p].registros++;
+    Object.values(rec.days || {}).forEach(d => {
+      if (d.kmOut && d.kmIn) { byPlate[p].km += Number(d.kmIn) - Number(d.kmOut); byPlate[p].dias++; }
+    });
+  });
+  const rows = Object.entries(byPlate).sort((a, b) => b[1].km - a[1].km);
+  return {
+    title: '📋 KM Rodado por Veículo (Checklist)',
+    headers: ['Placa', 'Registros (meses)', 'Dias com KM', 'Total KM Rodado'],
+    rows: rows.map(([p, d]) => [p, d.registros, d.dias, d.km.toLocaleString('pt-BR') + ' km']),
+    summary: [
+      { v: rows.length, l: 'VEÍCULOS' },
+      { v: rows.reduce((s,[,d])=>s+d.km,0).toLocaleString('pt-BR') + ' km', l: 'KM TOTAL' }
+    ]
+  };
+}
+
+// ── Relatório: Fornecedores por Categoria ──
+function relFornecedores() {
+  const byCat = {};
+  fornecedores.forEach(f => {
+    const c = f.categoria || 'Outros';
+    byCat[c] = byCat[c] || { count: 0, nomes: [] };
+    byCat[c].count++;
+    byCat[c].nomes.push(f.nome);
+  });
+  const rows = Object.entries(byCat).sort((a, b) => b[1].count - a[1].count);
+  return {
+    title: '🔧 Fornecedores por Categoria',
+    headers: ['Categoria', 'Quantidade', 'Fornecedores'],
+    rows: rows.map(([c, d]) => [c, d.count, d.nomes.join(', ')]),
+    summary: [
+      { v: fornecedores.length, l: 'FORNECEDORES TOTAIS' },
+      { v: rows.length, l: 'CATEGORIAS' }
+    ]
+  };
+}
+
+function exportRelatorioPDF() {
+  if (!_lastRelReport || !_lastRelReport.rows.length) { alert('Não há dados para gerar este relatório.'); return; }
+  const rep = _lastRelReport;
+  const now = new Date();
+  const rows = rep.rows.map(r => `<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('');
+  const summary = (rep.summary||[]).map(s => `<div><div class="v">${s.v}</div><div class="l">${s.l}</div></div>`).join('');
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${rep.title}</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:24px}
+    h1{color:#1b5e20;font-size:18px;margin-bottom:4px}
+    .sub{font-size:12px;color:#555;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th{background:#1b5e20;color:#fff;padding:6px;text-align:left}
+    td{padding:6px;border-bottom:1px solid #ddd}
+    .summary{display:flex;gap:16px;margin:16px 0}
+    .summary div{border:1px solid #ccc;border-radius:6px;padding:8px 14px;text-align:center}
+    .summary .v{font-weight:700;color:#1b5e20;font-size:15px}
+    .summary .l{font-size:10px;color:#666}
+    @media print{ button{display:none} }
+  </style></head><body>
+    <h1>${rep.title} — SERVSUL</h1>
+    <div class="sub">Gerado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+    <div class="summary">${summary}</div>
+    <table><thead><tr>${rep.headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
+    <script>window.onload = () => { window.print(); };${'</' + 'script>'}
+  </body></html>`;
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
 startApp();
+
+// ═══════════════════════════════════════════════
+//  KPI CARDS
+// ═══════════════════════════════════════════════
+function renderKPIs() {
+  document.getElementById('kpi-vehicles').textContent = vehicles.length;
+
+  const allKeys = Object.keys(records);
+  document.getElementById('kpi-records').textContent = allKeys.length;
+
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  let kmThisMonth = 0;
+  allKeys.forEach(k => {
+    const r = records[k];
+    if (!r.month || r.month !== thisMonth) return;
+    Object.values(r.days||{}).forEach(d => {
+      if (d.kmOut && d.kmIn) kmThisMonth += Math.max(0, Number(d.kmIn) - Number(d.kmOut));
+    });
+  });
+  const kmEl = document.getElementById('kpi-km');
+  kmEl.textContent = kmThisMonth >= 1000
+    ? (kmThisMonth/1000).toFixed(1).replace('.',',') + 'k'
+    : kmThisMonth.toLocaleString('pt-BR');
+}
+
+// Patch renderHome to also update KPIs and req report
+const _origRenderHome = renderHome;
+renderHome = function() { _origRenderHome(); renderKPIs(); renderReqReport(); };
+
+function renderReqReport() {
+  const card = document.getElementById('req-report-card');
+  const div  = document.getElementById('req-report-content');
+  if (!card || !div) return;
+
+  // Apenas requisições Autorizadas com comprovante
+  const autorizadas = requisicoes.filter(r => r.status === 'Autorizada' && r.sig);
+  if (!autorizadas.length) { card.style.display = 'none'; return; }
+  card.style.display = '';
+
+  // Agrega por veículo
+  const byPlate = {};
+  autorizadas.forEach(r => {
+    const p = r.plate || '—';
+    if (!byPlate[p]) byPlate[p] = { litros: 0, valor: 0, count: 0, kms: [], comps: 0 };
+    byPlate[p].litros += parseFloat(r.litros) || 0;
+    byPlate[p].valor  += parseFloat(r.valor)  || 0;
+    byPlate[p].count  += 1;
+    if (r.km) byPlate[p].kms.push(parseFloat(r.km));
+    if (r.comprovante) byPlate[p].comps += 1;
+  });
+
+  const totalValor  = autorizadas.reduce((s,r) => s + (parseFloat(r.valor)||0), 0);
+  const totalLitros = autorizadas.reduce((s,r) => s + (parseFloat(r.litros)||0), 0);
+  const totalComps  = autorizadas.filter(r => r.comprovante).length;
+
+  // KPIs do relatório
+  let html = `
+    <div class="fuel-summary" style="margin-bottom:14px">
+      <div class="fs-card"><div class="fs-value">R$ ${totalValor.toFixed(2).replace('.',',')}</div><div class="fs-label">Total Gasto</div></div>
+      <div class="fs-card"><div class="fs-value">${totalLitros.toFixed(0)} L</div><div class="fs-label">Total Litros</div></div>
+      <div class="fs-card"><div class="fs-value">${totalComps}/${autorizadas.length}</div><div class="fs-label">Comprovantes</div></div>
+    </div>`;
+
+  // Tabela por veículo
+  const maxValor = Math.max(...Object.values(byPlate).map(v => v.valor), 1);
+  html += `<div style="font-size:12px;font-weight:700;color:#555;margin-bottom:8px">💰 Gasto por Veículo</div>`;
+  Object.entries(byPlate)
+    .sort((a,b) => b[1].valor - a[1].valor)
+    .forEach(([plate, d]) => {
+      const pct = (d.valor / maxValor * 100).toFixed(0);
+      const kmAvg = d.kms.length > 1
+        ? Math.round((Math.max(...d.kms) - Math.min(...d.kms)) / (d.kms.length - 1))
+        : null;
+      const compBadge = d.comps === d.count
+        ? `<span style="color:#2e7d32;font-size:10px;font-weight:700">✅ ${d.comps}/${d.count}</span>`
+        : `<span style="color:#e65100;font-size:10px;font-weight:700">⚠️ ${d.comps}/${d.count}</span>`;
+      html += `
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+            <span style="font-weight:700">${plate}</span>
+            <span style="color:#555">${d.litros.toFixed(0)}L · ${compBadge}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="flex:1;background:#e8f5e9;border-radius:6px;height:20px;overflow:hidden">
+              <div style="width:${pct}%;background:linear-gradient(90deg,#388E3C,#66BB6A);height:100%;border-radius:6px;display:flex;align-items:center;padding-left:6px">
+                <span style="font-size:10px;color:#fff;font-weight:700;white-space:nowrap">R$ ${d.valor.toFixed(2).replace('.',',')}</span>
+              </div>
+            </div>
+            ${kmAvg ? `<span style="font-size:10px;color:#888;white-space:nowrap">~${kmAvg} km/req</span>` : ''}
+          </div>
+        </div>`;
+    });
+
+  // Alerta comprovantes pendentes
+  const pendComps = autorizadas.filter(r => !r.comprovante).length;
+  if (pendComps > 0) {
+    html += `<div style="background:#fff3e0;border-radius:8px;padding:8px 12px;font-size:12px;color:#e65100;margin-top:8px">
+      ⚠️ <strong>${pendComps} abastecimento${pendComps>1?'s':''}</strong> sem comprovante anexado
+    </div>`;
+  }
+
+  div.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════
+//  PWA — Service Worker + Install Prompt
+// ═══════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+
+let _pwaPrompt = null;
+
+function isIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+}
+function isInStandaloneMode() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+}
+
+function _showInstallButtons() {
+  if (isInStandaloneMode()) return; // já instalado — não mostra nada
+  document.getElementById('login-install-btn')?.classList.add('visible');
+  document.getElementById('hdr-install-btn')?.classList.add('visible');
+}
+
+function _hideInstallButtons() {
+  document.getElementById('login-install-btn')?.classList.remove('visible');
+  document.getElementById('hdr-install-btn')?.classList.remove('visible');
+  document.getElementById('pwa-banner')?.classList.remove('show');
+}
+
+const _tutorialHTML = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/tabler-icons.min.css"><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#f5f5f5;font-family:-apple-system,'Segoe UI',Arial,sans-serif;display:flex;flex-direction:column;align-items:center;padding:12px 8px 16px}#pb-wrap{display:flex;gap:6px;margin-bottom:10px;width:260px}.pb{height:4px;border-radius:2px;flex:1;background:#ddd;transition:background .4s}.pb.active{background:#FDD835}.pb.done{background:#2E7D32}#role-label{font-size:18px;font-weight:700;color:#1B5E20;margin-bottom:2px}#step-label{font-size:11px;color:#777;margin-bottom:10px;min-height:16px}#phone{width:240px;height:460px;border-radius:34px;border:6px solid #222;background:#111;position:relative;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.3)}#phone-screen{width:100%;height:100%;background:#f5f5f5;border-radius:28px;overflow:hidden;position:relative}#nav-bar{position:absolute;bottom:0;left:0;right:0;height:42px;background:#1B5E20;display:flex;align-items:center;justify-content:space-around;z-index:10}.nav-item{color:rgba(255,255,255,.5);font-size:8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:1px}.nav-item.active{color:#FDD835}.nav-item i{font-size:17px}#screen-content{position:absolute;top:0;left:0;right:0;bottom:42px;overflow:hidden}.screen{position:absolute;inset:0;transition:opacity .3s,transform .3s;opacity:0;transform:translateX(16px);pointer-events:none;display:flex;flex-direction:column}.screen.visible{opacity:1;transform:translateX(0);pointer-events:all}.s-header{background:#1B5E20;color:#fff;padding:9px 12px 7px;font-size:10px;font-weight:600;display:flex;align-items:center;gap:5px}.s-body{flex:1;overflow:auto;padding:9px}.card-sm{background:#fff;border-radius:9px;border:0.5px solid #ddd;padding:9px 11px;margin-bottom:7px;font-size:10px}.badge{display:inline-block;padding:2px 6px;border-radius:10px;font-size:8px;font-weight:700}.badge-ok{background:#E8F5E9;color:#1B5E20}.badge-pend{background:#FFF8E1;color:#F57F17}.badge-aut{background:#E3F2FD;color:#1565C0}.tap-ring{position:absolute;width:32px;height:32px;border-radius:50%;border:3px solid rgba(253,216,53,.9);pointer-events:none;opacity:0;transform:scale(.5);z-index:999}@keyframes tapAnim{0%{opacity:0;transform:scale(.4)}30%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.4)}}.tap-ring.go{animation:tapAnim .6s ease-out forwards}#login-screen{background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1}#login-logo{width:52px;height:52px;background:#1B5E20;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}#login-logo i{font-size:26px;color:#FDD835}#login-title{font-size:13px;font-weight:700;color:#1B5E20;margin-bottom:2px}#login-sub{font-size:9px;color:#999;margin-bottom:12px}.role-btn{width:190px;padding:7px 0;border-radius:9px;border:1.5px solid #1B5E20;background:#fff;color:#1B5E20;font-size:10px;font-weight:700;margin-bottom:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}.role-btn.sel{background:#1B5E20;color:#fff}.pin-row{display:flex;gap:5px;margin:7px 0}.pin-dot{width:20px;height:20px;border-radius:50%;border:1.5px solid #ccc;background:#f0f0f0}.pin-dot.filled{background:#1B5E20;border-color:#1B5E20}.stat-row{display:flex;gap:5px;margin-bottom:7px}.stat-box{flex:1;background:#E8F5E9;border-radius:7px;padding:5px 7px;text-align:center}.stat-box .sv{font-size:12px;font-weight:700;color:#1B5E20}.stat-box .sl{font-size:7px;color:#555}.checklist-row{display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:0.5px solid #eee;font-size:9px}.check-circle{width:14px;height:14px;border-radius:50%;border:1.5px solid #1B5E20;display:flex;align-items:center;justify-content:center;flex-shrink:0}.check-circle.checked{background:#1B5E20}.check-circle.checked::after{content:'✓';color:#fff;font-size:7px}.forn-row{display:flex;align-items:center;justify-content:space-between;font-size:9px;padding:5px 0;border-bottom:0.5px solid #eee}.forn-row .fn{font-weight:700;color:#222}.forn-row .fp{color:#999;font-size:8px}.comp-img{width:100%;height:60px;background:#E8F5E9;border-radius:7px;display:flex;align-items:center;justify-content:center;margin-top:5px;font-size:8px;color:#2E7D32;border:1px dashed #81C784}#controls{display:flex;gap:8px;margin-top:10px}#controls button{padding:7px 16px;border-radius:8px;border:1px solid #ccc;background:#fff;color:#333;font-size:12px;cursor:pointer}#play-btn{background:#1B5E20;color:#FDD835;border-color:#1B5E20}#tl{display:flex;gap:5px;margin-top:7px}.tl-btn{padding:4px 12px;border-radius:16px;border:1px solid #ccc;font-size:11px;cursor:pointer;background:#fff;color:#555}.tl-btn.active{background:#1B5E20;color:#FDD835;border-color:#1B5E20}#caption{max-width:280px;text-align:center;font-size:11px;color:#666;margin-top:6px;min-height:32px;line-height:1.5}</style></head><body><div id="pb-wrap"><div class="pb" id="pb0"></div><div class="pb" id="pb1"></div><div class="pb" id="pb2"></div></div><div id="role-label">ALMOX</div><div id="step-label">Login e seleção de perfil</div><div id="phone"><div id="phone-screen"><div id="screen-content"><div class="screen visible" id="sc-login" style="background:#fff;align-items:center;justify-content:center;flex-direction:column"><div id="login-logo"><i class="ti ti-truck"></i></div><div id="login-title">SERVSUL — Frota</div><div id="login-sub">Selecione o perfil</div><button class="role-btn" id="rb-almox"><i class="ti ti-package"></i>ALMOX</button><button class="role-btn" id="rb-gestor"><i class="ti ti-user-check"></i>GESTOR</button><button class="role-btn" id="rb-motorista"><i class="ti ti-steering-wheel"></i>MOTORISTA</button><div class="pin-row" id="pin-row"><div class="pin-dot" id="p0"></div><div class="pin-dot" id="p1"></div><div class="pin-dot" id="p2"></div><div class="pin-dot" id="p3"></div></div></div><div class="screen" id="sc-inicio"><div class="s-header"><i class="ti ti-home"></i> Início</div><div class="s-body"><div class="stat-row"><div class="stat-box"><div class="sv">8</div><div class="sl">Requisições</div></div><div class="stat-box"><div class="sv">3</div><div class="sl">Pendentes</div></div><div class="stat-box"><div class="sv">2</div><div class="sl">Veículos</div></div></div><div class="card-sm" style="background:#FFF8E1"><div style="font-weight:700;font-size:9px;color:#F57F17;margin-bottom:3px">⚠ Checklist pendente</div><div style="font-size:8px;color:#555">VEÍ-001 — inspeção aguardando</div></div><div class="card-sm"><div style="font-weight:700;font-size:9px;color:#1B5E20;margin-bottom:3px">Última movimentação</div><div style="font-size:8px;color:#555">Req #045 — gasolina — R$ 180,00</div></div></div></div><div class="screen" id="sc-checklist"><div class="s-header"><i class="ti ti-clipboard-check"></i> Checklist VEÍ-001</div><div class="s-body"><div style="font-size:8px;color:#888;margin-bottom:7px">TOYOTA HILUX • ABC-1234</div><div class="checklist-row"><div class="check-circle checked" id="ck1"></div><span>Pneus em bom estado</span></div><div class="checklist-row"><div class="check-circle checked" id="ck2"></div><span>Nível de óleo OK</span></div><div class="checklist-row"><div class="check-circle" id="ck3"></div><span>Lanternas funcionando</span></div><div class="checklist-row"><div class="check-circle" id="ck4"></div><span>Documentos no veículo</span></div><div style="margin-top:8px;display:flex;justify-content:flex-end"><div style="background:#1B5E20;color:#fff;border-radius:7px;padding:5px 12px;font-size:9px;font-weight:700">Salvar</div></div></div></div><div class="screen" id="sc-req"><div class="s-header"><i class="ti ti-file-text"></i> Requisições</div><div class="s-body"><div class="card-sm"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-weight:700">Req #046</span><span class="badge badge-pend">Pendente</span></div><div style="font-size:8px;color:#555">JOÃO SILVA • ABC-1234 • 45L • R$270</div></div><div class="card-sm"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-weight:700">Req #047</span><span class="badge badge-aut" id="req47-badge">Pendente</span></div><div style="font-size:8px;color:#555">MARIA SANTOS • DEF-5678 • 30L • R$180</div><div style="font-size:8px;color:#1B5E20;margin-top:3px;display:none" id="sig-line">✔ Assinado pelo gestor</div></div></div></div><div class="screen" id="sc-forn"><div class="s-header"><i class="ti ti-building-store"></i> Fornecedores</div><div class="s-body"><div style="font-size:8px;color:#888;margin-bottom:7px">Visualização — somente leitura</div><div class="forn-row"><div><div class="fn">Posto Shell Centro</div><div class="fp">Gasolina • Diesel</div></div><div style="font-size:8px;color:#1B5E20">Ativo</div></div><div class="forn-row"><div><div class="fn">Auto Peças Rápida</div><div class="fp">Peças • Manutenção</div></div><div style="font-size:8px;color:#1B5E20">Ativo</div></div><div class="forn-row"><div><div class="fn">Posto Ipiranga</div><div class="fp">Gasolina • GNV</div></div><div style="font-size:8px;color:#999">Inativo</div></div></div></div><div class="screen" id="sc-moto-req"><div class="s-header"><i class="ti ti-file-text"></i> Minhas Requisições</div><div class="s-body"><div class="card-sm"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-weight:700">Req #046</span><span class="badge badge-aut">Autorizada</span></div><div style="font-size:8px;color:#555">45L gasolina • R$270 • ABC-1234</div><div style="margin-top:5px;display:flex;justify-content:flex-end"><div style="background:#1B5E20;color:#fff;border-radius:5px;padding:3px 9px;font-size:8px;font-weight:700">📎 Anexar comprovante</div></div></div><div class="card-sm" style="opacity:.5"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-weight:700">Req #043</span><span class="badge badge-ok">Concluída</span></div><div style="font-size:8px;color:#555">30L diesel • R$180</div></div></div></div><div class="screen" id="sc-comp"><div class="s-header"><i class="ti ti-file-text"></i> Req #046 — Comprovante</div><div class="s-body"><div class="comp-img"><i class="ti ti-photo" style="font-size:20px;margin-right:5px"></i>comprovante_046.jpg</div><div style="margin-top:7px;font-size:8px;color:#555"><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:0.5px solid #eee"><span>KM atual</span><span style="font-weight:700">48.250 km</span></div><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:0.5px solid #eee"><span>Litros</span><span style="font-weight:700">45 L</span></div><div style="display:flex;justify-content:space-between;padding:3px 0"><span>Valor</span><span style="font-weight:700">R$ 270,00</span></div></div><div style="background:#E8F5E9;border-radius:7px;padding:5px 9px;margin-top:7px;font-size:8px;color:#1B5E20;font-weight:700">✔ Comprovante enviado com sucesso</div></div></div></div><div id="nav-bar"><div class="nav-item active" id="nav0"><i class="ti ti-home"></i><span>Início</span></div><div class="nav-item" id="nav1"><i class="ti ti-file-text"></i><span>Req.</span></div><div class="nav-item" id="nav2"><i class="ti ti-clipboard-check"></i><span>Check</span></div><div class="nav-item" id="nav3"><i class="ti ti-building-store"></i><span>Forn.</span></div></div><div class="tap-ring" id="tap"></div></div></div><div id="caption">Pressione Play para iniciar</div><div id="controls"><button id="play-btn" onclick="togglePlay()">▶ Play</button><button onclick="restart()">↺ Reiniciar</button></div><div id="tl"><button class="tl-btn active" onclick="jumpTo(0)">ALMOX</button><button class="tl-btn" onclick="jumpTo(1)">GESTOR</button><button class="tl-btn" onclick="jumpTo(2)">MOTORISTA</button></div><script>const steps=[{role:'ALMOX',pb:0,step:'Login — seleciona perfil ALMOX',caption:'O almoxarife toca em ALMOX e digita o PIN de 4 dígitos.',fn:s=>{showLogin();tap(95,145);setTimeout(()=>sel('rb-almox'),400)}},{role:'ALMOX',pb:0,step:'Digitando PIN de acesso',caption:'PIN de 4 dígitos garante autenticação segura por usuário.',fn:s=>{tap(120,205);setTimeout(()=>fillPin(4),300)}},{role:'ALMOX',pb:0,step:'Tela Início — visão geral',caption:'Resumo instantâneo: requisições, pendências e veículos da frota.',fn:s=>{showScreen('sc-inicio');setNav(0)}},{role:'ALMOX',pb:0,step:'Acessando Checklist do veículo',caption:'Na aba Checklist, registra a inspeção antes de liberar o veículo.',fn:s=>{tap(185,460);setTimeout(()=>{showScreen('sc-checklist');setNav(2)},400)}},{role:'ALMOX',pb:0,step:'Marcando itens inspecionados',caption:'Marca lanternas e documentos como OK — segurança operacional garantida.',fn:s=>{tap(120,175);setTimeout(()=>{ck('ck3')},400);setTimeout(()=>{tap(120,205);ck('ck4')},900)}},{role:'GESTOR',pb:1,step:'Login — seleciona perfil GESTOR',caption:'A gestora toca em GESTOR, escolhe o nome e digita o PIN.',fn:s=>{showLogin();sel(null);fillPin(0);tap(95,165);setTimeout(()=>sel('rb-gestor'),400);setTimeout(()=>fillPin(4),700)}},{role:'GESTOR',pb:1,step:'Aba Requisições — ver pedidos',caption:'Visualiza todas as requisições pendentes de autorização.',fn:s=>{showScreen('sc-req');setNav(1);document.getElementById('req47-badge').textContent='Pendente';document.getElementById('req47-badge').className='badge badge-pend';document.getElementById('sig-line').style.display='none'}},{role:'GESTOR',pb:1,step:'Autorizando requisição com assinatura',caption:'Toca em Autorizar — assinatura digital registrada em tempo real no servidor.',fn:s=>{tap(190,295);setTimeout(()=>{document.getElementById('req47-badge').textContent='Autorizada';document.getElementById('req47-badge').className='badge badge-aut';document.getElementById('sig-line').style.display=''},600)}},{role:'GESTOR',pb:1,step:'Aba Fornecedores — somente leitura',caption:'Gestora vê fornecedores homologados sem poder editar ou excluir.',fn:s=>{tap(185,460);setTimeout(()=>{showScreen('sc-forn');setNav(3)},400)}},{role:'MOTORISTA',pb:2,step:'Login — seleciona perfil MOTORISTA',caption:'O motorista toca em MOTORISTA, escolhe o nome e digita o PIN.',fn:s=>{showLogin();sel(null);fillPin(0);tap(95,185);setTimeout(()=>sel('rb-motorista'),400);setTimeout(()=>fillPin(3),700)}},{role:'MOTORISTA',pb:2,step:'Vê suas requisições autorizadas',caption:'Somente as próprias requisições aparecem. Req #046 está pronta para comprovante.',fn:s=>{showScreen('sc-moto-req');setNav(1)}},{role:'MOTORISTA',pb:2,step:'Anexa comprovante de abastecimento',caption:'Após abastecer, toca em "Anexar comprovante" e tira foto do cupom fiscal.',fn:s=>{tap(180,275);setTimeout(()=>showScreen('sc-comp'),500)}},{role:'MOTORISTA',pb:2,step:'Comprovante registrado com sucesso',caption:'KM, litros e valor salvos. Gestor e ALMOX podem gerar relatórios de consumo.',fn:s=>{}}];let cur=0,playing=false,timer=null;function showLogin(){hideAll();document.getElementById('sc-login').classList.add('visible');document.getElementById('nav-bar').style.display='none'}function showScreen(id){hideAll();document.getElementById(id).classList.add('visible');document.getElementById('nav-bar').style.display='flex'}function hideAll(){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('visible'))}function setNav(idx){document.querySelectorAll('.nav-item').forEach((n,i)=>n.classList.toggle('active',i===idx))}function sel(id){document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('sel'));if(id)document.getElementById(id)?.classList.add('sel')}function fillPin(n){document.querySelectorAll('.pin-dot').forEach((d,i)=>d.classList.toggle('filled',i<n))}function ck(id){document.getElementById(id)?.classList.add('checked')}function tap(x,y){const t=document.getElementById('tap');t.style.left=(x-16)+'px';t.style.top=(y-16)+'px';t.classList.remove('go');void t.offsetWidth;t.classList.add('go')}function runStep(idx){if(idx>=steps.length){endPlay();return}const s=steps[idx];document.getElementById('role-label').textContent=s.role;document.getElementById('step-label').textContent=s.step;document.getElementById('caption').textContent=s.caption;document.querySelectorAll('.tl-btn').forEach((b,i)=>b.classList.toggle('active',i===s.pb));for(let i=0;i<3;i++){const pb=document.getElementById('pb'+i);pb.className='pb'+(i<s.pb?' done':i===s.pb?' active':'')}s.fn(s);timer=setTimeout(()=>{cur++;runStep(cur)},2600)}function togglePlay(){if(playing){pausePlay()}else{startPlay()}}function startPlay(){playing=true;document.getElementById('play-btn').textContent='⏸ Pausar';runStep(cur)}function pausePlay(){playing=false;clearTimeout(timer);document.getElementById('play-btn').textContent='▶ Continuar'}function endPlay(){playing=false;clearTimeout(timer);document.getElementById('play-btn').textContent='▶ Play';document.getElementById('caption').textContent='Concluído! Toque em Reiniciar para rever.'}function restart(){clearTimeout(timer);playing=false;cur=0;document.getElementById('play-btn').textContent='▶ Play';showLogin();sel(null);fillPin(0);setNav(0);document.getElementById('role-label').textContent='ALMOX';document.getElementById('step-label').textContent='Login e seleção de perfil';document.getElementById('caption').textContent='Pressione Play para iniciar';document.querySelectorAll('.pb').forEach(p=>p.className='pb');document.getElementById('nav-bar').style.display='none';document.querySelectorAll('.tl-btn').forEach((b,i)=>b.classList.toggle('active',i===0))}function jumpTo(roleIdx){clearTimeout(timer);playing=false;document.getElementById('play-btn').textContent='▶ Play';const firstStep=[0,5,9][roleIdx];cur=firstStep;const s=steps[cur];document.getElementById('role-label').textContent=s.role;document.getElementById('step-label').textContent=s.step;document.getElementById('caption').textContent=s.caption;s.fn(s);document.querySelectorAll('.tl-btn').forEach((b,i)=>b.classList.toggle('active',i===roleIdx));for(let i=0;i<3;i++){const pb=document.getElementById('pb'+i);pb.className='pb'+(i<s.pb?' done':i===s.pb?' active':'')}}restart();<\/script></body></html>`;
+
+function openTutorial() {
+  const modal = document.getElementById('tutorial-modal');
+  const iframe = document.getElementById('tutorial-iframe');
+  if (!iframe.contentDocument || iframe.src === 'about:blank') {
+    iframe.srcdoc = _tutorialHTML;
+  }
+  modal.classList.add('open');
+}
+
+function closeTutorial() {
+  document.getElementById('tutorial-modal')?.classList.remove('open');
+}
+
+async function triggerInstall() {
+  if (isIOS()) {
+    // iOS: não tem prompt nativo — mostra as instruções
+    document.getElementById('ios-install-modal')?.classList.add('open');
+    return;
+  }
+  if (_pwaPrompt) {
+    // Android/Chrome: dispara o prompt nativo
+    _pwaPrompt.prompt();
+    const { outcome } = await _pwaPrompt.userChoice;
+    _pwaPrompt = null;
+    if (outcome === 'accepted') _hideInstallButtons();
+    return;
+  }
+  // Fallback: orientação manual
+  alert('Para instalar:\n\nAndroid: menu ⋮ → "Adicionar à tela inicial"\niPhone: botão ⎋ Compartilhar → "Adicionar à Tela de Início"');
+}
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _pwaPrompt = e;
+  // Mostra o banner compacto E os botões dedicados
+  document.getElementById('pwa-banner')?.classList.add('show');
+  _showInstallButtons();
+});
+
+document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
+  if (!_pwaPrompt) return;
+  _pwaPrompt.prompt();
+  const { outcome } = await _pwaPrompt.userChoice;
+  _pwaPrompt = null;
+  _hideInstallButtons();
+});
+
+document.getElementById('pwa-close-btn')?.addEventListener('click', () => {
+  document.getElementById('pwa-banner')?.classList.remove('show');
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  // Mostra botões se não estiver em standalone
+  _showInstallButtons();
+});
+
+window.addEventListener('appinstalled', () => {
+  _hideInstallButtons();
+});
 </script>
 </body>
 </html>

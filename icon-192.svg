@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="40" fill="#2E7D32"/>
+  <text x="96" y="72" font-family="Arial,sans-serif" font-size="18" font-weight="900" fill="white" text-anchor="middle" letter-spacing="2">SERVSUL</text>
+  <text x="96" y="94" font-family="Arial,sans-serif" font-size="10" fill="rgba(255,255,255,0.75)" text-anchor="middle">CONTROLE DE FROTA</text>
+  <!-- Car body -->
+  <rect x="34" y="118" width="124" height="34" rx="8" fill="white"/>
+  <!-- Car roof -->
+  <path d="M60 118 L72 100 L120 100 L132 118 Z" fill="white"/>
+  <!-- Windshields -->
+  <path d="M63 116 L73 103 L93 103 L90 116 Z" fill="#2E7D32"/>
+  <path d="M102 116 L105 103 L119 103 L129 116 Z" fill="#2E7D32"/>
+  <!-- Wheels -->
+  <circle cx="62" cy="152" r="14" fill="#1B5E20"/>
+  <circle cx="62" cy="152" r="7" fill="white"/>
+  <circle cx="130" cy="152" r="14" fill="#1B5E20"/>
+  <circle cx="130" cy="152" r="7" fill="white"/>
+  <!-- Windows -->
+  <rect x="40" y="122" width="28" height="14" rx="3" fill="#A5D6A7"/>
+  <rect x="124" y="122" width="28" height="14" rx="3" fill="#A5D6A7"/>
+</svg>
