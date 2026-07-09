@@ -251,8 +251,7 @@
   body.user-mode .admin-only { display: none !important; }
   body.user-mode .readonly-msg { display: block !important; }
   /* Motorista e Almox não acessam Fornecedores; Gestora acessa só leitura */
-  body.role-motorista #screen-fornecedores,
-  body.role-almox     #screen-fornecedores { display: none !important; }
+  body.role-motorista #screen-fornecedores { display: none !important; }
   .readonly-msg {
     display: none; background: #fff3e0; color: #e65100;
     border: 1px solid #ffcc80; border-radius: 8px;
@@ -552,11 +551,26 @@
   /* ── FORNECEDORES TAB ── */
   .forn-category { margin-bottom: 18px; }
   .forn-category h3 { font-size: 13px; font-weight: 700; color: var(--green-dark); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e0e0e0; }
-  .forn-item { display: flex; justify-content: space-between; align-items: flex-start; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; }
+  .forn-item { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; margin-bottom: 8px; overflow: hidden; }
+  .forn-item-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; cursor: pointer; }
+  .forn-item-header:hover { background: #f5f5f5; }
   .forn-item .fi-info { flex: 1; }
   .forn-item .fi-name { font-weight: 700; font-size: 13px; }
+  .forn-item .fi-cat-badge { display: inline-block; background: #E8F5E9; color: #1B5E20; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; margin-top: 3px; }
   .forn-item .fi-detail { font-size: 11px; color: #666; margin-top: 2px; }
-  .forn-item .fi-actions { display: flex; gap: 4px; }
+  .forn-item .fi-actions { display: flex; gap: 4px; align-items: center; }
+  .forn-chevron { font-size: 14px; color: #aaa; transition: transform .2s; }
+  .forn-chevron.open { transform: rotate(180deg); }
+  .forn-item-body { display: none; padding: 0 12px 12px; border-top: 1px solid #f0f0f0; }
+  .forn-item-body.open { display: block; }
+  .forn-detail-row { font-size: 12px; color: #555; padding: 3px 0; display: flex; gap: 6px; align-items: flex-start; }
+  .forn-detail-row span:first-child { min-width: 16px; }
+  .forn-btns { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .btn-wpp { display: inline-flex; align-items: center; gap: 6px; background: #25D366; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none; }
+  .btn-wpp:hover { background: #1ebe5c; }
+  .btn-solicitar { display: inline-flex; align-items: center; gap: 6px; background: #1B5E20; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .btn-solicitar:hover { background: #2E7D32; }
+  .forn-sol-badge { background: #FFF8E1; color: #E65100; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
   .forn-search { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; background: #fafafa; margin-bottom: 12px; }
   .forn-row { display: flex; gap: 10px; }
   .forn-row .form-group { flex: 1; }
@@ -1280,6 +1294,7 @@
           <option value="requisicoes">📝 Requisições por Status</option>
           <option value="checklist">📋 KM Rodado por Veículo (checklist)</option>
           <option value="fornecedores">🔧 Fornecedores por Categoria</option>
+          <option value="solicitacoes_forn">📲 Solicitações a Fornecedores</option>
         </select>
       </div>
       <div class="form-group" style="flex:1;min-width:130px;margin:0" id="rel-periodo-wrap">
@@ -2397,9 +2412,8 @@ function applyRole() {
     document.body.classList.add('user-mode', 'role-almox');
     document.getElementById('hdr-user').textContent = user;
     document.getElementById('hdr-role').textContent = '📦 Almox';
-    // Acesso somente a Início e Checklist
     document.querySelectorAll('.nav button').forEach(b => b.style.display = 'none');
-    ['home','checklist'].forEach(id => {
+    ['home','checklist','fornecedores'].forEach(id => {
       const btn = document.querySelector(`.nav button[onclick*="'${id}'"]`);
       if (btn) btn.style.display = '';
     });
@@ -3103,8 +3117,10 @@ function exportFuelPDF() {
     .summary .v{font-weight:700;color:#1b5e20;font-size:15px}
     .summary .l{font-size:10px;color:#666}
     @media print{ button{display:none} }
+    #btn-voltar{position:fixed;top:12px;right:12px;background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;z-index:999}
   </style></head><body>
-    <h1>⛽ Relatório de Controle de Combustível — SERVSUL</h1>
+    <button id="btn-voltar" onclick="window.close()">← Voltar ao App</button>
+    <h1>⛽ Relatório de Controle de Combustível — POWER</h1>
     <div class="sub">
       Período: ${r.monthLabel} · Placa: ${r.plateLabel} · Cliente: ${r.clientLabel}<br>
       Gerado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
@@ -3706,9 +3722,8 @@ function renderFornecedores() {
     return (f.nome||'').toLowerCase().includes(search) || (f.categoria||'').toLowerCase().includes(search) || (f.telefone||'').includes(search);
   });
 
-  // Group by category
   const groups = {};
-  filtered.forEach((f, idx) => {
+  filtered.forEach(f => {
     const cat = f.categoria || 'Outros';
     if (!groups[cat]) groups[cat] = [];
     groups[cat].push({ ...f, _idx: fornecedores.indexOf(f) });
@@ -3720,22 +3735,60 @@ function renderFornecedores() {
   Object.keys(groups).sort().forEach(cat => {
     html += `<div class="forn-category"><h3>${cat}</h3>`;
     groups[cat].forEach(f => {
+      const id = 'fb-' + f._idx;
+      const wppNum = (f.telefone||'').replace(/\D/g,'');
+      const user = sessionStorage.getItem('sv_user') || 'usuário';
+      const wppMsg = encodeURIComponent(`Olá, sou ${user} da POWER Frota. Gostaria de solicitar suporte/orçamento. Aguardo retorno.`);
+      const wppHref = wppNum ? `https://wa.me/55${wppNum}?text=${wppMsg}` : '';
       html += `<div class="forn-item">
-        <div class="fi-info">
-          <div class="fi-name">${f.nome}</div>
-          ${f.cnpj||f.inscricao ? `<div class="fi-detail">${f.cnpj ? '🏢 CNPJ: '+f.cnpj : ''}${f.cnpj&&f.inscricao?' &nbsp;|&nbsp; ':''}${f.inscricao ? 'IE: '+f.inscricao : ''}</div>` : ''}
-          <div class="fi-detail">📞 ${f.telefone||'—'}${f.contato ? ' ('+f.contato+')' : ''} &nbsp;|&nbsp; 📍 ${f.endereco||'—'}${f.obs ? ' &nbsp;|&nbsp; 📝 '+f.obs : ''}</div>
-          ${f.maps ? `<a class="forn-map-link" href="${f.maps}" target="_blank">📍 Abrir no Google Maps</a>` : ''}
+        <div class="forn-item-header" onclick="document.getElementById('${id}').classList.toggle('open');this.querySelector('.forn-chevron').classList.toggle('open')">
+          <div class="fi-info">
+            <div class="fi-name">${f.nome}</div>
+            <span class="fi-cat-badge">${cat}</span>
+          </div>
+          <div class="fi-actions">
+            ${isAdmin ? `<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();editFornecedor(${f._idx})">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteFornecedor(${f._idx})">🗑️</button>` : ''}
+            <span class="forn-chevron">▼</span>
+          </div>
         </div>
-        ${isAdmin ? `<div class="fi-actions">
-          <button class="btn btn-secondary btn-sm" onclick="editFornecedor(${f._idx})">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteFornecedor(${f._idx})">🗑️</button>
-        </div>` : ''}
+        <div class="forn-item-body" id="${id}">
+          ${f.cnpj ? `<div class="forn-detail-row"><span>🏢</span><span>CNPJ: ${f.cnpj}</span></div>` : ''}
+          ${f.inscricao ? `<div class="forn-detail-row"><span>📄</span><span>IE: ${f.inscricao}</span></div>` : ''}
+          ${f.telefone ? `<div class="forn-detail-row"><span>📞</span><span>${f.telefone}${f.contato ? ' — '+f.contato : ''}</span></div>` : ''}
+          ${f.endereco ? `<div class="forn-detail-row"><span>📍</span><span>${f.endereco}</span></div>` : ''}
+          ${f.obs ? `<div class="forn-detail-row"><span>📝</span><span>${f.obs}</span></div>` : ''}
+          ${f.maps ? `<div class="forn-detail-row"><span>🗺️</span><a class="forn-map-link" href="${f.maps}" target="_blank">Abrir no Google Maps</a></div>` : ''}
+          <div class="forn-btns">
+            ${wppHref ? `<a class="btn-wpp" href="${wppHref}" target="_blank" onclick="solicitarFornecedor(${f._idx})">📲 Suporte via WhatsApp</a>` : '<span style="font-size:11px;color:#aaa">Sem telefone cadastrado</span>'}
+          </div>
+        </div>
       </div>`;
     });
     html += '</div>';
   });
   list.innerHTML = html;
+}
+
+async function solicitarFornecedor(idx) {
+  const f = fornecedores[idx];
+  if (!f) return;
+  const user = sessionStorage.getItem('sv_user') || '?';
+  const role = sessionStorage.getItem('sv_role') || '?';
+  const reg = {
+    data: new Date().toLocaleString('pt-BR'),
+    usuario: user,
+    perfil: role,
+    fornecedor: f.nome || '—',
+    categoria: f.categoria || '—',
+    telefone: f.telefone || '—'
+  };
+  try {
+    const doc = await db.collection('sv_data').doc('solicitacoes_forn').get();
+    const lista = doc.exists ? (doc.data().lista || []) : [];
+    lista.push(reg);
+    await db.collection('sv_data').doc('solicitacoes_forn').set({ lista });
+  } catch(e) { console.warn('solicitarFornecedor:', e); }
 }
 
 function addFornecedor() {
@@ -3965,7 +4018,7 @@ function renderRelatorios() {
   _populateRelPeriodo();
   const tipo = document.getElementById('rel-tipo').value;
   // O filtro de período aparece em todos exceto fornecedores e checklist
-  const showPeriodo = !['fornecedores', 'checklist'].includes(tipo);
+  const showPeriodo = !['fornecedores', 'checklist', 'solicitacoes_forn'].includes(tipo);
   const wrap = document.getElementById('rel-periodo-wrap');
   if (wrap) wrap.style.display = showPeriodo ? '' : 'none';
 
@@ -3976,6 +4029,7 @@ function renderRelatorios() {
   else if (tipo === 'requisicoes') rep = relRequisicoes();
   else if (tipo === 'checklist')  rep = relChecklist();
   else if (tipo === 'fornecedores') rep = relFornecedores();
+  else if (tipo === 'solicitacoes_forn') { renderRelSolicitacoesForn(); return; }
 
   _lastRelReport = rep;
   document.getElementById('rel-content').innerHTML = relToHtml(rep);
@@ -4205,6 +4259,70 @@ function relFornecedores() {
   };
 }
 
+// ── Relatório: Solicitações a Fornecedores (async, lê Firestore) ──
+async function renderRelSolicitacoesForn() {
+  const el = document.getElementById('rel-content');
+  el.innerHTML = '<p style="color:#999;font-size:13px">Carregando solicitações...</p>';
+  _lastRelReport = null;
+  try {
+    const doc = await db.collection('sv_data').doc('solicitacoes_forn').get();
+    const lista = doc.exists ? (doc.data().lista || []) : [];
+    if (!lista.length) {
+      el.innerHTML = '<div class="empty-state"><div class="icon">📲</div>Nenhuma solicitação registrada até o momento.</div>';
+      return;
+    }
+    const sorted = [...lista].reverse();
+    const byCat = {};
+    sorted.forEach(s => { byCat[s.categoria] = (byCat[s.categoria]||0)+1; });
+    const sumCards = Object.entries(byCat).map(([c,n]) => `<div class="fs-card"><div class="fs-value">${n}</div><div class="fs-label">${c}</div></div>`).join('');
+    const rows = sorted.map(s =>
+      `<tr><td>${s.data||'—'}</td><td>${s.usuario||'—'}</td><td>${s.perfil||'—'}</td><td>${s.fornecedor||'—'}</td><td>${s.categoria||'—'}</td><td>${s.telefone||'—'}</td></tr>`
+    ).join('');
+    el.innerHTML = `
+      <h3 style="color:var(--green-dark);margin-bottom:8px">📲 Solicitações a Fornecedores</h3>
+      <div class="fuel-summary">
+        <div class="fs-card"><div class="fs-value">${lista.length}</div><div class="fs-label">TOTAL</div></div>
+        ${sumCards}
+      </div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table class="fuel-table"><thead><tr>
+          <th>Data/Hora</th><th>Usuário</th><th>Perfil</th><th>Fornecedor</th><th>Categoria</th><th>Telefone</th>
+        </tr></thead><tbody>${rows}</tbody></table>
+      </div>
+      <button class="btn btn-primary" style="margin-top:12px" onclick="exportSolicitacoesPDF(${JSON.stringify(lista).replace(/"/g,'&quot;')})">📄 Gerar PDF</button>`;
+  } catch(e) {
+    el.innerHTML = '<p style="color:red;font-size:13px">Erro ao carregar: ' + e.message + '</p>';
+  }
+}
+
+function exportSolicitacoesPDF(lista) {
+  if (!lista || !lista.length) { alert('Sem dados.'); return; }
+  const rows = [...lista].reverse().map(s =>
+    `<tr><td>${s.data||'—'}</td><td>${s.usuario||'—'}</td><td>${s.perfil||'—'}</td><td>${s.fornecedor||'—'}</td><td>${s.categoria||'—'}</td><td>${s.telefone||'—'}</td></tr>`
+  ).join('');
+  const now = new Date().toLocaleString('pt-BR');
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Solicitações a Fornecedores — POWER</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:24px}
+    h1{color:#1b5e20;font-size:18px;margin-bottom:4px}
+    .sub{font-size:12px;color:#555;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th{background:#1b5e20;color:#fff;padding:6px;text-align:left}
+    td{padding:6px;border-bottom:1px solid #ddd}
+    #btn-voltar{position:fixed;top:12px;right:12px;background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;z-index:999}
+    @media print{button{display:none}}
+  </style></head><body>
+  <button id="btn-voltar" onclick="window.close()">← Voltar ao App</button>
+  <h1>📲 Solicitações a Fornecedores — POWER</h1>
+  <div class="sub">Total: ${lista.length} registro(s) &nbsp;|&nbsp; Gerado em: ${now}</div>
+  <table><thead><tr><th>Data/Hora</th><th>Usuário</th><th>Perfil</th><th>Fornecedor</th><th>Categoria</th><th>Telefone</th></tr></thead>
+  <tbody>${rows}</tbody></table>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
 function exportRelatorioPDF() {
   if (!_lastRelReport || !_lastRelReport.rows.length) { alert('Não há dados para gerar este relatório.'); return; }
   const rep = _lastRelReport;
@@ -4224,8 +4342,10 @@ function exportRelatorioPDF() {
     .summary .v{font-weight:700;color:#1b5e20;font-size:15px}
     .summary .l{font-size:10px;color:#666}
     @media print{ button{display:none} }
+    #btn-voltar{position:fixed;top:12px;right:12px;background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;z-index:999}
   </style></head><body>
-    <h1>${rep.title} — SERVSUL</h1>
+    <button id="btn-voltar" onclick="window.close()">← Voltar ao App</button>
+    <h1>${rep.title} — POWER</h1>
     <div class="sub">Gerado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
     <div class="summary">${summary}</div>
     <table><thead><tr>${rep.headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
