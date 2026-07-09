@@ -2383,7 +2383,7 @@ function doLogin(role, name) {
 function applyRole() {
   const role = sessionStorage.getItem('sv_role');
   const user = sessionStorage.getItem('sv_user') || '';
-  document.body.classList.remove('user-mode', 'admin-mode', 'role-motorista', 'role-gestora');
+  document.body.classList.remove('user-mode', 'admin-mode', 'role-motorista', 'role-gestora', 'role-almox');
 
   if (role === 'admin') {
     document.body.classList.add('admin-mode');
@@ -2405,7 +2405,7 @@ function applyRole() {
     document.getElementById('hdr-role').textContent = '👩‍💼 Gestora';
     document.querySelectorAll('.nav button').forEach(b => b.style.display = 'none');
     ['requisicao', 'fornecedores'].forEach(id => {
-      const btn = document.querySelector(`.nav button[onclick*="'${id}'"]`);
+      const btn = document.querySelector(`.nav button[onclick*="${id}"]`);
       if (btn) btn.style.display = '';
     });
   } else if (role === 'almox') {
@@ -2414,7 +2414,7 @@ function applyRole() {
     document.getElementById('hdr-role').textContent = '📦 Almox';
     document.querySelectorAll('.nav button').forEach(b => b.style.display = 'none');
     ['home','checklist','fornecedores'].forEach(id => {
-      const btn = document.querySelector(`.nav button[onclick*="'${id}'"]`);
+      const btn = document.querySelector(`.nav button[onclick*="${id}"]`);
       if (btn) btn.style.display = '';
     });
   } else {
