@@ -3738,7 +3738,24 @@ function renderFornecedores() {
       const id = 'fb-' + f._idx;
       const wppNum = (f.telefone||'').replace(/\D/g,'');
       const user = sessionStorage.getItem('sv_user') || 'usuário';
-      const wppMsg = encodeURIComponent(`Olá, sou ${user} da POWER Frota. Gostaria de solicitar suporte/orçamento. Aguardo retorno.`);
+      const catLower = (f.categoria||'').toLowerCase();
+      let wppTexto;
+      if (catLower.includes('guincho')) {
+        wppTexto = `Olá, aqui é o ${user}. Solicito socorro do guincho para um de nossos veículos. Aguardo retorno.`;
+      } else if (catLower.includes('mecân') || catLower.includes('mecan')) {
+        wppTexto = `Olá, aqui é o ${user}. Solicito serviço mecânico para um de nossos veículos. Aguardo retorno.`;
+      } else if (catLower.includes('pneu') || catLower.includes('borracharia')) {
+        wppTexto = `Olá, aqui é o ${user}. Solicito serviço de pneus/borracharia para um de nossos veículos. Aguardo retorno.`;
+      } else if (catLower.includes('elétric') || catLower.includes('eletric')) {
+        wppTexto = `Olá, aqui é o ${user}. Solicito serviço elétrico para um de nossos veículos. Aguardo retorno.`;
+      } else if (catLower.includes('funilaria') || catLower.includes('lataria') || catLower.includes('pintura')) {
+        wppTexto = `Olá, aqui é o ${user}. Solicito serviço de funilaria/pintura para um de nossos veículos. Aguardo retorno.`;
+      } else if (catLower.includes('combustível') || catLower.includes('combustivel') || catLower.includes('posto')) {
+        wppTexto = `Olá, aqui é o ${user}. Solicito abastecimento para um de nossos veículos. Aguardo retorno.`;
+      } else {
+        wppTexto = `Olá, aqui é o ${user}. Solicito suporte/orçamento referente a: ${f.categoria||'serviço'}. Aguardo retorno.`;
+      }
+      const wppMsg = encodeURIComponent(wppTexto);
       const wppHref = wppNum ? `https://wa.me/55${wppNum}?text=${wppMsg}` : '';
       html += `<div class="forn-item">
         <div class="forn-item-header" onclick="document.getElementById('${id}').classList.toggle('open');this.querySelector('.forn-chevron').classList.toggle('open')">
