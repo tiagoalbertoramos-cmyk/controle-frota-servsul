@@ -3120,7 +3120,7 @@ function exportFuelPDF() {
     #btn-voltar{position:fixed;top:12px;right:12px;background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;z-index:999}
   </style></head><body>
     <button id="btn-voltar" onclick="window.close()">← Voltar ao App</button>
-    <h1>⛽ Relatório de Controle de Combustível — POWER</h1>
+    <h1>⛽ Relatório de Controle de Combustível — SERVSUL</h1>
     <div class="sub">
       Período: ${r.monthLabel} · Placa: ${r.plateLabel} · Cliente: ${r.clientLabel}<br>
       Gerado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
@@ -4318,7 +4318,7 @@ function exportSolicitacoesPDF(lista) {
     `<tr><td>${s.data||'—'}</td><td>${s.usuario||'—'}</td><td>${s.perfil||'—'}</td><td>${s.fornecedor||'—'}</td><td>${s.categoria||'—'}</td><td>${s.telefone||'—'}</td></tr>`
   ).join('');
   const now = new Date().toLocaleString('pt-BR');
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Solicitações a Fornecedores — POWER</title>
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Solicitações a Fornecedores — SERVSUL</title>
   <style>
     body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:24px}
     h1{color:#1b5e20;font-size:18px;margin-bottom:4px}
@@ -4330,7 +4330,7 @@ function exportSolicitacoesPDF(lista) {
     @media print{button{display:none}}
   </style></head><body>
   <button id="btn-voltar" onclick="window.close()">← Voltar ao App</button>
-  <h1>📲 Solicitações a Fornecedores — POWER</h1>
+  <h1>📲 Solicitações a Fornecedores — SERVSUL</h1>
   <div class="sub">Total: ${lista.length} registro(s) &nbsp;|&nbsp; Gerado em: ${now}</div>
   <table><thead><tr><th>Data/Hora</th><th>Usuário</th><th>Perfil</th><th>Fornecedor</th><th>Categoria</th><th>Telefone</th></tr></thead>
   <tbody>${rows}</tbody></table>
@@ -4362,7 +4362,7 @@ function exportRelatorioPDF() {
     #btn-voltar{position:fixed;top:12px;right:12px;background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;z-index:999}
   </style></head><body>
     <button id="btn-voltar" onclick="window.close()">← Voltar ao App</button>
-    <h1>${rep.title} — POWER</h1>
+    <h1>${rep.title} — SERVSUL</h1>
     <div class="sub">Gerado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
     <div class="summary">${summary}</div>
     <table><thead><tr>${rep.headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
