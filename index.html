@@ -252,6 +252,8 @@
   body.user-mode .readonly-msg { display: block !important; }
   /* Motorista e Almox não acessam Fornecedores; Gestora acessa só leitura */
   body.role-motorista #screen-fornecedores { display: none !important; }
+  body.role-gestora .nav-forn,
+  body.role-almox   .nav-forn { display: flex !important; }
   .readonly-msg {
     display: none; background: #fff3e0; color: #e65100;
     border: 1px solid #ffcc80; border-radius: 8px;
@@ -907,7 +909,7 @@
   <button onclick="showScreen('history')">📁 Histórico</button>
   <button onclick="showScreen('fuel')">⛽ Combustível</button>
   <button onclick="showScreen('requisicao')">📝 Requisição</button>
-  <button onclick="showScreen('fornecedores')" style="display:none">🔧 Fornecedores</button>
+  <button class="nav-forn admin-only" onclick="showScreen('fornecedores')">🔧 Fornecedores</button>
   <button class="admin-only" onclick="showScreen('relatorios')">📊 Relatórios</button>
 </div>
 
@@ -1187,12 +1189,6 @@
     <div class="fuel-filters">
       <select id="fuel-month" onchange="renderFuel()">
         <option value="">Todos os meses</option>
-        <option value="01">Janeiro 2026</option>
-        <option value="02">Fevereiro 2026</option>
-        <option value="03">Março 2026</option>
-        <option value="04">Abril 2026</option>
-        <option value="05">Maio 2026</option>
-        <option value="06">Junho 2026</option>
       </select>
       <select id="fuel-plate" onchange="renderFuel()">
         <option value="">Todas as placas</option>
@@ -1474,12 +1470,12 @@ function save() {
   if (db) {
     // Salva registro atual no Firestore
     if (currentKey && records[currentKey]) {
-      db.collection('sv_records').doc(currentKey).set(records[currentKey]).catch(console.error);
+      db.collection('sv_records').doc(currentKey).set(records[currentKey]).catch(e => { console.error(e); alert('Erro ao salvar checklist: ' + e.message); });
     }
     // Salva configurações (debounced)
     clearTimeout(save._t);
     save._t = setTimeout(() => {
-      db.collection('sv_data').doc('settings').set({ vehicles, drivers }).catch(console.error);
+      db.collection('sv_data').doc('settings').set({ vehicles, drivers }).catch(e => { console.error(e); alert('Erro ao salvar configurações: ' + e.message); });
     }, 800);
   } else {
     // Fallback: localStorage
@@ -2290,9 +2286,13 @@ function updatePinDots(error) {
   }
 }
 
-/* PIN individual do motorista = 4 primeiros dígitos do CPF cadastrado */
-function driverCpfPin(cpf) {
-  return (cpf || '').replace(/\D/g, '').slice(0, 4);
+/* PIN individual do motorista — campo 'pin' cadastrado pelo admin (padrão: 1234) */
+function driverCpfPin(_unused) {
+  // mantido por compatibilidade; use driverPin(driver) para novo código
+  return '1234';
+}
+function driverPin(driver) {
+  return (driver && driver.pin) ? String(driver.pin) : '1234';
 }
 
 function tryLogin() {
@@ -2304,8 +2304,8 @@ function tryLogin() {
     pinError('PIN de administrador incorreto.');
   } else if (loginMode === 'motorista-driver') {
     const driver = drivers.find(d => d.name === selectedLoginName);
-    const expected = driverCpfPin(driver && driver.cpf);
-    if (expected && pin === expected) { doLogin('motorista', selectedLoginName); return; }
+    const expected = driverPin(driver);
+    if (pin === expected) { doLogin('motorista', selectedLoginName); return; }
     pinError('PIN incorreto. Tente novamente.');
   } else if (loginMode === 'almox-user') {
     const users = getAppUsers();
@@ -2529,55 +2529,17 @@ function changePassword() {
 // ═══════════════════════════════════════════════
 //  DEFAULT DRIVERS – DRA/SERVSUL (CNH extraída)
 // ═══════════════════════════════════════════════
+// Dados sensíveis (CPF, RG, nascimento) removidos do código-fonte por LGPD.
+// São cadastrados pelo admin no painel Motoristas e salvos no Firestore.
 const DEFAULT_DRIVERS = [
-  {
-    name: 'LUCIANA APARECIDA SANT ANA',
-    cpf: '032.573.179-99', rg: '5527198-4 SESP/PR',
-    nascimento: '24/01/1973', cnh: '04043772250',
-    categoria: 'B', validade: '27/07/2031', primeiraHab: '26/02/2007'
-  },
-  {
-    name: 'CLAUDINEI HENRIQUE DOS SANTOS',
-    cpf: '962.307.899-49', rg: '6473873-9 SESP/PR',
-    nascimento: '18/02/1974', cnh: '03041655774',
-    categoria: 'B', validade: '28/02/2028', primeiraHab: '01/10/2003'
-  },
-  {
-    name: 'WELLINGTON KELVIN EVANGELISTA FERREIRA',
-    cpf: '116.049.289-90', rg: 'TIS04978990 SESP/PR',
-    nascimento: '25/09/2001', cnh: '07881208702',
-    categoria: 'AB', validade: '05/11/2035', primeiraHab: '19/07/2022'
-  },
-  {
-    name: 'JORGE EDUARDO ALVES',
-    cpf: '036.601.809-47', rg: '76076944 SESP/PR',
-    nascimento: '19/09/1981', cnh: '07293241844',
-    categoria: 'AB', validade: '15/02/2034', primeiraHab: '11/07/2019'
-  },
-  {
-    name: 'VAGNER APARECIDO DE CAMPOS',
-    cpf: '064.237.929-76', rg: '92638570 SESP/PR',
-    nascimento: '29/04/1982', cnh: '05486353842',
-    categoria: 'B', validade: '26/11/2034', primeiraHab: '15/04/2012'
-  },
-  {
-    name: 'CRISTIAN RODRIGUES GONCALVES DA SILVA',
-    cpf: '094.117.979-62', rg: '94031967 SESP/PR',
-    nascimento: '14/07/1993', cnh: '05622322121',
-    categoria: 'AB', validade: '18/03/2028', primeiraHab: '10/10/2012'
-  },
-  {
-    name: 'FELIPE DE OLIVEIRA ROSA',
-    cpf: '095.627.179-58', rg: '11188825 SESP/PR',
-    nascimento: '24/12/1990', cnh: '09090449060',
-    categoria: 'B', validade: '01/08/2026', primeiraHab: '18/10/2013'
-  },
-  {
-    name: 'ALEXANDRE BATISTA',
-    cpf: '962.213.729-68', rg: '6711789-0 SESP/PR',
-    nascimento: '09/07/1974', cnh: '02756901210',
-    categoria: 'B', validade: '05/10/2033', primeiraHab: '26/03/1998'
-  },
+  { name: 'LUCIANA APARECIDA SANT ANA',            cnh: '04043772250', categoria: 'B',  validade: '27/07/2031', primeiraHab: '26/02/2007', pin: '1234' },
+  { name: 'CLAUDINEI HENRIQUE DOS SANTOS',          cnh: '03041655774', categoria: 'B',  validade: '28/02/2028', primeiraHab: '01/10/2003', pin: '1234' },
+  { name: 'WELLINGTON KELVIN EVANGELISTA FERREIRA', cnh: '07881208702', categoria: 'AB', validade: '05/11/2035', primeiraHab: '19/07/2022', pin: '1234' },
+  { name: 'JORGE EDUARDO ALVES',                    cnh: '07293241844', categoria: 'AB', validade: '15/02/2034', primeiraHab: '11/07/2019', pin: '1234' },
+  { name: 'VAGNER APARECIDO DE CAMPOS',             cnh: '05486353842', categoria: 'B',  validade: '26/11/2034', primeiraHab: '15/04/2012', pin: '1234' },
+  { name: 'CRISTIAN RODRIGUES GONCALVES DA SILVA',  cnh: '05622322121', categoria: 'AB', validade: '18/03/2028', primeiraHab: '10/10/2012', pin: '1234' },
+  { name: 'FELIPE DE OLIVEIRA ROSA',                cnh: '09090449060', categoria: 'B',  validade: '01/08/2026', primeiraHab: '18/10/2013', pin: '1234' },
+  { name: 'ALEXANDRE BATISTA',                      cnh: '02756901210', categoria: 'B',  validade: '05/10/2033', primeiraHab: '26/03/1998', pin: '1234' },
 ];
 
 function initDefaultDrivers() {
@@ -2604,18 +2566,16 @@ function initDefaultDrivers() {
 //  INIT
 // ═══════════════════════════════════════════════
 function ensureDefaultMotoristUser() {
-  const exists = _appUsers.some(u => u.role === 'motorista');
-  if (!exists) {
-    _appUsers.push({ name: 'MOTORISTA', pin: '0000', role: 'motorista' });
-    saveAuth();
-  }
+  // Não cria usuário motorista genérico — motoristas usam o cadastro de motoristas com PIN próprio
 }
 
 function ensureDefaultGestoraUser() {
   const exists = _appUsers.some(u => u.role === 'gestora');
   if (!exists) {
-    _appUsers.push({ name: 'MARIA GESTORA', pin: '1111', role: 'gestora' });
+    const pin = Math.floor(1000 + Math.random() * 9000).toString();
+    _appUsers.push({ name: 'MARIA GESTORA', pin, role: 'gestora' });
     saveAuth();
+    console.info('[SERVSUL] PIN inicial da Gestora gerado. Acesse Configurações > Usuários para alterar.');
   }
 }
 
@@ -3135,6 +3095,7 @@ function exportFuelPDF() {
     <script>window.onload = () => { window.print(); };${'</' + 'script>'}
   </body></html>`;
   const w = window.open('', '_blank');
+  if (!w) { alert('Popup bloqueado. Permita popups para este site e tente novamente.'); return; }
   w.document.write(html);
   w.document.close();
 }
@@ -3145,6 +3106,22 @@ function renderFuel() {
   const clientFilter = document.getElementById('fuel-client').value;
 
   // Populate plate dropdown
+  // Popula meses dinamicamente a partir dos dados reais
+  const monthSel = document.getElementById('fuel-month');
+  const curMonth = monthSel.value;
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const monthsInData = [...new Set(fuelEntries.map(e => {
+    const p = (e.date||'').split('/'); return p.length >= 3 ? p[1]+'/'+p[2].slice(0,4) : null;
+  }).filter(Boolean))].sort((a,b) => {
+    const [ma,ya] = a.split('/'); const [mb,yb] = b.split('/');
+    return (+ya*12 + +ma) - (+yb*12 + +mb);
+  });
+  monthSel.innerHTML = '<option value="">Todos os meses</option>' + monthsInData.map(mv => {
+    const [m,y] = mv.split('/');
+    const label = meses[+m-1] + ' ' + y;
+    return `<option value="${m}"${m===curMonth?' selected':''}>${label}</option>`;
+  }).join('');
+
   const plates = [...new Set(fuelEntries.map(e => e.plate).filter(Boolean))].sort();
   const plateSel = document.getElementById('fuel-plate');
   const curPlate = plateSel.value;
@@ -3703,6 +3680,7 @@ function denyRequisicao(idx) {
 function printRequisicao(idx) {
   const r = requisicoes[idx];
   const w = window.open('','','width=400,height=500');
+  if (!w) { alert('Popup bloqueado. Permita popups para este site e tente novamente.'); return; }
   w.document.write(`<html><head><title>Requisição</title><style>body{font-family:Arial;padding:20px}h2{color:#2e7d32}table{width:100%;border-collapse:collapse}td{padding:6px;border-bottom:1px solid #ddd;font-size:13px}td:first-child{font-weight:700;width:40%}</style></head><body>
     <h2>Requisição de Combustível</h2>
     <table><tr><td>Veículo</td><td>${r.plate}</td></tr><tr><td>Motorista</td><td>${r.motorista||'—'}</td></tr><tr><td>Data</td><td>${r.date}</td></tr><tr><td>KM Atual</td><td>${r.km||'—'}</td></tr><tr><td>Litros</td><td>${r.litros||'—'}</td></tr><tr><td>Valor</td><td>R$ ${(r.valor||0).toFixed(2).replace('.',',')}</td></tr><tr><td>Status</td><td>${r.status}</td></tr><tr><td>Obs</td><td>${r.obs||'—'}</td></tr></table>
@@ -3789,7 +3767,7 @@ function renderFornecedores() {
 
 async function solicitarFornecedor(idx) {
   const f = fornecedores[idx];
-  if (!f) return;
+  if (!f || !db) return;
   const user = sessionStorage.getItem('sv_user') || '?';
   const role = sessionStorage.getItem('sv_role') || '?';
   const reg = {
@@ -4279,6 +4257,7 @@ function relFornecedores() {
 // ── Relatório: Solicitações a Fornecedores (async, lê Firestore) ──
 async function renderRelSolicitacoesForn() {
   const el = document.getElementById('rel-content');
+  if (!db) { el.innerHTML = '<div class="empty-state"><div class="icon">📲</div>Relatório disponível apenas com conexão ao servidor.</div>'; return; }
   el.innerHTML = '<p style="color:#999;font-size:13px">Carregando solicitações...</p>';
   _lastRelReport = null;
   try {
@@ -4369,6 +4348,7 @@ function exportRelatorioPDF() {
     <script>window.onload = () => { window.print(); };${'</' + 'script>'}
   </body></html>`;
   const w = window.open('', '_blank');
+  if (!w) { alert('Popup bloqueado. Permita popups para este site e tente novamente.'); return; }
   w.document.write(html);
   w.document.close();
 }
