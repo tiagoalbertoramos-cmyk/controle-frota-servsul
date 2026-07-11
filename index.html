@@ -4294,9 +4294,23 @@ async function renderRelSolicitacoesForn() {
           <th>Data/Hora</th><th>Usuário</th><th>Perfil</th><th>Fornecedor</th><th>Categoria</th><th>Telefone</th>
         </tr></thead><tbody>${rows}</tbody></table>
       </div>
-      <button class="btn btn-primary" style="margin-top:12px" onclick="exportSolicitacoesPDF(${JSON.stringify(lista).replace(/"/g,'&quot;')})">📄 Gerar PDF</button>`;
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="exportSolicitacoesPDF(${JSON.stringify(lista).replace(/"/g,'&quot;')})">📄 Gerar PDF</button>
+        <button class="btn btn-danger" onclick="zerarSolicitacoesForn()">🗑️ Zerar histórico</button>
+      </div>`;
   } catch(e) {
     el.innerHTML = '<p style="color:red;font-size:13px">Erro ao carregar: ' + e.message + '</p>';
+  }
+}
+
+async function zerarSolicitacoesForn() {
+  if (!confirm('Tem certeza que deseja apagar todo o histórico de solicitações a fornecedores? Esta ação não pode ser desfeita.')) return;
+  try {
+    await db.collection('sv_data').doc('solicitacoes_forn').set({ lista: [] });
+    alert('Histórico zerado com sucesso.');
+    renderRelSolicitacoesForn();
+  } catch(e) {
+    alert('Erro ao zerar: ' + e.message);
   }
 }
 
