@@ -1526,7 +1526,7 @@ async function loadFromFirestore() {
     }
     if (authSnap.exists) {
       const a = authSnap.data();
-      _appUsers = a.appUsers || [];
+      if (Array.isArray(a.appUsers) && a.appUsers.length > 0) _appUsers = a.appUsers;
       _adminPin = a.adminPin || DEFAULT_ADMIN_PIN;
       if (_adminPin === '1234') { _adminPin = DEFAULT_ADMIN_PIN; saveAuth(); }
     }
@@ -2201,7 +2201,7 @@ function renderChart() {
 // ═══════════════════════════════════════════════
 //  SECURITY / PIN AUTH
 // ═══════════════════════════════════════════════
-const DEFAULT_ADMIN_PIN = '2291';
+const DEFAULT_ADMIN_PIN = '0913';
 const MAX_USERS = 5;
 
 let _adminPin = DEFAULT_ADMIN_PIN;
@@ -2287,13 +2287,14 @@ function updatePinDots(error) {
   }
 }
 
-/* PIN individual do motorista — campo 'pin' cadastrado pelo admin (padrão: 1234) */
-function driverCpfPin(_unused) {
-  // mantido por compatibilidade; use driverPin(driver) para novo código
-  return '1234';
+/* PIN do motorista = 4 primeiros dígitos do CPF */
+function driverCpfPin(cpf) {
+  return (cpf || '').replace(/\D/g, '').slice(0, 4);
 }
 function driverPin(driver) {
-  return (driver && driver.pin) ? String(driver.pin) : '1234';
+  if (!driver) return '0000';
+  if (driver.pin) return String(driver.pin);
+  return driverCpfPin(driver.cpf);
 }
 
 function tryLogin() {
@@ -2530,17 +2531,15 @@ function changePassword() {
 // ═══════════════════════════════════════════════
 //  DEFAULT DRIVERS – DRA/SERVSUL (CNH extraída)
 // ═══════════════════════════════════════════════
-// Dados sensíveis (CPF, RG, nascimento) removidos do código-fonte por LGPD.
-// São cadastrados pelo admin no painel Motoristas e salvos no Firestore.
 const DEFAULT_DRIVERS = [
-  { name: 'LUCIANA APARECIDA SANT ANA',            cnh: '04043772250', categoria: 'B',  validade: '27/07/2031', primeiraHab: '26/02/2007', pin: '1234' },
-  { name: 'CLAUDINEI HENRIQUE DOS SANTOS',          cnh: '03041655774', categoria: 'B',  validade: '28/02/2028', primeiraHab: '01/10/2003', pin: '1234' },
-  { name: 'WELLINGTON KELVIN EVANGELISTA FERREIRA', cnh: '07881208702', categoria: 'AB', validade: '05/11/2035', primeiraHab: '19/07/2022', pin: '1234' },
-  { name: 'JORGE EDUARDO ALVES',                    cnh: '07293241844', categoria: 'AB', validade: '15/02/2034', primeiraHab: '11/07/2019', pin: '1234' },
-  { name: 'VAGNER APARECIDO DE CAMPOS',             cnh: '05486353842', categoria: 'B',  validade: '26/11/2034', primeiraHab: '15/04/2012', pin: '1234' },
-  { name: 'CRISTIAN RODRIGUES GONCALVES DA SILVA',  cnh: '05622322121', categoria: 'AB', validade: '18/03/2028', primeiraHab: '10/10/2012', pin: '1234' },
-  { name: 'FELIPE DE OLIVEIRA ROSA',                cnh: '09090449060', categoria: 'B',  validade: '01/08/2026', primeiraHab: '18/10/2013', pin: '1234' },
-  { name: 'ALEXANDRE BATISTA',                      cnh: '02756901210', categoria: 'B',  validade: '05/10/2033', primeiraHab: '26/03/1998', pin: '1234' },
+  { name: 'LUCIANA APARECIDA SANT ANA',            cpf: '032.573.179-99', cnh: '04043772250', categoria: 'B',  validade: '27/07/2031', primeiraHab: '26/02/2007' },
+  { name: 'CLAUDINEI HENRIQUE DOS SANTOS',          cpf: '962.307.899-49', cnh: '03041655774', categoria: 'B',  validade: '28/02/2028', primeiraHab: '01/10/2003' },
+  { name: 'WELLINGTON KELVIN EVANGELISTA FERREIRA', cpf: '116.049.289-90', cnh: '07881208702', categoria: 'AB', validade: '05/11/2035', primeiraHab: '19/07/2022' },
+  { name: 'JORGE EDUARDO ALVES',                    cpf: '036.601.809-47', cnh: '07293241844', categoria: 'AB', validade: '15/02/2034', primeiraHab: '11/07/2019' },
+  { name: 'VAGNER APARECIDO DE CAMPOS',             cpf: '064.237.929-76', cnh: '05486353842', categoria: 'B',  validade: '26/11/2034', primeiraHab: '15/04/2012' },
+  { name: 'CRISTIAN RODRIGUES GONCALVES DA SILVA',  cpf: '094.117.979-62', cnh: '05622322121', categoria: 'AB', validade: '18/03/2028', primeiraHab: '10/10/2012' },
+  { name: 'FELIPE DE OLIVEIRA ROSA',                cpf: '095.627.179-58', cnh: '09090449060', categoria: 'B',  validade: '01/08/2026', primeiraHab: '18/10/2013' },
+  { name: 'ALEXANDRE BATISTA',                      cpf: '962.213.729-68', cnh: '02756901210', categoria: 'B',  validade: '05/10/2033', primeiraHab: '26/03/1998' },
 ];
 
 function initDefaultDrivers() {
