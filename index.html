@@ -1502,7 +1502,14 @@ async function initFirebase() {
   try {
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    await firebase.auth().signInAnonymously();
+    const auth = firebase.auth();
+    await auth.signInAnonymously();
+    await new Promise((resolve, reject) => {
+      const unsub = auth.onAuthStateChanged(user => {
+        unsub();
+        if (user) resolve(user); else reject(new Error('Auth falhou'));
+      }, reject);
+    });
     return true;
   } catch(e) {
     console.error('Erro ao inicializar Firebase:', e);
