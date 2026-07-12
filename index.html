@@ -1252,6 +1252,11 @@
     <div class="form-group"><label>Fatura</label><input type="text" id="fuel-new-fatura" placeholder="Nº fatura"></div>
     <button class="btn btn-primary" onclick="addFuelEntry()">💾 Salvar</button>
   </div>
+  <div class="card admin-only" style="border:1.5px solid #ffcdd2;background:#fff8f8">
+    <h2 style="color:#c62828">⚠️ Zona de Perigo</h2>
+    <p style="font-size:13px;color:#555;margin-bottom:12px">Apaga <strong>todos</strong> os lançamentos de combustível. Esta ação não pode ser desfeita.</p>
+    <button class="btn" style="background:#c62828;color:#fff;width:100%" onclick="zerarCombustivel()">🗑️ Zerar todos os lançamentos</button>
+  </div>
 </div>
 
 <!-- ════════════════════ REQUISICAO ════════════════════ -->
@@ -3257,6 +3262,14 @@ function addFuelEntry() {
   dateEl.value=''; plateEl.value=''; itemsEl.value=''; valueEl.value=''; faturaEl.value='';
   renderFuel();
   alert('Lançamento salvo!');
+}
+
+async function zerarCombustivel() {
+  if (!confirm('Tem certeza que deseja apagar TODOS os lançamentos de combustível? Esta ação não pode ser desfeita.')) return;
+  fuelEntries = [];
+  await db.collection('sv_data').doc('fuel').set({ entries: [] });
+  renderFuel();
+  alert('Todos os lançamentos foram apagados.');
 }
 
 // ── Requisicoes ──
