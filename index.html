@@ -804,8 +804,20 @@
       <p>Gestão em Controle de Frotas</p>
     </div>
 
+    <!-- ETAPA 0: Código da empresa -->
+    <div id="login-step-empresa">
+      <div class="login-select-title">Código da empresa</div>
+      <input id="empresa-code-input" type="text" placeholder="Ex: SERVSUL"
+        style="width:100%;padding:13px 14px;border:1.5px solid #ddd;border-radius:12px;font-size:16px;
+        text-transform:uppercase;letter-spacing:2px;text-align:center;outline:none;margin-bottom:10px"
+        oninput="this.value=this.value.toUpperCase()"
+        onkeydown="if(event.key==='Enter') confirmarEmpresa()">
+      <div id="empresa-code-error" style="color:#c62828;font-size:12px;text-align:center;min-height:16px;margin-bottom:6px"></div>
+      <button class="btn btn-primary" style="width:100%" onclick="confirmarEmpresa()">Entrar →</button>
+    </div>
+
     <!-- ETAPA 1: Seleção de usuário -->
-    <div id="login-step-select">
+    <div id="login-step-select" style="display:none">
       <div class="login-select-title">Quem vai acessar?</div>
       <div class="login-role-grid" id="login-user-list">
         <!-- preenchido dinamicamente -->
@@ -1512,12 +1524,12 @@ function save() {
   if (db) {
     // Salva registro atual no Firestore
     if (currentKey && records[currentKey]) {
-      db.collection('sv_records').doc(currentKey).set(records[currentKey]).catch(e => { console.error(e); alert('Erro ao salvar checklist: ' + e.message); });
+      tenantRecords().doc(currentKey).set(records[currentKey]).catch(e => { console.error(e); alert('Erro ao salvar checklist: ' + e.message); });
     }
     // Salva configurações (debounced)
     clearTimeout(save._t);
     save._t = setTimeout(() => {
-      db.collection('sv_data').doc('settings').set({ vehicles, drivers }).catch(e => { console.error(e); alert('Erro ao salvar configurações: ' + e.message); });
+      tenantData().doc('settings').set({ vehicles, drivers }).catch(e => { console.error(e); alert('Erro ao salvar configurações: ' + e.message); });
     }, 800);
   } else {
     // Fallback: localStorage
@@ -1558,15 +1570,16 @@ async function initFirebase() {
 }
 
 async function loadFromFirestore() {
+  if (!_tenantId || _tenantId === SUPER_ADMIN_CODE) return;
   setLoadingOverlay(true, 'Carregando dados...');
   try {
     const [settingsSnap, authSnap, recordsSnap, fuelSnap, reqSnap, fornSnap] = await Promise.all([
-      db.collection('sv_data').doc('settings').get(),
-      db.collection('sv_data').doc('auth').get(),
-      db.collection('sv_records').get(),
-      db.collection('sv_data').doc('fuel').get(),
-      db.collection('sv_data').doc('requisicoes').get(),
-      db.collection('sv_data').doc('fornecedores').get(),
+      tenantData().doc('settings').get(),
+      tenantData().doc('auth').get(),
+      tenantRecords().get(),
+      tenantData().doc('fuel').get(),
+      tenantData().doc('requisicoes').get(),
+      tenantData().doc('fornecedores').get(),
     ]);
     if (settingsSnap.exists) {
       const s = settingsSnap.data();
@@ -1588,7 +1601,7 @@ async function loadFromFirestore() {
 
     // Mescla fotos de comprovante (docs separados com id "comp_{num}") de volta nas requisições
     try {
-      const allDataDocs = await db.collection('sv_data').get();
+      const allDataDocs = await tenantData().get();
       allDataDocs.forEach(doc => {
         if (!doc.id.startsWith('comp_')) return;
         const num = doc.id.slice(5); // remove "comp_"
@@ -1599,13 +1612,13 @@ async function loadFromFirestore() {
     } catch (e) { console.error('Erro ao carregar comprovantes:', e); }
 
     // Listeners em tempo real
-    db.collection('sv_records').onSnapshot(snap => {
+    tenantRecords().onSnapshot(snap => {
       snap.docChanges().forEach(ch => {
         if (ch.type === 'removed') { delete records[ch.doc.id]; return; }
         records[ch.doc.id] = ch.doc.data();
       });
     });
-    db.collection('sv_data').onSnapshot(snap => {
+    tenantData().onSnapshot(snap => {
       snap.docChanges().forEach(ch => {
         if (ch.doc.id === 'settings') { const s=ch.doc.data(); vehicles=s.vehicles||vehicles; drivers=s.drivers||drivers; }
         if (ch.doc.id === 'auth')     { const a=ch.doc.data(); _appUsers=a.appUsers||_appUsers; _adminPin=a.adminPin||_adminPin; renderLoginUsers(); }
@@ -1646,7 +1659,7 @@ function useLocalMode() {
 
 function saveAuth() {
   if (db) {
-    db.collection('sv_data').doc('auth').set({ adminPin: _adminPin, appUsers: _appUsers })
+    tenantData().doc('auth').set({ adminPin: _adminPin, appUsers: _appUsers })
       .then(() => console.log('✅ Auth salvo no Firestore:', _adminPin))
       .catch(e => { console.error('❌ Erro ao salvar auth:', e); alert('Erro ao salvar no Firebase: ' + e.message); });
   } else {
@@ -1661,9 +1674,11 @@ function saveAuth() {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
-  document.getElementById('screen-' + id).classList.add('active');
+  const screenEl = document.getElementById('screen-' + id);
+  if (screenEl) screenEl.classList.add('active');
+  if (id === 'superadmin') { renderSuperAdminPanel(); return; }
   const idx = {home:0,checklist:1,vehicles:2,drivers:3,history:4,fuel:5,requisicao:6,fornecedores:7,relatorios:8}[id];
-  document.querySelectorAll('.nav button')[idx].classList.add('active');
+  if (idx !== undefined) document.querySelectorAll('.nav button')[idx]?.classList.add('active');
   if (id === 'home')      renderHome();
   if (id === 'vehicles')  renderVehicles();
   if (id === 'drivers')   { renderDrivers(); renderUsersMgmt(); renderAlmoxMgmt(); }
@@ -2170,7 +2185,7 @@ function renderHistory() {
 function deleteRecord(key) {
   if (!confirm('Excluir este registro? Isso não pode ser desfeito.')) return;
   delete records[key];
-  if (db) db.collection('sv_records').doc(key).delete().catch(console.error);
+  if (db) tenantRecords().doc(key).delete().catch(console.error);
   else save();
   renderHistory();
 }
@@ -2178,7 +2193,7 @@ function deleteRecord(key) {
 function deleteRecordHome(key) {
   if (!confirm('Excluir este controle? Esta ação não pode ser desfeita.')) return;
   delete records[key];
-  if (db) db.collection('sv_records').doc(key).delete().catch(console.error);
+  if (db) tenantRecords().doc(key).delete().catch(console.error);
   else save();
   renderHome();
 }
@@ -2190,7 +2205,7 @@ function clearAllRecords() {
   const keys = Object.keys(records);
   keys.forEach(k => {
     delete records[k];
-    if (db) db.collection('sv_records').doc(k).delete().catch(console.error);
+    if (db) tenantRecords().doc(k).delete().catch(console.error);
   });
   if (!db) save();
   renderHome();
@@ -2256,11 +2271,126 @@ const MAX_USERS = 5;
 let _adminPin = DEFAULT_ADMIN_PIN;
 let _appUsers = [];
 
+// ── MULTI-TENANT ──
+let _tenantId = sessionStorage.getItem('sv_tenant') || '';
+const SUPER_ADMIN_CODE = 'MASTER';
+const SUPER_ADMIN_PIN  = '7749';   // PIN do super admin — altere após o deploy
+
+function tenantData() {
+  return db.collection('tenants').doc(_tenantId).collection('sv_data');
+}
+function tenantRecords() {
+  return db.collection('tenants').doc(_tenantId).collection('sv_records');
+}
+
 function getAdminPin()   { return _adminPin; }
 function getAppUsers()   { return _appUsers; }
 function saveAppUsers(u) { _appUsers = u; saveAuth(); }
 function isAdmin()      { return sessionStorage.getItem('sv_role') === 'admin'; }
 function getCurrentUser(){ return sessionStorage.getItem('sv_user') || ''; }
+
+// ── ETAPA 0: Código da empresa ──
+async function confirmarEmpresa() {
+  const code = (document.getElementById('empresa-code-input').value || '').trim().toUpperCase();
+  const errEl = document.getElementById('empresa-code-error');
+  errEl.textContent = '';
+  if (!code) { errEl.textContent = 'Digite o código da empresa.'; return; }
+
+  // Super Admin oculto
+  if (code === SUPER_ADMIN_CODE) {
+    _tenantId = SUPER_ADMIN_CODE;
+    sessionStorage.setItem('sv_tenant', _tenantId);
+    document.getElementById('login-step-empresa').style.display = 'none';
+    document.getElementById('login-step-pin').style.display = '';
+    document.getElementById('login-selected-label').textContent = '🔑 SUPER ADMIN';
+    document.getElementById('pin-title').textContent = 'PIN Master';
+    loginMode = 'superadmin';
+    return;
+  }
+
+  // Valida se o tenant existe no Firestore
+  errEl.textContent = 'Verificando...';
+  try {
+    const tenantDoc = await db.collection('tenants').doc(code).get();
+    if (!tenantDoc.exists) {
+      errEl.textContent = 'Empresa não encontrada. Verifique o código.';
+      return;
+    }
+    const td = tenantDoc.data();
+    if (td.ativo === false) {
+      errEl.textContent = 'Acesso suspenso. Contate o suporte.';
+      return;
+    }
+    _tenantId = code;
+    sessionStorage.setItem('sv_tenant', code);
+    // Mostra nome da empresa na logo
+    const nomeEl = document.querySelector('.login-logo p');
+    if (nomeEl && td.nome) nomeEl.textContent = td.nome;
+    errEl.textContent = '';
+    await loadFromFirestore();
+    document.getElementById('login-step-empresa').style.display = 'none';
+    document.getElementById('login-step-select').style.display = '';
+  } catch(e) {
+    errEl.textContent = 'Erro de conexão. Tente novamente.';
+  }
+}
+
+// ── SUPER ADMIN PANEL ──
+async function loginSuperAdmin(pin) {
+  if (pin !== SUPER_ADMIN_PIN) return false;
+  sessionStorage.setItem('sv_role', 'superadmin');
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('screen-superadmin')?.classList.add('active');
+  showScreen('superadmin');
+  await renderSuperAdminPanel();
+  return true;
+}
+
+async function renderSuperAdminPanel() {
+  const el = document.getElementById('sa-tenant-list');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;color:#aaa;font-size:12px">Carregando...</div>';
+  try {
+    const snap = await db.collection('tenants').get();
+    if (snap.empty) { el.innerHTML = '<div style="text-align:center;color:#aaa;font-size:12px">Nenhuma empresa cadastrada.</div>'; return; }
+    el.innerHTML = snap.docs.map(d => {
+      const t = d.data();
+      const ativo = t.ativo !== false;
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #e0e0e0;border-radius:10px;margin-bottom:8px;background:#fafafa">
+        <div>
+          <div style="font-weight:700;font-size:14px">${t.nome || d.id}</div>
+          <div style="font-size:11px;color:#888">Código: <b>${d.id}</b> · Plano: ${t.plano||'básico'} · ${ativo?'<span style="color:#2E7D32">Ativo</span>':'<span style="color:#c62828">Suspenso</span>'}</div>
+        </div>
+        <button onclick="toggleTenant('${d.id}',${ativo})" style="padding:5px 10px;border-radius:7px;border:none;background:${ativo?'#ffebee':'#e8f5e9'};color:${ativo?'#c62828':'#2E7D32'};font-size:11px;font-weight:700;cursor:pointer">${ativo?'Suspender':'Ativar'}</button>
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = '<div style="color:#c62828">Erro: ' + e.message + '</div>'; }
+}
+
+async function criarEmpresa() {
+  const codigo = (document.getElementById('sa-new-code').value||'').trim().toUpperCase();
+  const nome   = (document.getElementById('sa-new-nome').value||'').trim();
+  const plano  = document.getElementById('sa-new-plano').value;
+  if (!codigo || !nome) { alert('Preencha código e nome.'); return; }
+  if (!/^[A-Z0-9]{2,20}$/.test(codigo)) { alert('Código deve ter 2-20 letras/números, sem espaços.'); return; }
+  try {
+    const existing = await db.collection('tenants').doc(codigo).get();
+    if (existing.exists) { alert('Código já em uso. Escolha outro.'); return; }
+    await db.collection('tenants').doc(codigo).set({ nome, plano, ativo: true, criadoEm: new Date().toISOString() });
+    // Inicializa dados padrão da empresa
+    const ref = db.collection('tenants').doc(codigo).collection('sv_data');
+    await ref.doc('auth').set({ adminPin: '0913', appUsers: [] });
+    alert(`Empresa "${nome}" criada!\nCódigo de acesso: ${codigo}\nPIN admin padrão: 0913`);
+    document.getElementById('sa-new-code').value = '';
+    document.getElementById('sa-new-nome').value = '';
+    await renderSuperAdminPanel();
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function toggleTenant(codigo, ativo) {
+  await db.collection('tenants').doc(codigo).update({ ativo: !ativo });
+  await renderSuperAdminPanel();
+}
 
 // ── PIN PAD state ──
 let pinBuffer  = '';
@@ -2350,6 +2480,10 @@ function tryLogin() {
   const pin = pinBuffer;
   pinBuffer = '';
 
+  if (loginMode === 'superadmin') {
+    loginSuperAdmin(pin);
+    return;
+  }
   if (loginMode === 'admin') {
     if (pin === getAdminPin()) { doLogin('admin', 'ADMINISTRADOR'); return; }
     pinError('PIN de administrador incorreto.');
@@ -2480,12 +2614,19 @@ function logout() {
   if (!confirm('Deseja sair da sessão atual?')) return;
   sessionStorage.removeItem('sv_role');
   sessionStorage.removeItem('sv_user');
-  // Volta à etapa 1
+  sessionStorage.removeItem('sv_tenant');
+  _tenantId = '';
   pinBuffer = '';
-  document.getElementById('login-step-pin').style.display    = 'none';
-  document.getElementById('login-step-driver').style.display = 'none';
-  document.getElementById('login-step-select').style.display = '';
-  renderLoginUsers();
+  // Volta à etapa 0 (código da empresa)
+  document.getElementById('login-step-pin').style.display      = 'none';
+  document.getElementById('login-step-driver').style.display   = 'none';
+  document.getElementById('login-step-select').style.display   = 'none';
+  document.getElementById('login-step-almox').style.display    = 'none';
+  document.getElementById('login-step-gestora').style.display  = 'none';
+  document.getElementById('login-step-empresa').style.display  = '';
+  document.getElementById('empresa-code-input').value = '';
+  document.getElementById('empresa-code-error').textContent = '';
+  document.querySelector('.login-logo p').textContent = 'Gestão em Controle de Frotas';
   document.getElementById('login-overlay').style.display = 'flex';
 }
 
@@ -3066,7 +3207,7 @@ let fornecedores = [];
 // ── Fuel helpers ──
 function saveFuel() {
   if (!db) return;
-  db.collection('sv_data').doc('fuel').set({ entries: fuelEntries });
+  tenantData().doc('fuel').set({ entries: fuelEntries });
 }
 function saveRequisicoes() {
   if (!db) return;
@@ -3077,14 +3218,14 @@ function saveRequisicoes() {
     const { comprovante, ...rest } = r;
     return rest;
   });
-  db.collection('sv_data').doc('requisicoes').set({ list: lightList })
+  tenantData().doc('requisicoes').set({ list: lightList })
     .catch(e => { console.error('Erro ao salvar requisições:', e); alert('Erro ao salvar requisição: ' + e.message); });
 
   // Fotos de comprovante vão em documentos próprios (1 por requisição), evitando
   // que o documento principal cresça demais e pare de salvar.
   requisicoes.forEach(r => {
     if (r.comprovante && r.num) {
-      db.collection('sv_data').doc("comp_" + r.num).set({
+      tenantData().doc("comp_" + r.num).set({
         image: r.comprovante, by: r.comprovanteBy || '', date: r.comprovanteDate || ''
       }).catch(e => { console.error('Erro ao salvar comprovante:', e); alert('Erro ao salvar a foto do comprovante: ' + e.message); });
     }
@@ -3093,7 +3234,7 @@ function saveRequisicoes() {
 
 function deleteComprovanteDoc(num) {
   if (!db || !num) return;
-  db.collection('sv_data').doc("comp_" + num).delete().catch(console.error);
+  tenantData().doc("comp_" + num).delete().catch(console.error);
 }
 function nextReqSeq() {
   let max = 0;
@@ -3102,7 +3243,7 @@ function nextReqSeq() {
 }
 function saveFornecedores() {
   if (!db) return;
-  db.collection('sv_data').doc('fornecedores').set({ list: fornecedores });
+  tenantData().doc('fornecedores').set({ list: fornecedores });
 }
 
 let _lastFuelReport = null;
@@ -3267,7 +3408,7 @@ function addFuelEntry() {
 async function zerarCombustivel() {
   if (!confirm('Tem certeza que deseja apagar TODOS os lançamentos de combustível? Esta ação não pode ser desfeita.')) return;
   fuelEntries = [];
-  await db.collection('sv_data').doc('fuel').set({ entries: [] });
+  await tenantData().doc('fuel').set({ entries: [] });
   renderFuel();
   alert('Todos os lançamentos foram apagados.');
 }
@@ -3836,10 +3977,10 @@ async function solicitarFornecedor(idx) {
     telefone: f.telefone || '—'
   };
   try {
-    const doc = await db.collection('sv_data').doc('solicitacoes_forn').get();
+    const doc = await tenantData().doc('solicitacoes_forn').get();
     const lista = doc.exists ? (doc.data().lista || []) : [];
     lista.push(reg);
-    await db.collection('sv_data').doc('solicitacoes_forn').set({ lista });
+    await tenantData().doc('solicitacoes_forn').set({ lista });
   } catch(e) { console.warn('solicitarFornecedor:', e); }
 }
 
@@ -3894,8 +4035,27 @@ function deleteFornecedor(idx) {
 
 async function startApp() {
   const fbOk = await initFirebase();
-  if (!fbOk) return; // setup overlay está visível
-  await loadFromFirestore();
+  if (!fbOk) return;
+  // Se já tem tenant na sessão (ex: recarregou a página), pula etapa 0
+  const savedTenant = sessionStorage.getItem('sv_tenant');
+  if (savedTenant && savedTenant !== SUPER_ADMIN_CODE) {
+    _tenantId = savedTenant;
+    const tenantDoc = await db.collection('tenants').doc(_tenantId).get();
+    if (tenantDoc.exists && tenantDoc.data().ativo !== false) {
+      const td = tenantDoc.data();
+      const nomeEl = document.querySelector('.login-logo p');
+      if (nomeEl && td.nome) nomeEl.textContent = td.nome;
+      document.getElementById('login-step-empresa').style.display = 'none';
+      document.getElementById('login-step-select').style.display = '';
+      await loadFromFirestore();
+      finishInit();
+      return;
+    } else {
+      sessionStorage.removeItem('sv_tenant');
+      _tenantId = '';
+    }
+  }
+  // Mostra etapa 0 e aguarda o usuário digitar o código
   finishInit();
 }
 
@@ -4318,7 +4478,7 @@ async function renderRelSolicitacoesForn() {
   el.innerHTML = '<p style="color:#999;font-size:13px">Carregando solicitações...</p>';
   _lastRelReport = null;
   try {
-    const doc = await db.collection('sv_data').doc('solicitacoes_forn').get();
+    const doc = await tenantData().doc('solicitacoes_forn').get();
     const lista = doc.exists ? (doc.data().lista || []) : [];
     if (!lista.length) {
       el.innerHTML = '<div class="empty-state"><div class="icon">📲</div>Nenhuma solicitação registrada até o momento.</div>';
@@ -4354,7 +4514,7 @@ async function renderRelSolicitacoesForn() {
 async function zerarSolicitacoesForn() {
   if (!confirm('Tem certeza que deseja apagar todo o histórico de solicitações a fornecedores? Esta ação não pode ser desfeita.')) return;
   try {
-    await db.collection('sv_data').doc('solicitacoes_forn').set({ lista: [] });
+    await tenantData().doc('solicitacoes_forn').set({ lista: [] });
     alert('Histórico zerado com sucesso.');
     renderRelSolicitacoesForn();
   } catch(e) {
@@ -4683,6 +4843,36 @@ document.addEventListener('DOMContentLoaded', () => {
   if (ci) ci.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAjudaMsg(); } });
 });
 </script>
+
+<!-- ════════════════════ SUPER ADMIN ════════════════════ -->
+<div class="screen" id="screen-superadmin" style="display:none">
+  <div class="card" style="border-left:4px solid #1565C0">
+    <h2 style="color:#1565C0">🔑 Painel Super Admin</h2>
+    <p style="font-size:12px;color:#888;margin-bottom:16px">Gerencie todas as empresas cadastradas na plataforma.</p>
+
+    <div style="background:#f5f5f5;border-radius:12px;padding:14px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:#333;margin-bottom:10px">➕ Nova Empresa</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <input id="sa-new-code" type="text" placeholder="Código (ex: ACMELOGISTICA)" maxlength="20"
+          style="padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;text-transform:uppercase"
+          oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+        <input id="sa-new-nome" type="text" placeholder="Nome da empresa"
+          style="padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
+        <select id="sa-new-plano" style="padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
+          <option value="basico">Básico — até 5 veículos (R$ 97/mês)</option>
+          <option value="profissional">Profissional — até 15 veículos (R$ 197/mês)</option>
+          <option value="empresarial">Empresarial — ilimitado (R$ 397/mês)</option>
+        </select>
+        <button class="btn btn-primary" onclick="criarEmpresa()">✅ Criar Empresa</button>
+      </div>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:#333;margin-bottom:10px">🏢 Empresas Cadastradas</div>
+    <div id="sa-tenant-list"></div>
+
+    <button class="btn btn-secondary" style="margin-top:16px;width:100%" onclick="logout()">Sair</button>
+  </div>
+</div>
 
 <!-- MODAL CHAT SUPORTE -->
 <div id="chat-modal">
