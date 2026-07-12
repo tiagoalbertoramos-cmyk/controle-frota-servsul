@@ -959,6 +959,7 @@
   <button onclick="showScreen('requisicao')">📝 Requisição</button>
   <button class="nav-forn admin-only" onclick="showScreen('fornecedores')">🔧 Fornecedores</button>
   <button class="admin-only" onclick="showScreen('relatorios')">📊 Relatórios</button>
+  <button class="admin-only" onclick="showScreen('empresa')">🏢 Empresa</button>
 </div>
 
 <!-- ════════════════════ HOME ════════════════════ -->
@@ -1677,7 +1678,8 @@ function showScreen(id) {
   const screenEl = document.getElementById('screen-' + id);
   if (screenEl) screenEl.classList.add('active');
   if (id === 'superadmin') { renderSuperAdminPanel(); return; }
-  const idx = {home:0,checklist:1,vehicles:2,drivers:3,history:4,fuel:5,requisicao:6,fornecedores:7,relatorios:8}[id];
+  if (id === 'empresa') { renderEmpresaScreen(); }
+  const idx = {home:0,checklist:1,vehicles:2,drivers:3,history:4,fuel:5,requisicao:6,fornecedores:7,relatorios:8,empresa:9}[id];
   if (idx !== undefined) document.querySelectorAll('.nav button')[idx]?.classList.add('active');
   if (id === 'home')      renderHome();
   if (id === 'vehicles')  renderVehicles();
@@ -2369,36 +2371,69 @@ async function renderSuperAdminPanel() {
   try {
     const snap = await db.collection('tenants').get();
     if (snap.empty) { el.innerHTML = '<div style="text-align:center;color:#aaa;font-size:12px">Nenhuma empresa cadastrada.</div>'; return; }
+    const planoValor = { basico: 97, profissional: 197, empresarial: 397 };
+    const planoNome  = { basico: 'Básico', profissional: 'Profissional', empresarial: 'Empresarial' };
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
     el.innerHTML = snap.docs.map(d => {
       const t = d.data();
       const ativo = t.ativo !== false;
-      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #e0e0e0;border-radius:10px;margin-bottom:8px;background:#fafafa">
-        <div>
-          <div style="font-weight:700;font-size:14px">${t.nome || d.id}</div>
-          <div style="font-size:11px;color:#888">Código: <b>${d.id}</b> · Plano: ${t.plano||'básico'} · ${ativo?'<span style="color:#2E7D32">Ativo</span>':'<span style="color:#c62828">Suspenso</span>'}</div>
+      const vencDate = t.vencimento ? new Date(t.vencimento) : null;
+      const diasRestantes = vencDate ? Math.ceil((vencDate - hoje) / 86400000) : null;
+      const vencStr = t.vencimento ? t.vencimento.split('-').reverse().join('/') : '—';
+      let statusCor = '#2E7D32', statusBg = '#e8f5e9', statusTxt = '✅ Em dia';
+      if (!ativo) { statusCor = '#9e9e9e'; statusBg = '#f5f5f5'; statusTxt = '⏸ Suspenso'; }
+      else if (diasRestantes !== null && diasRestantes <= 0) { statusCor = '#c62828'; statusBg = '#ffebee'; statusTxt = '❌ Vencido'; }
+      else if (diasRestantes !== null && diasRestantes <= 7) { statusCor = '#E65100'; statusBg = '#fff3e0'; statusTxt = `⚠️ ${diasRestantes}d`; }
+      return `<div style="border:1px solid #e0e0e0;border-radius:12px;margin-bottom:10px;background:#fff;overflow:hidden">
+        <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f0f0f0">
+          <div>
+            <div style="font-weight:700;font-size:14px">${t.nome || d.id}</div>
+            <div style="font-size:11px;color:#888">Código: <b>${d.id}</b>${t.responsavel ? ' · ' + t.responsavel : ''}${t.email ? ' · ' + t.email : ''}</div>
+          </div>
+          <div style="background:${statusBg};color:${statusCor};padding:4px 8px;border-radius:8px;font-size:11px;font-weight:700">${statusTxt}</div>
         </div>
-        <button onclick="toggleTenant('${d.id}',${ativo})" style="padding:5px 10px;border-radius:7px;border:none;background:${ativo?'#ffebee':'#e8f5e9'};color:${ativo?'#c62828':'#2E7D32'};font-size:11px;font-weight:700;cursor:pointer">${ativo?'Suspender':'Ativar'}</button>
+        <div style="padding:8px 12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <div style="font-size:11px;color:#555;flex:1">
+            📦 ${planoNome[t.plano]||'—'} · R$ ${(planoValor[t.plano]||0)}/mês · Vence: ${vencStr}
+          </div>
+          <button onclick="entrarEmpresa('${d.id}')" style="padding:5px 10px;border-radius:7px;border:none;background:#e3f2fd;color:#1565C0;font-size:11px;font-weight:700;cursor:pointer">🔓 Entrar</button>
+          <button onclick="registrarPagamento('${d.id}')" style="padding:5px 10px;border-radius:7px;border:none;background:#e8f5e9;color:#2E7D32;font-size:11px;font-weight:700;cursor:pointer">💳 Pagamento</button>
+          <button onclick="toggleTenant('${d.id}',${ativo})" style="padding:5px 10px;border-radius:7px;border:none;background:${ativo?'#ffebee':'#e8f5e9'};color:${ativo?'#c62828':'#2E7D32'};font-size:11px;font-weight:700;cursor:pointer">${ativo?'Suspender':'Ativar'}</button>
+        </div>
       </div>`;
     }).join('');
   } catch(e) { el.innerHTML = '<div style="color:#c62828">Erro: ' + e.message + '</div>'; }
 }
 
 async function criarEmpresa() {
-  const codigo = (document.getElementById('sa-new-code').value||'').trim().toUpperCase();
-  const nome   = (document.getElementById('sa-new-nome').value||'').trim();
-  const plano  = document.getElementById('sa-new-plano').value;
-  if (!codigo || !nome) { alert('Preencha código e nome.'); return; }
-  if (!/^[A-Z0-9]{2,20}$/.test(codigo)) { alert('Código deve ter 2-20 letras/números, sem espaços.'); return; }
+  const codigo      = (document.getElementById('sa-new-code').value||'').trim().toUpperCase();
+  const nome        = (document.getElementById('sa-new-nome').value||'').trim();
+  const responsavel = (document.getElementById('sa-new-responsavel').value||'').trim();
+  const email       = (document.getElementById('sa-new-email').value||'').trim();
+  const telefone    = (document.getElementById('sa-new-telefone').value||'').trim();
+  const plano       = document.getElementById('sa-new-plano').value;
+  const vencimento  = document.getElementById('sa-new-vencimento').value;
+  const pin         = (document.getElementById('sa-new-pin').value||'0913').trim();
+  if (!codigo || !nome) { alert('Preencha pelo menos o código e o nome.'); return; }
+  if (!/^[A-Z0-9]{2,20}$/.test(codigo)) { alert('Código: 2-20 letras/números, sem espaços.'); return; }
+  if (codigo === LEGACY_TENANT) { alert('Código reservado. Escolha outro.'); return; }
   try {
     const existing = await db.collection('tenants').doc(codigo).get();
     if (existing.exists) { alert('Código já em uso. Escolha outro.'); return; }
-    await db.collection('tenants').doc(codigo).set({ nome, plano, ativo: true, criadoEm: new Date().toISOString() });
-    // Inicializa dados padrão da empresa
+    const criadoEm = new Date().toISOString();
+    await db.collection('tenants').doc(codigo).set({
+      nome, plano, ativo: true, criadoEm,
+      responsavel, email, telefone, vencimento: vencimento || '',
+      historicoPagamentos: []
+    });
     const ref = db.collection('tenants').doc(codigo).collection('sv_data');
-    await ref.doc('auth').set({ adminPin: '0913', appUsers: [] });
-    alert(`Empresa "${nome}" criada!\nCódigo de acesso: ${codigo}\nPIN admin padrão: 0913`);
-    document.getElementById('sa-new-code').value = '';
-    document.getElementById('sa-new-nome').value = '';
+    await ref.doc('auth').set({ adminPin: pin || '0913', appUsers: [] });
+    // Limpa formulário
+    ['sa-new-code','sa-new-nome','sa-new-responsavel','sa-new-email','sa-new-telefone','sa-new-vencimento'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('sa-new-pin').value = '0913';
+    alert(`✅ Empresa "${nome}" criada!\nCódigo: ${codigo}\nPIN Admin: ${pin||'0913'}`);
     await renderSuperAdminPanel();
   } catch(e) { alert('Erro: ' + e.message); }
 }
@@ -2406,6 +2441,117 @@ async function criarEmpresa() {
 async function toggleTenant(codigo, ativo) {
   await db.collection('tenants').doc(codigo).update({ ativo: !ativo });
   await renderSuperAdminPanel();
+}
+
+async function entrarEmpresa(codigo) {
+  _tenantId = codigo;
+  sessionStorage.setItem('sv_tenant', codigo);
+  sessionStorage.setItem('sv_role', 'admin');
+  sessionStorage.setItem('sv_user', 'SUPER ADMIN');
+  await loadFromFirestore();
+  finishInit();
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('hdr-user').textContent = 'SUPER ADMIN';
+  document.getElementById('hdr-role').textContent = '🔑 Master → ' + codigo;
+  showScreen('home');
+}
+
+async function registrarPagamento(codigo) {
+  const meses = prompt('Quantos meses pagar/renovar?', '1');
+  if (!meses || isNaN(meses)) return;
+  const snap = await db.collection('tenants').doc(codigo).get();
+  const td = snap.data();
+  const planoValor = { basico: 97, profissional: 197, empresarial: 397 };
+  const valor = (planoValor[td.plano] || 97) * parseInt(meses);
+  const hoje = new Date();
+  const baseDate = td.vencimento ? new Date(td.vencimento) : hoje;
+  if (baseDate < hoje) baseDate.setTime(hoje.getTime());
+  baseDate.setMonth(baseDate.getMonth() + parseInt(meses));
+  const novoVenc = baseDate.toISOString().split('T')[0];
+  const hist = td.historicoPagamentos || [];
+  hist.push({ data: hoje.toISOString().split('T')[0], meses: parseInt(meses), valor, plano: td.plano });
+  await db.collection('tenants').doc(codigo).update({ vencimento: novoVenc, ativo: true, historicoPagamentos: hist });
+  alert(`✅ Pagamento registrado!\nValor: R$ ${valor.toLocaleString('pt-BR')}\nNovo vencimento: ${novoVenc.split('-').reverse().join('/')}`);
+  await renderSuperAdminPanel();
+}
+
+// ── ABA EMPRESA ──
+let _empresaData = {};
+
+async function renderEmpresaScreen() {
+  try {
+    const doc = await tenantData().doc('empresa').get();
+    if (doc.exists) {
+      const d = doc.data();
+      _empresaData = d;
+      document.getElementById('emp-nome-fantasia').value = d.nomeFantasia || '';
+      document.getElementById('emp-razao-social').value  = d.razaoSocial  || '';
+      document.getElementById('emp-cnpj').value          = d.cnpj         || '';
+      document.getElementById('emp-telefone').value      = d.telefone     || '';
+      document.getElementById('emp-email').value         = d.email        || '';
+      document.getElementById('emp-cep').value           = d.cep          || '';
+      document.getElementById('emp-cidade').value        = d.cidade       || '';
+      document.getElementById('emp-endereco').value      = d.endereco     || '';
+      document.getElementById('emp-responsavel').value   = d.responsavel  || '';
+    }
+  } catch(e) { console.error(e); }
+  await renderPlanoBadge();
+}
+
+async function renderPlanoBadge() {
+  const el = document.getElementById('emp-plano-info');
+  if (!el) return;
+  try {
+    const snap = await db.collection('tenants').doc(_tenantId).get();
+    if (!snap.exists) { el.innerHTML = '<div style="font-size:12px;color:#aaa">Plano não encontrado.</div>'; return; }
+    const td = snap.data();
+    const planoNome = { basico: 'Básico', profissional: 'Profissional', empresarial: 'Empresarial' };
+    const planoValor = { basico: 97, profissional: 197, empresarial: 397 };
+    const venc = td.vencimento ? td.vencimento.split('-').reverse().join('/') : '—';
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const vencDate = td.vencimento ? new Date(td.vencimento) : null;
+    const diasRestantes = vencDate ? Math.ceil((vencDate - hoje) / 86400000) : null;
+    let statusCor = '#2E7D32', statusTxt = '✅ Em dia';
+    if (diasRestantes !== null && diasRestantes <= 0) { statusCor = '#c62828'; statusTxt = '❌ Vencido'; }
+    else if (diasRestantes !== null && diasRestantes <= 7) { statusCor = '#E65100'; statusTxt = `⚠️ Vence em ${diasRestantes} dia(s)`; }
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div style="background:#e8f5e9;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:#1B5E20">${planoNome[td.plano] || '—'}</div>
+          <div style="font-size:11px;color:#555">Plano atual</div>
+        </div>
+        <div style="background:#e8f5e9;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:#1B5E20">R$ ${(planoValor[td.plano]||0).toLocaleString('pt-BR')}</div>
+          <div style="font-size:11px;color:#555">Por mês</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;background:#f5f5f5;border-radius:10px;padding:10px 14px">
+        <div>
+          <div style="font-size:11px;color:#888">Vencimento</div>
+          <div style="font-size:14px;font-weight:700">${venc}</div>
+        </div>
+        <div style="color:${statusCor};font-weight:700;font-size:13px">${statusTxt}</div>
+      </div>`;
+  } catch(e) { el.innerHTML = '<div style="font-size:12px;color:#aaa">Informação de plano indisponível.</div>'; }
+}
+
+async function salvarEmpresa() {
+  const data = {
+    nomeFantasia: document.getElementById('emp-nome-fantasia').value.trim(),
+    razaoSocial:  document.getElementById('emp-razao-social').value.trim(),
+    cnpj:         document.getElementById('emp-cnpj').value.trim(),
+    telefone:     document.getElementById('emp-telefone').value.trim(),
+    email:        document.getElementById('emp-email').value.trim(),
+    cep:          document.getElementById('emp-cep').value.trim(),
+    cidade:       document.getElementById('emp-cidade').value.trim(),
+    endereco:     document.getElementById('emp-endereco').value.trim(),
+    responsavel:  document.getElementById('emp-responsavel').value.trim(),
+  };
+  try {
+    await tenantData().doc('empresa').set(data);
+    _empresaData = data;
+    alert('✅ Dados da empresa salvos!');
+  } catch(e) { alert('Erro ao salvar: ' + e.message); }
 }
 
 // ── PIN PAD state ──
@@ -4860,6 +5006,63 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+<!-- ════════════════════ EMPRESA ════════════════════ -->
+<div class="screen admin-only" id="screen-empresa">
+  <div class="card">
+    <h2>🏢 Dados da Empresa</h2>
+    <p style="font-size:12px;color:#888;margin-bottom:16px">Informações da empresa titular desta conta.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group" style="grid-column:span 2">
+        <label>Nome Fantasia</label>
+        <input id="emp-nome-fantasia" type="text" placeholder="Ex: SERVSUL Transportes">
+      </div>
+      <div class="form-group" style="grid-column:span 2">
+        <label>Razão Social</label>
+        <input id="emp-razao-social" type="text" placeholder="Ex: SERVSUL LTDA">
+      </div>
+      <div class="form-group">
+        <label>CNPJ</label>
+        <input id="emp-cnpj" type="text" placeholder="00.000.000/0001-00" maxlength="18">
+      </div>
+      <div class="form-group">
+        <label>Telefone</label>
+        <input id="emp-telefone" type="text" placeholder="(41) 99999-9999">
+      </div>
+      <div class="form-group" style="grid-column:span 2">
+        <label>E-mail</label>
+        <input id="emp-email" type="email" placeholder="contato@empresa.com.br">
+      </div>
+      <div class="form-group">
+        <label>CEP</label>
+        <input id="emp-cep" type="text" placeholder="00000-000" maxlength="9">
+      </div>
+      <div class="form-group">
+        <label>Cidade / Estado</label>
+        <input id="emp-cidade" type="text" placeholder="Curitiba / PR">
+      </div>
+      <div class="form-group" style="grid-column:span 2">
+        <label>Endereço</label>
+        <input id="emp-endereco" type="text" placeholder="Rua, número, bairro">
+      </div>
+      <div class="form-group" style="grid-column:span 2">
+        <label>Responsável</label>
+        <input id="emp-responsavel" type="text" placeholder="Nome do responsável pela conta">
+      </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:8px;width:100%" onclick="salvarEmpresa()">💾 Salvar dados da empresa</button>
+  </div>
+
+  <div class="card" style="border-left:4px solid #1565C0">
+    <h2 style="color:#1565C0">💳 Plano e Pagamento</h2>
+    <div id="emp-plano-info" style="margin-bottom:14px"></div>
+    <div style="background:#f5f5f5;border-radius:10px;padding:12px;font-size:12px;color:#555">
+      Para alterar o plano ou regularizar pagamentos, entre em contato:<br>
+      <strong>POWER Tecnologia em Gestão de Frotas</strong><br>
+      📱 WhatsApp: <a href="https://wa.me/5541997932573" target="_blank" style="color:#1B5E20;font-weight:700">(41) 99793-2573</a>
+    </div>
+  </div>
+</div>
+
 <!-- ════════════════════ SUPER ADMIN ════════════════════ -->
 <div class="screen" id="screen-superadmin" style="display:none">
   <div class="card" style="border-left:4px solid #1565C0">
@@ -4869,16 +5072,33 @@ document.addEventListener('DOMContentLoaded', () => {
     <div style="background:#f5f5f5;border-radius:12px;padding:14px;margin-bottom:16px">
       <div style="font-size:12px;font-weight:700;color:#333;margin-bottom:10px">➕ Nova Empresa</div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <input id="sa-new-code" type="text" placeholder="Código (ex: ACMELOGISTICA)" maxlength="20"
+        <input id="sa-new-code" type="text" placeholder="Código de acesso (ex: ACMELOGISTICA)" maxlength="20"
           style="padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;text-transform:uppercase"
           oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
         <input id="sa-new-nome" type="text" placeholder="Nome da empresa"
           style="padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
+        <input id="sa-new-responsavel" type="text" placeholder="Responsável / contato"
+          style="padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
+        <input id="sa-new-email" type="email" placeholder="E-mail da empresa"
+          style="padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
+        <input id="sa-new-telefone" type="text" placeholder="Telefone / WhatsApp"
+          style="padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
         <select id="sa-new-plano" style="padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
-          <option value="basico">Básico — até 5 veículos (R$ 97/mês)</option>
-          <option value="profissional">Profissional — até 15 veículos (R$ 197/mês)</option>
-          <option value="empresarial">Empresarial — ilimitado (R$ 397/mês)</option>
+          <option value="basico">Básico — até 5 veículos — R$ 97/mês</option>
+          <option value="profissional">Profissional — até 15 veículos — R$ 197/mês</option>
+          <option value="empresarial">Empresarial — ilimitado — R$ 397/mês</option>
         </select>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1">
+            <div style="font-size:11px;color:#888;margin-bottom:4px">Vencimento</div>
+            <input id="sa-new-vencimento" type="date" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
+          </div>
+          <div style="flex:1">
+            <div style="font-size:11px;color:#888;margin-bottom:4px">PIN Admin inicial</div>
+            <input id="sa-new-pin" type="text" placeholder="0913" maxlength="4" value="0913"
+              style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
+          </div>
+        </div>
         <button class="btn btn-primary" onclick="criarEmpresa()">✅ Criar Empresa</button>
       </div>
     </div>
@@ -4886,7 +5106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div style="font-size:12px;font-weight:700;color:#333;margin-bottom:10px">🏢 Empresas Cadastradas</div>
     <div id="sa-tenant-list"></div>
 
-    <button class="btn btn-secondary" style="margin-top:16px;width:100%" onclick="logout()">Sair</button>
+    <button class="btn btn-secondary" style="margin-top:16px;width:100%" onclick="logout()">🚪 Sair do Super Admin</button>
   </div>
 </div>
 
