@@ -77,7 +77,7 @@ module.exports = async function handler(req, res) {
   const { messages } = req.body || {};
   if (!messages || !Array.isArray(messages)) return res.status(400).json({ error: 'messages obrigatório' });
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CHAVE_API_ANTROPICA;
   if (!apiKey) return res.status(500).json({ error: 'Assistente não configurado. Contate o administrador.' });
 
   try {
