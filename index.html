@@ -801,7 +801,7 @@
   <div class="login-box">
     <div class="login-logo">
       <div class="logo-badge">POWER</div>
-      <p>Gestão em Controle de Frotas</p>
+      <p id="login-logo-subtitle">Tecnologia em Gestão de Frotas</p>
     </div>
 
     <!-- ETAPA 0: Código da empresa -->
@@ -2274,12 +2274,16 @@ let _appUsers = [];
 // ── MULTI-TENANT ──
 let _tenantId = sessionStorage.getItem('sv_tenant') || '';
 const SUPER_ADMIN_CODE = 'MASTER';
-const SUPER_ADMIN_PIN  = '7749';   // PIN do super admin — altere após o deploy
+const SUPER_ADMIN_PIN  = '7749';
+// SERVSUL usa coleções legadas (sv_data / sv_records) para não perder dados existentes
+const LEGACY_TENANT = 'SERVSUL';
 
 function tenantData() {
+  if (_tenantId === LEGACY_TENANT) return db.collection('sv_data');
   return db.collection('tenants').doc(_tenantId).collection('sv_data');
 }
 function tenantRecords() {
+  if (_tenantId === LEGACY_TENANT) return db.collection('sv_records');
   return db.collection('tenants').doc(_tenantId).collection('sv_records');
 }
 
@@ -2308,7 +2312,20 @@ async function confirmarEmpresa() {
     return;
   }
 
-  // Valida se o tenant existe no Firestore
+  // SERVSUL: acesso direto às coleções legadas, sem lookup no Firestore
+  if (code === LEGACY_TENANT) {
+    _tenantId = LEGACY_TENANT;
+    sessionStorage.setItem('sv_tenant', LEGACY_TENANT);
+    const nomeEl = document.getElementById('login-logo-subtitle');
+    if (nomeEl) nomeEl.textContent = 'SERVSUL — Controle de Frota';
+    errEl.textContent = '';
+    await loadFromFirestore();
+    document.getElementById('login-step-empresa').style.display = 'none';
+    document.getElementById('login-step-select').style.display = '';
+    return;
+  }
+
+  // Outras empresas: valida no Firestore
   errEl.textContent = 'Verificando...';
   try {
     const tenantDoc = await db.collection('tenants').doc(code).get();
@@ -2323,8 +2340,7 @@ async function confirmarEmpresa() {
     }
     _tenantId = code;
     sessionStorage.setItem('sv_tenant', code);
-    // Mostra nome da empresa na logo
-    const nomeEl = document.querySelector('.login-logo p');
+    const nomeEl = document.getElementById('login-logo-subtitle');
     if (nomeEl && td.nome) nomeEl.textContent = td.nome;
     errEl.textContent = '';
     await loadFromFirestore();
@@ -2626,7 +2642,7 @@ function logout() {
   document.getElementById('login-step-empresa').style.display  = '';
   document.getElementById('empresa-code-input').value = '';
   document.getElementById('empresa-code-error').textContent = '';
-  document.querySelector('.login-logo p').textContent = 'Gestão em Controle de Frotas';
+  document.getElementById('login-logo-subtitle').textContent = 'Tecnologia em Gestão de Frotas';
   document.getElementById('login-overlay').style.display = 'flex';
 }
 
@@ -4043,7 +4059,7 @@ async function startApp() {
     const tenantDoc = await db.collection('tenants').doc(_tenantId).get();
     if (tenantDoc.exists && tenantDoc.data().ativo !== false) {
       const td = tenantDoc.data();
-      const nomeEl = document.querySelector('.login-logo p');
+      const nomeEl = document.getElementById('login-logo-subtitle');
       if (nomeEl && td.nome) nomeEl.textContent = td.nome;
       document.getElementById('login-step-empresa').style.display = 'none';
       document.getElementById('login-step-select').style.display = '';
