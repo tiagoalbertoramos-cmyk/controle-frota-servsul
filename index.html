@@ -1296,7 +1296,10 @@
     <button class="btn btn-primary" onclick="openReqSign()">✍️ Assinar e Enviar</button>
   </div>
   <div class="card">
-    <h2>📋 Requisições</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <h2 style="margin:0">📋 Requisições</h2>
+      <button class="btn btn-danger btn-sm admin-only" onclick="zerarComprovantes()">🗑️ Zerar Comprovantes</button>
+    </div>
     <div id="req-list"></div>
   </div>
 </div>
@@ -1490,6 +1493,7 @@
 </div>
 
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -4296,7 +4300,7 @@ function handleComprovanteFile(e) {
   const reader = new FileReader();
   reader.onload = function(ev) {
     const img = new Image();
-    img.onload = function() {
+    img.onload = async function() {
       // Redimensiona para max 1000px e comprime (Firestore 1MB limit)
       const MAX = 1000;
       let w = img.width, h = img.height;
@@ -4309,6 +4313,15 @@ function handleComprovanteFile(e) {
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
       const compressed = canvas.toDataURL('image/jpeg', 0.72);
 
+      showOcrOverlay('🔎 Analisando comprovante...');
+      const recognized = await recognizeComprovante(compressed);
+      hideOcrOverlay();
+
+      if (!recognized) {
+        const proceed = confirm('⚠️ Não conseguimos confirmar que esta foto é um cupom fiscal / NFC-e de abastecimento.\n\nVerifique se a foto está nítida e mostra o cupom completo (CNPJ do posto, itens e valor total).\n\nDeseja anexar mesmo assim?');
+        if (!proceed) { _compIdx = null; return; }
+      }
+
       requisicoes[_compIdx].comprovante     = compressed;
       requisicoes[_compIdx].comprovanteBy   = curUser || sessionStorage.getItem('sv_user') || '—';
       requisicoes[_compIdx].comprovanteDate = new Date().toLocaleString('pt-BR');
@@ -4319,6 +4332,44 @@ function handleComprovanteFile(e) {
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
+}
+
+// ── Protocolo de reconhecimento do comprovante (OCR) ──
+// Confere, por OCR, se a foto anexada tem as características de um cupom
+// fiscal / NFC-e de abastecimento (chave de acesso, CNPJ, combustível,
+// valor total etc.) antes de aceitá-la como comprovante válido.
+async function recognizeComprovante(dataUrl) {
+  if (typeof Tesseract === 'undefined') return true; // OCR indisponível: não bloqueia
+  try {
+    const { data: { text } } = await Tesseract.recognize(dataUrl, 'por');
+    const norm = text.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const keywords = [
+      'NFC-E', 'NFCE', 'NOTA FISCAL', 'CUPOM FISCAL', 'CONSUMIDOR ELETRONICA',
+      'CHAVE DE ACESSO', 'PROTOCOLO DE AUTORIZACAO', 'COMBUSTIVEL', 'GASOLINA',
+      'ETANOL', 'DIESEL', 'ANP', 'VALOR TOTAL', 'VL TOTAL', 'CNPJ'
+    ];
+    const hits = keywords.filter(k => norm.includes(k)).length;
+    return hits >= 2;
+  } catch (e) {
+    console.error('Erro no reconhecimento do comprovante:', e);
+    return true; // falha técnica de OCR não deve bloquear o motorista
+  }
+}
+
+function showOcrOverlay(msg) {
+  let el = document.getElementById('ocr-overlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'ocr-overlay';
+    el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#1a237e;color:#fff;text-align:center;padding:10px;font-size:14px;font-weight:600';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideOcrOverlay() {
+  const el = document.getElementById('ocr-overlay');
+  if (el) el.style.display = 'none';
 }
 
 let _viewingCompIdx = null;
@@ -4346,6 +4397,25 @@ function deleteComprovante() {
   saveRequisicoes();
   renderRequisicoes();
   closePhotoModal();
+}
+
+// ── Zera todos os comprovantes de abastecimento anexados (somente admin) ──
+async function zerarComprovantes() {
+  if (sessionStorage.getItem('sv_role') !== 'admin') { alert('Apenas o administrador pode zerar os comprovantes.'); return; }
+  const total = requisicoes.filter(r => r.comprovante).length;
+  if (!total) { alert('Não há comprovantes anexados para zerar.'); return; }
+  if (!confirm(`Tem certeza que deseja apagar os ${total} comprovante(s) de abastecimento anexados? Esta ação não pode ser desfeita.`)) return;
+  requisicoes.forEach(r => {
+    if (r.comprovante) {
+      deleteComprovanteDoc(r.num);
+      delete r.comprovante;
+      delete r.comprovanteBy;
+      delete r.comprovanteDate;
+    }
+  });
+  saveRequisicoes();
+  renderRequisicoes();
+  alert('Comprovantes zerados com sucesso.');
 }
 
 // ── Excluir requisição (somente administrador, com confirmação por PIN) ──
