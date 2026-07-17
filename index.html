@@ -2374,45 +2374,100 @@ async function loginSuperAdmin(pin) {
   return true;
 }
 
+let _saTenants = [];
+let _saFilter  = 'todas';
+
 async function renderSuperAdminPanel() {
   const el = document.getElementById('sa-tenant-list');
   if (!el) return;
   el.innerHTML = '<div style="text-align:center;color:#aaa;font-size:12px">Carregando...</div>';
   try {
     const snap = await db.collection('tenants').get();
-    if (snap.empty) { el.innerHTML = '<div style="text-align:center;color:#aaa;font-size:12px">Nenhuma empresa cadastrada.</div>'; return; }
-    const planoValor = { basico: 97, profissional: 197, empresarial: 397 };
-    const planoNome  = { basico: 'Básico', profissional: 'Profissional', empresarial: 'Empresarial' };
-    const hoje = new Date(); hoje.setHours(0,0,0,0);
-    el.innerHTML = snap.docs.map(d => {
-      const t = d.data();
-      const ativo = t.ativo !== false;
-      const vencDate = t.vencimento ? new Date(t.vencimento) : null;
-      const diasRestantes = vencDate ? Math.ceil((vencDate - hoje) / 86400000) : null;
-      const vencStr = t.vencimento ? t.vencimento.split('-').reverse().join('/') : '—';
-      let statusCor = '#2E7D32', statusBg = '#e8f5e9', statusTxt = '✅ Em dia';
-      if (!ativo) { statusCor = '#9e9e9e'; statusBg = '#f5f5f5'; statusTxt = '⏸ Suspenso'; }
-      else if (diasRestantes !== null && diasRestantes <= 0) { statusCor = '#c62828'; statusBg = '#ffebee'; statusTxt = '❌ Vencido'; }
-      else if (diasRestantes !== null && diasRestantes <= 7) { statusCor = '#E65100'; statusBg = '#fff3e0'; statusTxt = `⚠️ ${diasRestantes}d`; }
-      return `<div style="border:1px solid #e0e0e0;border-radius:12px;margin-bottom:10px;background:#fff;overflow:hidden">
-        <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f0f0f0">
-          <div>
-            <div style="font-weight:700;font-size:14px">${t.nome || d.id}</div>
-            <div style="font-size:11px;color:#888">Código: <b>${d.id}</b>${t.responsavel ? ' · ' + t.responsavel : ''}${t.email ? ' · ' + t.email : ''}</div>
-          </div>
-          <div style="background:${statusBg};color:${statusCor};padding:4px 8px;border-radius:8px;font-size:11px;font-weight:700">${statusTxt}</div>
-        </div>
-        <div style="padding:8px 12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <div style="font-size:11px;color:#555;flex:1">
-            📦 ${planoNome[t.plano]||'—'} · R$ ${(planoValor[t.plano]||0)}/mês · Vence: ${vencStr}
-          </div>
-          <button onclick="entrarEmpresa('${d.id}')" style="padding:5px 10px;border-radius:7px;border:none;background:#e3f2fd;color:#1565C0;font-size:11px;font-weight:700;cursor:pointer">🔓 Entrar</button>
-          <button onclick="registrarPagamento('${d.id}')" style="padding:5px 10px;border-radius:7px;border:none;background:#e8f5e9;color:#2E7D32;font-size:11px;font-weight:700;cursor:pointer">💳 Pagamento</button>
-          <button onclick="toggleTenant('${d.id}',${ativo})" style="padding:5px 10px;border-radius:7px;border:none;background:${ativo?'#ffebee':'#e8f5e9'};color:${ativo?'#c62828':'#2E7D32'};font-size:11px;font-weight:700;cursor:pointer">${ativo?'Suspender':'Ativar'}</button>
-        </div>
-      </div>`;
-    }).join('');
+    _saTenants = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderSaTenantList();
   } catch(e) { el.innerHTML = '<div style="color:#c62828">Erro: ' + e.message + '</div>'; }
+}
+
+function setSaFilter(f) {
+  _saFilter = f;
+  renderSaTenantList();
+}
+
+// Classifica uma empresa em: status de pagamento (badge) + se está ativa/em dia
+function classificaEmpresa(t, hoje) {
+  const ativo = t.ativo !== false;
+  const vencDate = t.vencimento ? new Date(t.vencimento) : null;
+  const diasRestantes = vencDate ? Math.ceil((vencDate - hoje) / 86400000) : null;
+  const emDia = ativo && (diasRestantes === null || diasRestantes > 7);
+  let statusCor = '#2E7D32', statusBg = '#e8f5e9', statusTxt = '✅ Em dia';
+  if (!ativo) { statusCor = '#9e9e9e'; statusBg = '#f5f5f5'; statusTxt = '⏸ Suspenso'; }
+  else if (diasRestantes !== null && diasRestantes <= 0) { statusCor = '#c62828'; statusBg = '#ffebee'; statusTxt = '❌ Vencido'; }
+  else if (diasRestantes !== null && diasRestantes <= 7) { statusCor = '#E65100'; statusBg = '#fff3e0'; statusTxt = `⚠️ ${diasRestantes}d`; }
+  return { ativo, diasRestantes, emDia, statusCor, statusBg, statusTxt };
+}
+
+function renderSaTenantList() {
+  const el = document.getElementById('sa-tenant-list');
+  const tabsEl = document.getElementById('sa-filter-tabs');
+  if (!el) return;
+
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const classificadas = _saTenants.map(t => ({ t, c: classificaEmpresa(t, hoje) }));
+
+  const counts = {
+    todas:    classificadas.length,
+    em_dia:   classificadas.filter(x => x.c.emDia).length,
+    ativas:   classificadas.filter(x => x.c.ativo).length,
+    inativas: classificadas.filter(x => !x.c.ativo).length,
+  };
+
+  if (tabsEl) {
+    const tabs = [
+      { key: 'todas',    label: '📁 Todas' },
+      { key: 'em_dia',   label: '✅ Em dia' },
+      { key: 'ativas',   label: '🟢 Ativas' },
+      { key: 'inativas', label: '⏸ Inativas' },
+    ];
+    tabsEl.innerHTML = tabs.map(tb => {
+      const sel = _saFilter === tb.key;
+      return `<button onclick="setSaFilter('${tb.key}')" style="padding:6px 12px;border-radius:20px;border:1.5px solid ${sel?'#1565C0':'#ddd'};background:${sel?'#1565C0':'#fff'};color:${sel?'#fff':'#555'};font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">${tb.label} (${counts[tb.key]})</button>`;
+    }).join('');
+  }
+
+  if (!classificadas.length) { el.innerHTML = '<div style="text-align:center;color:#aaa;font-size:12px">Nenhuma empresa cadastrada.</div>'; return; }
+
+  const visiveis = classificadas.filter(({c}) => {
+    if (_saFilter === 'em_dia')   return c.emDia;
+    if (_saFilter === 'ativas')   return c.ativo;
+    if (_saFilter === 'inativas') return !c.ativo;
+    return true;
+  });
+
+  if (!visiveis.length) { el.innerHTML = '<div style="text-align:center;color:#aaa;font-size:12px">Nenhuma empresa nesta categoria.</div>'; return; }
+
+  const planoValor = { basico: 97, profissional: 197, empresarial: 397 };
+  const planoNome  = { basico: 'Básico', profissional: 'Profissional', empresarial: 'Empresarial' };
+  el.innerHTML = visiveis.map(({t, c}) => {
+    const d_id = t.id;
+    const vencStr = t.vencimento ? t.vencimento.split('-').reverse().join('/') : '—';
+    return `<div style="border:1px solid #e0e0e0;border-radius:12px;margin-bottom:10px;background:#fff;overflow:hidden">
+      <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f0f0f0">
+        <div>
+          <div style="font-weight:700;font-size:14px">${t.nome || d_id}</div>
+          <div style="font-size:11px;color:#888">Código: <b>${d_id}</b>${t.responsavel ? ' · ' + t.responsavel : ''}${t.email ? ' · ' + t.email : ''}</div>
+        </div>
+        <div style="background:${c.statusBg};color:${c.statusCor};padding:4px 8px;border-radius:8px;font-size:11px;font-weight:700">${c.statusTxt}</div>
+      </div>
+      <div style="padding:8px 12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <div style="font-size:11px;color:#555;flex:1">
+          📦 ${planoNome[t.plano]||'—'} · R$ ${(planoValor[t.plano]||0)}/mês · Vence: ${vencStr}
+        </div>
+        <button onclick="entrarEmpresa('${d_id}')" style="padding:5px 10px;border-radius:7px;border:none;background:#e3f2fd;color:#1565C0;font-size:11px;font-weight:700;cursor:pointer">🔓 Entrar</button>
+        <button onclick="registrarPagamento('${d_id}')" style="padding:5px 10px;border-radius:7px;border:none;background:#e8f5e9;color:#2E7D32;font-size:11px;font-weight:700;cursor:pointer">💳 Pagamento</button>
+        <button onclick="toggleTenant('${d_id}',${c.ativo})" style="padding:5px 10px;border-radius:7px;border:none;background:${c.ativo?'#ffebee':'#e8f5e9'};color:${c.ativo?'#c62828':'#2E7D32'};font-size:11px;font-weight:700;cursor:pointer">${c.ativo?'Suspender':'Ativar'}</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function criarEmpresa() {
@@ -2438,10 +2493,11 @@ async function criarEmpresa() {
     });
     const ref = db.collection('tenants').doc(codigo).collection('sv_data');
     await ref.doc('auth').set({ adminPin: pin || '0913', appUsers: [] });
-    // Limpa formulário
+    // Limpa formulário para um novo cadastro
     ['sa-new-code','sa-new-nome','sa-new-responsavel','sa-new-email','sa-new-telefone','sa-new-vencimento'].forEach(id => {
       document.getElementById(id).value = '';
     });
+    document.getElementById('sa-new-plano').selectedIndex = 0;
     document.getElementById('sa-new-pin').value = '0913';
     alert(`✅ Empresa "${nome}" criada!\nCódigo: ${codigo}\nPIN Admin: ${pin||'0913'}`);
     await renderSuperAdminPanel();
@@ -5180,6 +5236,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 
     <div style="font-size:12px;font-weight:700;color:#333;margin-bottom:10px">🏢 Empresas Cadastradas</div>
+    <div id="sa-filter-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
     <div id="sa-tenant-list"></div>
 
     <button class="btn btn-secondary" style="margin-top:16px;width:100%" onclick="logout()">🚪 Sair do Super Admin</button>
