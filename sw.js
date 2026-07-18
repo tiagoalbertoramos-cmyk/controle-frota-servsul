@@ -1,4 +1,4 @@
-const CACHE = 'frota-servsul-v4';
+const CACHE = 'frota-servsul-v5';
 const SHELL = ['/', '/index.html', '/manifest.json', '/icon-192.svg', '/icon-512.svg', '/icon-apple.png'];
 
 self.addEventListener('install', e => {
