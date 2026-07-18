@@ -881,13 +881,6 @@
       <div class="login-user-list" id="login-gestora-list"></div>
     </div>
 
-    <!-- ETAPA 6: seleção do Colaborador (Programa Excelência) -->
-    <div id="login-step-colaborador" style="display:none">
-      <div class="login-back-btn" onclick="colaboradorPickerGoBack()">← Voltar</div>
-      <div class="login-select-title">Qual colaborador é você?</div>
-      <div class="login-user-list" id="login-colaborador-list"></div>
-    </div>
-
   </div>
 </div>
 
@@ -970,7 +963,6 @@
   <button onclick="showScreen('history')">📁 Histórico</button>
   <button onclick="showScreen('fuel')">⛽ Combustível</button>
   <button onclick="showScreen('requisicao')">📝 Requisição</button>
-  <button class="nav-exc" onclick="showScreen('excelencia')">🏆 Excelência</button>
   <button class="nav-forn admin-only" onclick="showScreen('fornecedores')">🔧 Fornecedores</button>
   <button class="admin-only" onclick="showScreen('relatorios')">📊 Relatórios</button>
   <button class="admin-only" onclick="showScreen('empresa')">🏢 Empresa</button>
@@ -1373,11 +1365,6 @@
   </div>
 </div>
 
-<!-- ════════════════════ PROGRAMA EXCELÊNCIA ════════════════════ -->
-<div class="screen" id="screen-excelencia">
-  <div id="exc-content"></div>
-</div>
-
 <!-- ════════════════════ CONFIRM PIN MODAL ════════════════════ -->
 <div id="confirm-pin-overlay">
   <div class="confirm-pin-box">
@@ -1593,14 +1580,13 @@ async function loadFromFirestore() {
   if (!_tenantId || _tenantId === SUPER_ADMIN_CODE) return;
   setLoadingOverlay(true, 'Carregando dados...');
   try {
-    const [settingsSnap, authSnap, recordsSnap, fuelSnap, reqSnap, fornSnap, excSnap] = await Promise.all([
+    const [settingsSnap, authSnap, recordsSnap, fuelSnap, reqSnap, fornSnap] = await Promise.all([
       tenantData().doc('settings').get(),
       tenantData().doc('auth').get(),
       tenantRecords().get(),
       tenantData().doc('fuel').get(),
       tenantData().doc('requisicoes').get(),
       tenantData().doc('fornecedores').get(),
-      tenantData().doc('excelencia').get(),
     ]);
     if (settingsSnap.exists) {
       const s = settingsSnap.data();
@@ -1619,13 +1605,6 @@ async function loadFromFirestore() {
     if (fuelSnap.exists && fuelSnap.data().entries) { fuelEntries = fuelSnap.data().entries; }
     if (reqSnap.exists && reqSnap.data().list) { requisicoes = reqSnap.data().list; }
     if (fornSnap.exists && fornSnap.data().list) { fornecedores = fornSnap.data().list; }
-    if (excSnap.exists) {
-      const ex = excSnap.data();
-      excColaboradores = ex.colaboradores || [];
-      excOcorrencias   = ex.ocorrencias   || [];
-      excChecklist     = ex.checklist     || [];
-      excBonusExtras   = ex.bonusExtras   || [];
-    }
 
     // Mescla fotos de comprovante (docs separados com id "comp_{num}") de volta nas requisições
     try {
@@ -1650,14 +1629,6 @@ async function loadFromFirestore() {
       snap.docChanges().forEach(ch => {
         if (ch.doc.id === 'settings') { const s=ch.doc.data(); vehicles=s.vehicles||vehicles; drivers=s.drivers||drivers; }
         if (ch.doc.id === 'auth')     { const a=ch.doc.data(); _appUsers=a.appUsers||_appUsers; _adminPin=a.adminPin||_adminPin; renderLoginUsers(); }
-        if (ch.doc.id === 'excelencia') {
-          const ex = ch.doc.data();
-          excColaboradores = ex.colaboradores || [];
-          excOcorrencias   = ex.ocorrencias   || [];
-          excChecklist     = ex.checklist     || [];
-          excBonusExtras   = ex.bonusExtras   || [];
-          if (document.getElementById('screen-excelencia')?.classList.contains('active')) renderExcelencia();
-        }
         if (ch.doc.id.startsWith('comp_')) {
           const num = ch.doc.id.slice(5);
           const match = requisicoes.find(r => r.num === num);
@@ -1714,7 +1685,7 @@ function showScreen(id) {
   if (screenEl) screenEl.classList.add('active');
   if (id === 'superadmin') { renderSuperAdminPanel(); return; }
   if (id === 'empresa') { renderEmpresaScreen(); }
-  const idx = {home:0,checklist:1,vehicles:2,drivers:3,history:4,fuel:5,requisicao:6,excelencia:7,fornecedores:8,relatorios:9,empresa:10}[id];
+  const idx = {home:0,checklist:1,vehicles:2,drivers:3,history:4,fuel:5,requisicao:6,fornecedores:7,relatorios:8,empresa:9}[id];
   if (idx !== undefined) document.querySelectorAll('.nav button')[idx]?.classList.add('active');
   if (id === 'home')      renderHome();
   if (id === 'vehicles')  renderVehicles();
@@ -1722,7 +1693,6 @@ function showScreen(id) {
   if (id === 'history')   renderHistory();
   if (id === 'fuel')        renderFuel();
   if (id === 'requisicao')  renderRequisicoes();
-  if (id === 'excelencia')  renderExcelencia();
   if (id === 'fornecedores') renderFornecedores();
   if (id === 'relatorios')   renderRelatorios();
 }
@@ -2609,8 +2579,7 @@ function renderLoginUsers() {
     card('admin-card',    '🔐', 'Administrador', "selectLoginUser('ADMINISTRADOR','admin')") +
     card('almox-card',    '📦', 'Almox',          "showAlmoxPicker()") +
     card('gestora-card',  '👩‍💼', 'Gestor',          "showGestoraPicker()") +
-    card('motorista-card','🚗', 'Motorista',      "selectLoginUser('MOTORISTA','motorista')") +
-    card('exc-card',      '🏆', 'Colaborador',    "showColaboradorPicker()");
+    card('motorista-card','🚗', 'Motorista',      "selectLoginUser('MOTORISTA','motorista')");
 }
 
 /* ── loginMode agora pode ser 'user', 'motorista' ou 'admin' ── */
@@ -2642,8 +2611,6 @@ function loginGoBack() {
   document.getElementById('login-step-pin').style.display = 'none';
   if (loginMode === 'motorista-driver') {
     document.getElementById('login-step-driver').style.display = '';
-  } else if (loginMode === 'colaborador-login') {
-    document.getElementById('login-step-colaborador').style.display = '';
   } else {
     document.getElementById('login-step-select').style.display = '';
   }
@@ -2697,14 +2664,6 @@ function tryLogin() {
     const users = getAppUsers();
     const found = users.find(u => u.name === selectedLoginName && u.role === 'almox' && u.pin === pin);
     if (found) { doLogin('almox', found.name); return; }
-    pinError('PIN incorreto. Tente novamente.');
-  } else if (loginMode === 'colaborador-login') {
-    const colab = excColaboradores.find(c => c.id === selectedColaboradorId);
-    if (colab && pin === colab.pin) {
-      sessionStorage.setItem('sv_colaborador_id', colab.id);
-      doLogin('colaborador', colab.nome);
-      return;
-    }
     pinError('PIN incorreto. Tente novamente.');
   } else {
     const users = getAppUsers();
@@ -2763,8 +2722,6 @@ function doLogin(role, name) {
   applyRole();
   if (role === 'motorista' || role === 'gestora') {
     showScreen('requisicao');
-  } else if (role === 'colaborador') {
-    showScreen('excelencia');
   } else {
     showScreen('home');
     if (role === 'user') {
@@ -2779,7 +2736,7 @@ function doLogin(role, name) {
 function applyRole() {
   const role = sessionStorage.getItem('sv_role');
   const user = sessionStorage.getItem('sv_user') || '';
-  document.body.classList.remove('user-mode', 'admin-mode', 'role-motorista', 'role-gestora', 'role-almox', 'role-colaborador');
+  document.body.classList.remove('user-mode', 'admin-mode', 'role-motorista', 'role-gestora', 'role-almox');
 
   if (role === 'admin') {
     document.body.classList.add('admin-mode');
@@ -2813,13 +2770,6 @@ function applyRole() {
       const btn = document.querySelector(`.nav button[onclick*="${id}"]`);
       if (btn) btn.style.display = '';
     });
-  } else if (role === 'colaborador') {
-    document.body.classList.add('user-mode', 'role-colaborador');
-    document.getElementById('hdr-user').textContent = user;
-    document.getElementById('hdr-role').textContent = '🏆 Colaborador';
-    document.querySelectorAll('.nav button').forEach(b => b.style.display = 'none');
-    const excBtn = document.querySelector('.nav button[onclick*="excelencia"]');
-    if (excBtn) excBtn.style.display = '';
   } else {
     document.body.classList.add('user-mode');
     document.getElementById('hdr-user').textContent = user;
@@ -2833,16 +2783,14 @@ function logout() {
   sessionStorage.removeItem('sv_role');
   sessionStorage.removeItem('sv_user');
   sessionStorage.removeItem('sv_tenant');
-  sessionStorage.removeItem('sv_colaborador_id');
   _tenantId = '';
   pinBuffer = '';
   // Volta à etapa 0 (código da empresa)
-  document.getElementById('login-step-pin').style.display        = 'none';
-  document.getElementById('login-step-driver').style.display     = 'none';
-  document.getElementById('login-step-select').style.display     = 'none';
-  document.getElementById('login-step-almox').style.display      = 'none';
-  document.getElementById('login-step-gestora').style.display     = 'none';
-  document.getElementById('login-step-colaborador').style.display = 'none';
+  document.getElementById('login-step-pin').style.display      = 'none';
+  document.getElementById('login-step-driver').style.display   = 'none';
+  document.getElementById('login-step-select').style.display   = 'none';
+  document.getElementById('login-step-almox').style.display    = 'none';
+  document.getElementById('login-step-gestora').style.display  = 'none';
   document.getElementById('login-step-empresa').style.display  = '';
   document.getElementById('empresa-code-input').value = '';
   document.getElementById('empresa-code-error').textContent = '';
@@ -3048,41 +2996,6 @@ function showGestoraPicker() {
 function gestoraPickerGoBack() {
   document.getElementById('login-step-gestora').style.display = 'none';
   document.getElementById('login-step-select').style.display  = '';
-}
-
-let selectedColaboradorId = null;
-
-function showColaboradorPicker() {
-  if (!excColaboradores.length) { alert('Nenhum colaborador cadastrado no Programa Excelência. Peça ao administrador para cadastrar.'); return; }
-  const listEl = document.getElementById('login-colaborador-list');
-  listEl.innerHTML = excColaboradores.map(c =>
-    `<div class="login-user-card exc-card" onclick="selectColaboradorForLogin('${c.id}')">
-      <span class="luc-avatar">🏆</span>
-      <span>${c.nome}</span>
-    </div>`).join('');
-  document.getElementById('login-step-select').style.display = 'none';
-  document.getElementById('login-step-colaborador').style.display = '';
-}
-
-function colaboradorPickerGoBack() {
-  document.getElementById('login-step-colaborador').style.display = 'none';
-  document.getElementById('login-step-select').style.display = '';
-}
-
-function selectColaboradorForLogin(id) {
-  const c = excColaboradores.find(x => x.id === id);
-  if (!c) return;
-  selectedColaboradorId = id;
-  loginMode = 'colaborador-login';
-  pinBuffer = '';
-  updatePinDots();
-  const label = document.getElementById('login-selected-label');
-  if (label) label.textContent = c.nome;
-  const hint = document.getElementById('pin-hint');
-  hint.textContent = 'Informe seu PIN de 4 dígitos';
-  hint.classList.remove('pin-error');
-  document.getElementById('login-step-colaborador').style.display = 'none';
-  document.getElementById('login-step-pin').style.display = '';
 }
 
 function selectAlmoxUser(name) {
@@ -3499,180 +3412,6 @@ function nextReqSeq() {
 function saveFornecedores() {
   if (!db) return;
   tenantData().doc('fornecedores').set({ list: fornecedores });
-}
-
-// ═══════════════════════════════════════════════
-//  PROGRAMA EXCELÊNCIA — bonificação por desempenho
-// ═══════════════════════════════════════════════
-let excColaboradores = [];  // {id, nome, cargo, bonusBase, pin}
-let excOcorrencias   = [];  // {id, colaboradorId, mes, categoria, pontos, obs, data}
-let excChecklist     = [];  // {id, colaboradorId, data, itens:{...}, hora}
-let excBonusExtras   = [];  // {id, colaboradorId, mes, tipo, valor, valorEconomizado?}
-
-const EXC_CATEGORIAS = [
-  { id:'entregas',        nome:'Entregas',        icone:'🚚', peso:30, penalidade:5 },
-  { id:'estoque',         nome:'Estoque',         icone:'📦', peso:25, penalidade:5 },
-  { id:'organizacao',     nome:'Organização',     icone:'🧹', peso:15, penalidade:3 },
-  { id:'veiculo',         nome:'Veículo',         icone:'🚗', peso:10, penalidade:3 },
-  { id:'equipamentos',    nome:'Equipamentos',    icone:'🛠️', peso:10, penalidade:2 },
-  { id:'comprometimento', nome:'Comprometimento', icone:'⭐', peso:10, penalidade:0 },
-];
-const EXC_BONUS_TIERS = [
-  { min:95, pct:100 }, { min:90, pct:80 }, { min:85, pct:60 }, { min:80, pct:40 }, { min:0, pct:0 },
-];
-const EXC_EXTRAS_DEFAULT = [
-  { tipo:'zero_erros',     nome:'Zero erros no mês',              valor:100 },
-  { tipo:'estoque_ok',     nome:'Estoque sem divergência',        valor:100 },
-  { tipo:'sem_reclamacao', nome:'Nenhuma reclamação de clientes',  valor:100 },
-  { tipo:'inventario_ok',  nome:'Inventário aprovado',             valor:100 },
-];
-const EXC_ECONOMIA_PCT = 0.05;
-const EXC_ECONOMIA_TETO = 200;
-const EXC_CHECKLIST_ITENS = [
-  'Veículo limpo', 'Estoque organizado', 'Pedidos separados', 'Produtos conferidos',
-  'Notas entregues', 'Coletas registradas', 'Lixo retirado', 'Portas fechadas', 'Equipamentos desligados',
-];
-
-function excMesAtual() { return new Date().toISOString().slice(0,7); }
-function excHojeISO()  { return new Date().toISOString().slice(0,10); }
-
-function saveExcelencia() {
-  if (!db) return;
-  tenantData().doc('excelencia').set({
-    colaboradores: excColaboradores, ocorrencias: excOcorrencias,
-    checklist: excChecklist, bonusExtras: excBonusExtras,
-  }).catch(e => { console.error('Erro ao salvar Excelência:', e); alert('Erro ao salvar o Programa Excelência: ' + e.message); });
-}
-
-function excComputeMes(colaboradorId, mes) {
-  const colaborador = excColaboradores.find(c => c.id === colaboradorId);
-  const categorias = EXC_CATEGORIAS.map(cat => {
-    const pts = excOcorrencias
-      .filter(o => o.colaboradorId === colaboradorId && o.mes === mes && o.categoria === cat.id)
-      .reduce((s,o) => s + Number(o.pontos||0), 0);
-    const nota = Math.max(0, Math.min(cat.peso, cat.peso + pts));
-    return { ...cat, pontosLancados: pts, nota };
-  });
-  const total = categorias.reduce((s,c) => s + c.nota, 0);
-  const tier = EXC_BONUS_TIERS.find(t => total >= t.min) || EXC_BONUS_TIERS[EXC_BONUS_TIERS.length-1];
-  const bonusBase = colaborador ? Number(colaborador.bonusBase||500) : 500;
-  const bonusValor = bonusBase * tier.pct / 100;
-  const extras = excBonusExtras.filter(e => e.colaboradorId === colaboradorId && e.mes === mes);
-  const extrasValor = extras.reduce((s,e) => s + Number(e.valor||0), 0);
-  return { colaborador, categorias, total, tier, bonusBase, bonusValor, extras, extrasValor, totalFinal: bonusValor + extrasValor };
-}
-
-function excAddColaborador() {
-  const nome = (document.getElementById('exc-new-nome').value||'').trim().toUpperCase();
-  const cargo = (document.getElementById('exc-new-cargo').value||'').trim();
-  const bonusBase = Number(document.getElementById('exc-new-bonus').value||500);
-  const pin = (document.getElementById('exc-new-pin').value||'').trim();
-  const msg = document.getElementById('exc-new-msg');
-  if (!nome) { msg.style.color='#c62828'; msg.textContent='❌ Informe o nome.'; return; }
-  if (!/^\d{4}$/.test(pin)) { msg.style.color='#c62828'; msg.textContent='❌ PIN deve ter exatamente 4 dígitos.'; return; }
-  if (excColaboradores.find(c => c.nome === nome)) { msg.style.color='#c62828'; msg.textContent='❌ Colaborador já cadastrado.'; return; }
-  excColaboradores.push({ id:'col_'+Date.now(), nome, cargo, bonusBase, pin });
-  saveExcelencia();
-  document.getElementById('exc-new-nome').value = '';
-  document.getElementById('exc-new-cargo').value = '';
-  document.getElementById('exc-new-pin').value = '';
-  msg.style.color='#2e7d32'; msg.textContent='✅ Colaborador cadastrado!';
-  renderExcelencia();
-}
-
-function excEditColaborador(id) {
-  const c = excColaboradores.find(x => x.id === id);
-  if (!c) return;
-  const cargo = prompt('Cargo/função:', c.cargo||'');
-  if (cargo === null) return;
-  const bonusBase = prompt('Valor do bônus mensal (R$) para 100% da pontuação:', c.bonusBase);
-  if (bonusBase === null) return;
-  const pin = prompt('PIN de acesso (4 dígitos):', c.pin);
-  if (pin === null) return;
-  if (!/^\d{4}$/.test(pin)) { alert('PIN deve ter exatamente 4 dígitos.'); return; }
-  c.cargo = cargo.trim();
-  c.bonusBase = Number(bonusBase||500);
-  c.pin = pin.trim();
-  saveExcelencia();
-  renderExcelencia();
-}
-
-function excRemoveColaborador(id) {
-  const c = excColaboradores.find(x => x.id === id);
-  if (!c) return;
-  if (!confirm(`Remover "${c.nome}" do Programa Excelência? O histórico de ocorrências e checklist será mantido, mas ele não terá mais acesso.`)) return;
-  excColaboradores = excColaboradores.filter(x => x.id !== id);
-  saveExcelencia();
-  renderExcelencia();
-}
-
-function excLancarOcorrencia() {
-  const colaboradorId = document.getElementById('exc-sel-colaborador').value;
-  const mes = document.getElementById('exc-sel-mes').value || excMesAtual();
-  const categoria = document.getElementById('exc-oc-categoria').value;
-  const pontos = Number(document.getElementById('exc-oc-pontos').value);
-  const obs = (document.getElementById('exc-oc-obs').value||'').trim();
-  const data = document.getElementById('exc-oc-data').value || excHojeISO();
-  if (!colaboradorId) { alert('Selecione um colaborador.'); return; }
-  if (!pontos) { alert('Informe a pontuação (positiva para ganho, negativa para perda).'); return; }
-  excOcorrencias.push({ id:'oc_'+Date.now(), colaboradorId, mes, categoria, pontos, obs, data });
-  saveExcelencia();
-  document.getElementById('exc-oc-obs').value = '';
-  renderExcelencia();
-}
-
-function excRemoveOcorrencia(id) {
-  if (!confirm('Excluir esta ocorrência?')) return;
-  excOcorrencias = excOcorrencias.filter(o => o.id !== id);
-  saveExcelencia();
-  renderExcelencia();
-}
-
-function excToggleExtra(colaboradorId, mes, tipo, valorPadrao) {
-  const idx = excBonusExtras.findIndex(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo===tipo);
-  if (idx >= 0) excBonusExtras.splice(idx,1);
-  else excBonusExtras.push({ id:'be_'+Date.now(), colaboradorId, mes, tipo, valor:valorPadrao });
-  saveExcelencia();
-  renderExcelencia();
-}
-
-function excSetEconomia(colaboradorId, mes) {
-  const valorEconomizado = Number(document.getElementById('exc-economia-input').value||0);
-  const valor = Math.min(valorEconomizado * EXC_ECONOMIA_PCT, EXC_ECONOMIA_TETO);
-  const idx = excBonusExtras.findIndex(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo==='economia');
-  const entry = { id:'be_econ_'+colaboradorId+'_'+mes, colaboradorId, mes, tipo:'economia', valorEconomizado, valor };
-  if (valorEconomizado <= 0) {
-    if (idx >= 0) excBonusExtras.splice(idx,1);
-  } else if (idx >= 0) excBonusExtras[idx] = entry;
-  else excBonusExtras.push(entry);
-  saveExcelencia();
-  renderExcelencia();
-}
-
-function excColaboradorLogado() {
-  const id = sessionStorage.getItem('sv_colaborador_id');
-  return excColaboradores.find(c => c.id === id) || null;
-}
-
-function excChecklistDoDia(colaboradorId, data) {
-  return excChecklist.find(c => c.colaboradorId === colaboradorId && c.data === data);
-}
-
-function excSalvarChecklistHoje() {
-  const colaborador = excColaboradorLogado();
-  if (!colaborador) return;
-  const hoje = excHojeISO();
-  const itens = {};
-  EXC_CHECKLIST_ITENS.forEach((_,i) => { itens[i] = !!document.getElementById('exc-chk-'+i)?.checked; });
-  const idx = excChecklist.findIndex(c => c.colaboradorId===colaborador.id && c.data===hoje);
-  const entry = {
-    id: idx>=0 ? excChecklist[idx].id : 'chk_'+Date.now(),
-    colaboradorId: colaborador.id, data: hoje, itens,
-    hora: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}),
-  };
-  if (idx >= 0) excChecklist[idx] = entry; else excChecklist.push(entry);
-  saveExcelencia();
-  renderExcelencia();
 }
 
 let _lastFuelReport = null;
@@ -5005,263 +4744,6 @@ function exportRelatorioPDF() {
     <div class="sub">Gerado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
     <div class="summary">${summary}</div>
     <table><thead><tr>${rep.headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
-    <script>window.onload = () => { window.print(); };${'</' + 'script>'}
-  </body></html>`;
-  const w = window.open('', '_blank');
-  if (!w) { alert('Popup bloqueado. Permita popups para este site e tente novamente.'); return; }
-  w.document.write(html);
-  w.document.close();
-}
-
-// ═══════════════════════════════════════════════
-//  PROGRAMA EXCELÊNCIA — telas
-// ═══════════════════════════════════════════════
-let _excSelColaboradorId = null;
-let _excSelMes = null;
-
-function renderExcelencia() {
-  const el = document.getElementById('exc-content');
-  if (!el) return;
-  const role = sessionStorage.getItem('sv_role');
-  if (role === 'colaborador') { el.innerHTML = excRenderColaborador(); return; }
-  if (!isAdmin()) { el.innerHTML = '<div class="card"><div class="empty-state"><div class="icon">🔒</div>Acesso restrito ao administrador.</div></div>'; return; }
-  const selEl = document.getElementById('exc-sel-colaborador');
-  const mesEl = document.getElementById('exc-sel-mes');
-  if (selEl && selEl.value) _excSelColaboradorId = selEl.value;
-  if (mesEl && mesEl.value)  _excSelMes = mesEl.value;
-  if (!_excSelColaboradorId || !excColaboradores.find(c=>c.id===_excSelColaboradorId)) {
-    _excSelColaboradorId = excColaboradores[0] ? excColaboradores[0].id : null;
-  }
-  if (!_excSelMes) _excSelMes = excMesAtual();
-  el.innerHTML = excRenderAdmin();
-}
-
-function excFormNovoColaborador() {
-  return `
-    <div class="form-group"><label>Nome</label><input type="text" id="exc-new-nome" placeholder="Ex: FELIPE"></div>
-    <div class="form-group"><label>Cargo/função</label><input type="text" id="exc-new-cargo" placeholder="Ex: Estoquista e Motorista"></div>
-    <div style="display:flex;gap:10px">
-      <div class="form-group" style="flex:1"><label>Bônus mensal (100%)</label><input type="number" id="exc-new-bonus" value="500"></div>
-      <div class="form-group" style="flex:1"><label>PIN de acesso (4 dígitos)</label><input type="text" id="exc-new-pin" maxlength="4" placeholder="0000"></div>
-    </div>
-    <button class="btn btn-primary" onclick="excAddColaborador()">Cadastrar</button>
-    <div id="exc-new-msg" style="font-size:12px;margin-top:6px"></div>`;
-}
-
-function excPreencherPontosSugeridos() {
-  const catId = document.getElementById('exc-oc-categoria').value;
-  const cat = EXC_CATEGORIAS.find(c => c.id === catId);
-  const input = document.getElementById('exc-oc-pontos');
-  if (cat && input) input.value = cat.penalidade ? -cat.penalidade : 0;
-}
-
-function excBarraCategoria(c) {
-  const pct = Math.round((c.nota / c.peso) * 100);
-  const cor = pct >= 90 ? '#388E3C' : pct >= 70 ? '#FDD835' : '#e53935';
-  const corTexto = (pct >= 70 && pct < 90) ? '#333' : '#fff';
-  return `<div class="chart-bar-row">
-    <div class="chart-label">${c.icone} ${c.nome}</div>
-    <div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${Math.max(pct,6)}%;background:${cor}">
-      <span style="color:${corTexto}">${c.nota}/${c.peso}</span></div></div>
-  </div>`;
-}
-
-function excCorTier(pct) {
-  return pct >= 100 ? '#388E3C' : pct >= 60 ? '#FDD835' : pct > 0 ? '#F57F17' : '#e53935';
-}
-
-function excRenderAdmin() {
-  if (!excColaboradores.length) {
-    return `
-    <div class="card"><h2>🏆 Programa Excelência</h2>
-      <div class="empty-state"><div class="icon">🏆</div>Cadastre o primeiro colaborador para começar.</div>
-    </div>
-    <div class="card"><h2>➕ Cadastrar colaborador</h2>${excFormNovoColaborador()}</div>`;
-  }
-
-  const colaboradorId = _excSelColaboradorId;
-  const mes = _excSelMes;
-  const colabOptions = excColaboradores.map(c =>
-    `<option value="${c.id}" ${c.id===colaboradorId?'selected':''}>${c.nome}${c.cargo?' — '+c.cargo:''}</option>`).join('');
-
-  const r = excComputeMes(colaboradorId, mes);
-  const categoriaBars = r.categorias.map(excBarraCategoria).join('');
-  const corTier = excCorTier(r.tier.pct);
-
-  const ocorrenciasMes = excOcorrencias.filter(o => o.colaboradorId===colaboradorId && o.mes===mes)
-    .sort((a,b) => (b.data||'').localeCompare(a.data||''));
-  const ocList = ocorrenciasMes.map(o => {
-    const cat = EXC_CATEGORIAS.find(c => c.id === o.categoria);
-    const sinal = o.pontos > 0 ? '+' : '';
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #f0f0f0;font-size:12px">
-      <div><strong>${cat ? cat.icone+' '+cat.nome : o.categoria}</strong>
-        <span style="color:${o.pontos<0?'#e53935':'#2e7d32'};font-weight:700">${sinal}${o.pontos} pts</span><br>
-        <span style="color:#888;font-size:11px">${o.data||''}${o.obs?' · '+o.obs:''}</span></div>
-      <button class="btn btn-danger btn-sm" onclick="excRemoveOcorrencia('${o.id}')">✕</button>
-    </div>`;
-  }).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhuma ocorrência lançada neste mês.</div>';
-
-  const extrasChecks = EXC_EXTRAS_DEFAULT.map(ex => {
-    const ativo = !!excBonusExtras.find(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo===ex.tipo);
-    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;cursor:pointer">
-      <input type="checkbox" ${ativo?'checked':''} onchange="excToggleExtra('${colaboradorId}','${mes}','${ex.tipo}',${ex.valor})">
-      ${ex.nome} <span style="margin-left:auto;color:#2e7d32;font-weight:700">+R$ ${ex.valor}</span>
-    </label>`;
-  }).join('');
-  const economiaEntry = excBonusExtras.find(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo==='economia');
-
-  const checklistMes = excChecklist.filter(c => c.colaboradorId===colaboradorId && (c.data||'').startsWith(mes))
-    .sort((a,b) => b.data.localeCompare(a.data));
-  const checklistList = checklistMes.slice(0,10).map(c => {
-    const n = Object.values(c.itens||{}).filter(Boolean).length;
-    return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #f5f5f5">
-      <span>${c.data.split('-').reverse().join('/')}</span><span>${n}/${EXC_CHECKLIST_ITENS.length} itens · ${c.hora}</span>
-    </div>`;
-  }).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhum checklist enviado neste mês.</div>';
-
-  const colabList = excColaboradores.map(c => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;margin-bottom:6px;background:#fafafa">
-      <div><div style="font-weight:700;font-size:13px">🏅 ${c.nome}</div>
-        <div style="font-size:10px;color:#888">${c.cargo||'—'} · Bônus base: R$ ${Number(c.bonusBase).toFixed(2).replace('.',',')}</div></div>
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-secondary btn-sm" onclick="excEditColaborador('${c.id}')">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="excRemoveColaborador('${c.id}')">✕</button>
-      </div>
-    </div>`).join('');
-
-  return `
-  <div class="card">
-    <h2>🏆 Programa Excelência — Estoque e Logística</h2>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-      <div class="form-group" style="flex:2;min-width:160px;margin:0"><label>Colaborador</label>
-        <select id="exc-sel-colaborador" onchange="renderExcelencia()">${colabOptions}</select></div>
-      <div class="form-group" style="flex:1;min-width:130px;margin:0"><label>Mês</label>
-        <input type="month" id="exc-sel-mes" value="${mes}" onchange="renderExcelencia()"></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>📊 Painel do mês</h2>
-    ${categoriaBars}
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:10px;border-top:2px solid #e0e0e0">
-      <div><div style="font-size:11px;color:#888">Pontuação total</div><div style="font-size:24px;font-weight:900;color:var(--green-dark)">${r.total}/100</div></div>
-      <div style="text-align:right"><div style="font-size:11px;color:#888">Bônus previsto</div>
-        <div style="font-size:20px;font-weight:900;color:${corTier}">${r.tier.pct}% · R$ ${r.bonusValor.toFixed(2).replace('.',',')}</div></div>
-    </div>
-    ${r.extrasValor>0 ? `<div style="margin-top:8px;font-size:12px;color:#2e7d32;font-weight:700">+ R$ ${r.extrasValor.toFixed(2).replace('.',',')} em bônus extras</div>` : ''}
-    <div style="margin-top:4px;font-size:15px;font-weight:900;color:var(--green-dark)">Total do mês: R$ ${r.totalFinal.toFixed(2).replace('.',',')}</div>
-    <button class="btn btn-primary" style="margin-top:12px" onclick="exportExcelenciaPDF('${colaboradorId}','${mes}')">📄 Gerar PDF do mês</button>
-  </div>
-
-  <div class="card">
-    <h2>➕ Lançar ocorrência</h2>
-    <div class="form-group"><label>Categoria</label>
-      <select id="exc-oc-categoria" onchange="excPreencherPontosSugeridos()">
-        ${EXC_CATEGORIAS.map(c => `<option value="${c.id}">${c.icone} ${c.nome} (peso ${c.peso})</option>`).join('')}
-      </select></div>
-    <div style="display:flex;gap:10px">
-      <div class="form-group" style="flex:1"><label>Pontos (negativo=perda, positivo=ganho)</label>
-        <input type="number" id="exc-oc-pontos" value="-5"></div>
-      <div class="form-group" style="flex:1"><label>Data</label>
-        <input type="date" id="exc-oc-data" value="${excHojeISO()}"></div>
-    </div>
-    <div class="form-group"><label>Observação</label><input type="text" id="exc-oc-obs" placeholder="Ex: atraso na entrega do pedido X"></div>
-    <button class="btn btn-primary" onclick="excLancarOcorrencia()">Lançar ocorrência</button>
-    <div style="margin-top:12px">${ocList}</div>
-  </div>
-
-  <div class="card">
-    <h2>🎁 Bônus extras do mês</h2>
-    ${extrasChecks}
-    <div class="form-group" style="margin-top:8px"><label>Economia comprovada (R$ economizado no mês)</label>
-      <input type="number" id="exc-economia-input" value="${economiaEntry?economiaEntry.valorEconomizado:''}" placeholder="0,00" onchange="excSetEconomia('${colaboradorId}','${mes}')"></div>
-    ${economiaEntry ? `<div style="font-size:11px;color:#2e7d32">Bônus de economia: R$ ${economiaEntry.valor.toFixed(2).replace('.',',')} (5%, teto R$ ${EXC_ECONOMIA_TETO})</div>` : ''}
-  </div>
-
-  <div class="card"><h2>📋 Checklist diário — histórico do mês</h2>${checklistList}</div>
-
-  <div class="card"><h2>👥 Colaboradores cadastrados</h2>${colabList}</div>
-
-  <div class="card"><h2>➕ Cadastrar colaborador</h2>${excFormNovoColaborador()}</div>`;
-}
-
-function excRenderColaborador() {
-  const colaborador = excColaboradorLogado();
-  if (!colaborador) return '<div class="card"><div class="empty-state"><div class="icon">🏆</div>Colaborador não encontrado.</div></div>';
-  const mes = excMesAtual();
-  const r = excComputeMes(colaborador.id, mes);
-  const categoriaBars = r.categorias.map(excBarraCategoria).join('');
-  const corTier = excCorTier(r.tier.pct);
-
-  const hoje = excHojeISO();
-  const jaEnviado = excChecklistDoDia(colaborador.id, hoje);
-  const checklistForm = EXC_CHECKLIST_ITENS.map((item,i) => `
-    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer">
-      <input type="checkbox" id="exc-chk-${i}" ${jaEnviado && jaEnviado.itens[i] ? 'checked':''}> ${item}
-    </label>`).join('');
-
-  const base = new Date();
-  const meses = [];
-  for (let i=0; i<6; i++) meses.push(new Date(base.getFullYear(), base.getMonth()-i, 1).toISOString().slice(0,7));
-  const historico = meses.map(m => {
-    const rm = excComputeMes(colaborador.id, m);
-    return `<div class="summary-row"><span>${m.split('-').reverse().join('/')}</span><span>${rm.total}/100 · R$ ${rm.totalFinal.toFixed(2).replace('.',',')}</span></div>`;
-  }).join('');
-
-  return `
-  <div class="card">
-    <h2>🏆 ${colaborador.nome}</h2>
-    <div style="font-size:12px;color:#888;margin-bottom:8px">${colaborador.cargo||''} · ${mes.split('-').reverse().join('/')}</div>
-    ${categoriaBars}
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:10px;border-top:2px solid #e0e0e0">
-      <div><div style="font-size:11px;color:#888">Pontuação total</div><div style="font-size:24px;font-weight:900;color:var(--green-dark)">${r.total}/100</div></div>
-      <div style="text-align:right"><div style="font-size:11px;color:#888">Bônus previsto</div>
-        <div style="font-size:20px;font-weight:900;color:${corTier}">${r.tier.pct}% · R$ ${r.bonusValor.toFixed(2).replace('.',',')}</div></div>
-    </div>
-    ${r.extrasValor>0 ? `<div style="margin-top:8px;font-size:12px;color:#2e7d32;font-weight:700">+ R$ ${r.extrasValor.toFixed(2).replace('.',',')} em bônus extras conquistados</div>` : ''}
-    <div style="margin-top:4px;font-size:15px;font-weight:900;color:var(--green-dark)">Total do mês: R$ ${r.totalFinal.toFixed(2).replace('.',',')}</div>
-  </div>
-
-  <div class="card">
-    <h2>📋 Checklist de hoje ${jaEnviado ? '· ✅ enviado às '+jaEnviado.hora : ''}</h2>
-    ${checklistForm}
-    <button class="btn btn-primary" style="margin-top:8px" onclick="excSalvarChecklistHoje()">${jaEnviado ? 'Atualizar checklist' : 'Salvar checklist de hoje'}</button>
-  </div>
-
-  <div class="card"><h2>📁 Histórico mensal</h2>${historico}</div>`;
-}
-
-function exportExcelenciaPDF(colaboradorId, mes) {
-  const r = excComputeMes(colaboradorId, mes);
-  if (!r.colaborador) { alert('Colaborador não encontrado.'); return; }
-  const now = new Date();
-  const rows = r.categorias.map(c => `<tr><td>${c.icone} ${c.nome}</td><td>${c.peso}</td><td>${c.nota}</td></tr>`).join('');
-  const extrasRows = r.extras.map(e => {
-    const nomeExtra = e.tipo === 'economia' ? 'Economia comprovada' : ((EXC_EXTRAS_DEFAULT.find(x=>x.tipo===e.tipo)||{}).nome || e.tipo);
-    return `<tr><td>${nomeExtra}</td><td>R$ ${Number(e.valor).toFixed(2).replace('.',',')}</td></tr>`;
-  }).join('') || '<tr><td colspan="2">Nenhum bônus extra no mês.</td></tr>';
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Programa Excelência — ${r.colaborador.nome}</title>
-  <style>
-    body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:24px}
-    h1{color:#1b5e20;font-size:18px;margin-bottom:4px}
-    .sub{font-size:12px;color:#555;margin-bottom:16px}
-    table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px}
-    th{background:#1b5e20;color:#fff;padding:6px;text-align:left}
-    td{padding:6px;border-bottom:1px solid #ddd}
-    .total{font-size:16px;font-weight:700;color:#1b5e20;margin:10px 0}
-    .sig{display:flex;gap:40px;margin-top:60px}
-    .sig div{flex:1;border-top:1px solid #333;text-align:center;padding-top:6px;font-size:12px}
-    @media print{ button{display:none} }
-    #btn-voltar{position:fixed;top:12px;right:12px;background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;z-index:999}
-  </style></head><body>
-    <button id="btn-voltar" onclick="window.close()">← Voltar ao App</button>
-    <h1>🏆 Programa Excelência — ${_tenantId}</h1>
-    <div class="sub">Colaborador: <strong>${r.colaborador.nome}</strong> ${r.colaborador.cargo?'('+r.colaborador.cargo+')':''} · Mês: ${mes.split('-').reverse().join('/')} · Gerado em ${now.toLocaleDateString('pt-BR')}</div>
-    <table><thead><tr><th>Critério</th><th>Peso</th><th>Nota obtida</th></tr></thead><tbody>${rows}</tbody></table>
-    <div class="total">Pontuação total: ${r.total}/100 — Bônus: ${r.tier.pct}% de R$ ${r.bonusBase.toFixed(2).replace('.',',')} = R$ ${r.bonusValor.toFixed(2).replace('.',',')}</div>
-    <table><thead><tr><th>Bônus extra</th><th>Valor</th></tr></thead><tbody>${extrasRows}</tbody></table>
-    <div class="total">Total do mês: R$ ${r.totalFinal.toFixed(2).replace('.',',')}</div>
-    <div class="sig"><div>Assinatura do Gestor</div><div>Assinatura do Colaborador</div></div>
     <script>window.onload = () => { window.print(); };${'</' + 'script>'}
   </body></html>`;
   const w = window.open('', '_blank');
