@@ -407,6 +407,17 @@ function excRemoveOcorrencia(id) {
   renderExcelencia();
 }
 
+function excZerarMes(colaboradorId, mes) {
+  const colaborador = excColaboradores.find(c => c.id === colaboradorId);
+  if (!colaborador) return;
+  const mesLabel = mes.split('-').reverse().join('/');
+  if (!confirm(`Zerar TODAS as ocorrências e bônus extras de ${colaborador.nome} em ${mesLabel}?\n\nA pontuação volta para 100/100 e os bônus extras somem. O cadastro do colaborador e o checklist diário não são afetados. Essa ação não pode ser desfeita.`)) return;
+  excOcorrencias = excOcorrencias.filter(o => !(o.colaboradorId === colaboradorId && o.mes === mes));
+  excBonusExtras = excBonusExtras.filter(e => !(e.colaboradorId === colaboradorId && e.mes === mes));
+  saveExcelencia();
+  renderExcelencia();
+}
+
 function excToggleExtra(colaboradorId, mes, tipo, valorPadrao) {
   const idx = excBonusExtras.findIndex(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo===tipo);
   if (idx >= 0) excBonusExtras.splice(idx,1);
@@ -716,7 +727,10 @@ function excRenderAdmin() {
     </div>
     ${r.extrasValor>0 ? `<div style="margin-top:8px;font-size:12px;color:#2e7d32;font-weight:700">+ R$ ${r.extrasValor.toFixed(2).replace('.',',')} em bônus extras</div>` : ''}
     <div style="margin-top:4px;font-size:15px;font-weight:900;color:var(--gold-dark)">Total do mês: R$ ${r.totalFinal.toFixed(2).replace('.',',')}</div>
-    <button class="btn btn-primary" style="margin-top:12px" onclick="exportExcelenciaPDF('${colaboradorId}','${mes}')">📄 Gerar PDF do mês</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn btn-primary" onclick="exportExcelenciaPDF('${colaboradorId}','${mes}')">📄 Gerar PDF do mês</button>
+      <button class="btn btn-danger" onclick="excZerarMes('${colaboradorId}','${mes}')">🔄 Zerar ocorrências e bônus deste mês</button>
+    </div>
   </div>
 
   <div class="card">
