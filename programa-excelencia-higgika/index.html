@@ -652,6 +652,7 @@ function excColaboradorLogado() {
 // ═══════════════════════════════════════════════
 let _excSelColaboradorId = null;
 let _excSelMes = null;
+let _excChecklistRelData = null;
 
 function renderExcelencia() {
   const el = document.getElementById('exc-content');
@@ -661,12 +662,15 @@ function renderExcelencia() {
   if (!isAdmin()) { el.innerHTML = '<div class="card"><div class="empty-state"><div class="icon">🔒</div>Acesso restrito.</div></div>'; return; }
   const selEl = document.getElementById('exc-sel-colaborador');
   const mesEl = document.getElementById('exc-sel-mes');
+  const chkDataEl = document.getElementById('exc-rel-chk-data');
   if (selEl && selEl.value) _excSelColaboradorId = selEl.value;
   if (mesEl && mesEl.value) _excSelMes = mesEl.value;
+  if (chkDataEl && chkDataEl.value) _excChecklistRelData = chkDataEl.value;
   if (!_excSelColaboradorId || !excColaboradores.find(c=>c.id===_excSelColaboradorId)) {
     _excSelColaboradorId = excColaboradores[0] ? excColaboradores[0].id : null;
   }
   if (!_excSelMes) _excSelMes = excMesAtual();
+  if (!_excChecklistRelData) _excChecklistRelData = excHojeISO();
   el.innerHTML = excRenderAdmin();
 }
 
@@ -697,6 +701,40 @@ function excCorTier(pct) { return pct >= 100 ? '#388E3C' : pct >= 60 ? '#FDD835'
 function excBannerConfig() {
   if (FIREBASE_CONFIGURADO) return '';
   return `<div id="config-banner" style="display:block">⚠️ Este app ainda está salvando os dados só neste aparelho (Firebase não configurado). Veja o <strong>README.md</strong> do projeto para conectar um banco de dados próprio e sincronizar entre celulares.</div>`;
+}
+
+function excChecklistDiaLinhas(data) {
+  return excColaboradores.map(c => {
+    const entry = excChecklistDoDia(c.id, data);
+    if (!entry) {
+      return `<div style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px">
+        <strong>${c.nome}</strong> — <span style="color:#e53935;font-weight:700">❌ Não preenchido</span>
+      </div>`;
+    }
+    const total = excChecklistItens.length;
+    const marcados = Object.values(entry.itens||{}).filter(Boolean).length;
+    const itensDetalhe = excChecklistItens.map(item => {
+      const ok = !!entry.itens[item.id];
+      return `<span style="display:inline-block;margin:2px 6px 2px 0;font-size:11px;color:${ok?'#2e7d32':'#aaa'}">${ok?'✅':'⬜'} ${item.texto}</span>`;
+    }).join('');
+    return `<div style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px">
+      <strong>${c.nome}</strong> — <span style="color:#2e7d32;font-weight:700">✅ Enviado às ${entry.hora}</span> (${marcados}/${total})
+      <div style="margin-top:4px">${itensDetalhe}</div>
+    </div>`;
+  }).join('');
+}
+
+function excRenderChecklistDiaCard() {
+  const data = _excChecklistRelData;
+  const linhas = excChecklistDiaLinhas(data) || '<div class="empty-state"><div class="icon">📋</div>Nenhum colaborador cadastrado.</div>';
+  return `
+  <div class="card">
+    <h2>📋 Relatório diário do checklist (todos os colaboradores)</h2>
+    <div class="form-group"><label>Data</label>
+      <input type="date" id="exc-rel-chk-data" value="${data}" onchange="renderExcelencia()"></div>
+    ${linhas}
+    <button class="btn btn-primary" style="margin-top:10px" onclick="exportChecklistDiarioPDF('${data}')">📄 Gerar PDF do dia</button>
+  </div>`;
 }
 
 function excRenderAdmin() {
@@ -826,6 +864,8 @@ function excRenderAdmin() {
 
   <div class="card"><h2>📋 Checklist diário — histórico do mês</h2>${checklistList}</div>
 
+  ${excRenderChecklistDiaCard()}
+
   <div class="card"><h2>👥 Colaboradores cadastrados</h2>${colabList}</div>
 
   <div class="card"><h2>➕ Cadastrar colaborador</h2>${excFormNovoColaborador()}</div>
@@ -932,6 +972,43 @@ function exportExcelenciaPDF(colaboradorId, mes) {
     <table><thead><tr><th>Bônus extra</th><th>Valor</th></tr></thead><tbody>${extrasRows}</tbody></table>
     <div class="total">Total do mês: R$ ${r.totalFinal.toFixed(2).replace('.',',')}</div>
     <div class="sig"><div>Assinatura do Gestor</div><div>Assinatura do Colaborador</div></div>
+    <script>window.onload = () => { window.print(); };${'</' + 'script>'}
+  </body></html>`;
+  const w = window.open('', '_blank');
+  if (!w) { alert('Popup bloqueado. Permita popups para este site e tente novamente.'); return; }
+  w.document.write(html);
+  w.document.close();
+}
+
+function exportChecklistDiarioPDF(data) {
+  if (!excColaboradores.length) { alert('Nenhum colaborador cadastrado.'); return; }
+  const now = new Date();
+  const dataLabel = data.split('-').reverse().join('/');
+  const linhas = excColaboradores.map(c => {
+    const entry = excChecklistDoDia(c.id, data);
+    if (!entry) {
+      return `<tr><td><strong>${c.nome}</strong></td><td colspan="2" style="color:#c62828">Não preenchido</td></tr>`;
+    }
+    const total = excChecklistItens.length;
+    const marcados = Object.values(entry.itens||{}).filter(Boolean).length;
+    const itensTexto = excChecklistItens.map(item => `${entry.itens[item.id] ? '✅' : '⬜'} ${item.texto}`).join('<br>');
+    return `<tr><td><strong>${c.nome}</strong><br><span style="font-size:11px;color:#555">Enviado às ${entry.hora} (${marcados}/${total})</span></td><td colspan="2">${itensTexto}</td></tr>`;
+  }).join('');
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Checklist diário — ${dataLabel}</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:24px}
+    h1{color:#8D6E00;font-size:18px;margin-bottom:4px}
+    .sub{font-size:12px;color:#555;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th{background:#8D6E00;color:#fff;padding:6px;text-align:left}
+    td{padding:8px 6px;border-bottom:1px solid #ddd;vertical-align:top}
+    @media print{ button{display:none} }
+    #btn-voltar{position:fixed;top:12px;right:12px;background:#8D6E00;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;z-index:999}
+  </style></head><body>
+    <button id="btn-voltar" onclick="window.close()">← Voltar ao App</button>
+    <h1>📋 Relatório diário do checklist — Higgika</h1>
+    <div class="sub">Data: <strong>${dataLabel}</strong> · Gerado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+    <table><thead><tr><th>Colaborador</th><th colspan="2">Itens do checklist</th></tr></thead><tbody>${linhas}</tbody></table>
     <script>window.onload = () => { window.print(); };${'</' + 'script>'}
   </body></html>`;
   const w = window.open('', '_blank');
