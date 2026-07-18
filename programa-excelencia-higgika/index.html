@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Programa Excelência – Higgika</title>
+<meta name="description" content="Programa de bonificação por desempenho — Higgika">
+<meta name="theme-color" content="#8D6E00">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Excelência Higgika">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.svg">
+<style>
+  :root {
+    --gold: #C9A227;
+    --gold-dark: #8D6E00;
+    --green-ok: #388E3C;
+    --yellow: #FDD835;
+    --red: #e53935;
+    --bg: #f4f1e8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    background: var(--bg); color: #222; -webkit-tap-highlight-color: transparent;
+  }
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--gold-dark); color: #fff; padding: 12px 16px;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .header h1 { font-size: 16px; font-weight: 700; margin: 0; }
+  .header .sub { font-size: 11px; opacity: .85; }
+  .ub-name { font-size: 12px; font-weight: 700; }
+  .ub-role { font-size: 10px; opacity: .85; }
+  .header button {
+    background: rgba(255,255,255,.15); color: #fff; border: none; border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; font-weight: 700; cursor: pointer; margin-left: 8px;
+  }
+  #app { max-width: 640px; margin: 0 auto; padding: 12px; padding-bottom: 40px; display: none; }
+  .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .card h2 { font-size: 14px; font-weight: 700; color: var(--gold-dark); margin: 0 0 12px; }
+  .form-group { margin-bottom: 10px; }
+  .form-group label { display: block; font-size: 11px; font-weight: 700; color: #666; margin-bottom: 4px; }
+  .form-group input, .form-group select {
+    width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; background: #fafafa;
+  }
+  .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--gold); background: #fff; }
+  .btn { border: none; border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-primary { background: var(--gold-dark); color: #fff; }
+  .btn-primary:hover { background: var(--gold); }
+  .btn-secondary { background: #eee; color: #444; }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-sm { padding: 6px 10px; font-size: 11px; }
+  .empty-state { text-align: center; padding: 32px 16px; color: #aaa; font-size: 13px; }
+  .empty-state .icon { font-size: 36px; margin-bottom: 8px; }
+  .summary-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  .summary-row:last-child { border: none; }
+  .chart-bar-row { display: flex; align-items: center; margin-bottom: 8px; gap: 8px; }
+  .chart-label { font-size: 10px; font-weight: 700; color: #444; min-width: 100px; text-align: right; }
+  .chart-bar-bg { flex: 1; background: #f0ece0; border-radius: 6px; height: 22px; overflow: hidden; }
+  .chart-bar-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; transition: width .4s ease; }
+  .chart-bar-fill span { font-size: 10px; font-weight: 700; white-space: nowrap; }
+
+  /* ── LOGIN ── */
+  #login-overlay {
+    position: fixed; inset: 0; background: linear-gradient(160deg, var(--gold-dark), #4a3900);
+    display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px;
+  }
+  .login-box { background: #fff; border-radius: 16px; padding: 28px 22px; width: 100%; max-width: 360px; text-align: center; }
+  .login-box .logo { font-size: 44px; margin-bottom: 6px; }
+  .login-box h2 { font-size: 17px; color: var(--gold-dark); margin: 0 0 4px; }
+  .login-box .sub { font-size: 12px; color: #888; margin-bottom: 20px; }
+  .login-role-grid { display: flex; gap: 12px; }
+  .login-user-card {
+    flex: 1; border: 2px solid #eee; border-radius: 12px; padding: 16px 8px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #555;
+  }
+  .login-user-card:hover { border-color: var(--gold-dark); background: #fbf7ec; color: var(--gold-dark); }
+  .luc-avatar { font-size: 28px; }
+  .login-user-list { max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  .login-back-btn { text-align: left; font-size: 12px; color: #999; cursor: pointer; margin-bottom: 8px; }
+  .login-back-btn:hover { color: var(--gold-dark); }
+  .login-selected-user { font-size: 15px; font-weight: 700; color: var(--gold-dark); margin-bottom: 4px; }
+  .pin-title { font-size: 12px; color: #888; margin-bottom: 16px; }
+  .pin-dots { display: flex; gap: 10px; justify-content: center; margin-bottom: 14px; }
+  .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #ddd; }
+  .pin-dot.filled { background: var(--gold-dark); border-color: var(--gold-dark); }
+  .pin-dot.error { background: var(--red); border-color: var(--red); }
+  .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .pin-key {
+    padding: 14px 0; font-size: 18px; font-weight: 700; border: 1.5px solid #eee; border-radius: 10px;
+    background: #fafafa; cursor: pointer; color: #333;
+  }
+  .pin-key:active, .pin-key:hover { background: var(--gold-dark); color: #fff; border-color: var(--gold-dark); }
+  .pin-key.del { font-size: 13px; }
+  .pin-hint { font-size: 11px; color: #999; margin-top: 12px; min-height: 14px; }
+  .pin-hint.pin-error { color: var(--red); font-weight: 700; }
+  #login-install-btn {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.4);
+    border-radius: 20px; padding: 8px 16px; font-size: 12px; cursor: pointer; display: none;
+  }
+  #config-banner {
+    display: none; background: #fff3cd; color: #7a5b00; border: 1px solid #ffe08a;
+    border-radius: 10px; padding: 10px 12px; font-size: 11px; margin-bottom: 12px; line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ LOGIN ══════════════ -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div id="login-step-select">
+      <div class="logo">🏆</div>
+      <h2>Programa Excelência</h2>
+      <div class="sub">Higgika — Estoque e Logística</div>
+      <div class="login-role-grid">
+        <div class="login-user-card" onclick="selectAdminLogin()">
+          <span class="luc-avatar">🔐</span><span>Administrador</span>
+        </div>
+        <div class="login-user-card" onclick="showColaboradorPicker()">
+          <span class="luc-avatar">🏅</span><span>Colaborador</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="login-step-colaborador" style="display:none">
+      <div class="login-back-btn" onclick="colaboradorPickerGoBack()">← Voltar</div>
+      <h2 style="margin-bottom:14px">Qual colaborador é você?</h2>
+      <div class="login-user-list" id="login-colaborador-list"></div>
+    </div>
+
+    <div id="login-step-pin" style="display:none">
+      <div class="login-back-btn" onclick="loginGoBack()">← Voltar</div>
+      <div class="login-selected-user" id="login-selected-label">—</div>
+      <div class="pin-title" id="pin-title">Digite seu PIN de 4 dígitos</div>
+      <div class="pin-dots">
+        <div class="pin-dot" id="dot-0"></div>
+        <div class="pin-dot" id="dot-1"></div>
+        <div class="pin-dot" id="dot-2"></div>
+        <div class="pin-dot" id="dot-3"></div>
+      </div>
+      <div class="pin-pad">
+        <button class="pin-key" onclick="pinKey('1')">1</button>
+        <button class="pin-key" onclick="pinKey('2')">2</button>
+        <button class="pin-key" onclick="pinKey('3')">3</button>
+        <button class="pin-key" onclick="pinKey('4')">4</button>
+        <button class="pin-key" onclick="pinKey('5')">5</button>
+        <button class="pin-key" onclick="pinKey('6')">6</button>
+        <button class="pin-key" onclick="pinKey('7')">7</button>
+        <button class="pin-key" onclick="pinKey('8')">8</button>
+        <button class="pin-key" onclick="pinKey('9')">9</button>
+        <button class="pin-key del" onclick="pinClear()">Limpar</button>
+        <button class="pin-key" onclick="pinKey('0')">0</button>
+        <button class="pin-key del" onclick="pinDelete()">⌫</button>
+      </div>
+      <div class="pin-hint" id="pin-hint">Informe seu PIN de 4 dígitos</div>
+    </div>
+  </div>
+  <button id="login-install-btn" onclick="triggerInstall()">📲 Instalar App no celular</button>
+</div>
+
+<!-- ══════════════ APP ══════════════ -->
+<div id="app">
+  <div class="header">
+    <div>
+      <h1>🏆 Programa Excelência</h1>
+      <div class="sub" id="hdr-sub">Higgika</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="text-align:right">
+        <div class="ub-name" id="hdr-user">—</div>
+        <div class="ub-role" id="hdr-role">—</div>
+      </div>
+      <button onclick="logout()">Sair</button>
+    </div>
+  </div>
+  <div id="exc-content" style="padding:12px"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+// ═══════════════════════════════════════════════
+//  CONFIGURAÇÃO DO FIREBASE — banco de dados PRÓPRIO deste app
+//  (separado de qualquer outro app/projeto). Veja README.md para
+//  o passo a passo de como criar o projeto gratuito no Firebase e
+//  preencher os valores abaixo.
+// ═══════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey: "COLE_AQUI_A_apiKey",
+  authDomain: "COLE_AQUI_O_authDomain",
+  projectId: "COLE_AQUI_O_projectId",
+  storageBucket: "COLE_AQUI_O_storageBucket",
+  messagingSenderId: "COLE_AQUI_O_messagingSenderId",
+  appId: "COLE_AQUI_O_appId",
+};
+const FIREBASE_CONFIGURADO = FIREBASE_CONFIG.projectId && !FIREBASE_CONFIG.projectId.startsWith('COLE_AQUI');
+
+let db = null; // Firestore (null = modo local, salvando só neste aparelho)
+
+async function initFirebase() {
+  if (!FIREBASE_CONFIGURADO) return false;
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    const auth = firebase.auth();
+    await auth.signInAnonymously();
+    await new Promise((resolve, reject) => {
+      const unsub = auth.onAuthStateChanged(user => { unsub(); user ? resolve(user) : reject(new Error('Auth falhou')); }, reject);
+    });
+    return true;
+  } catch (e) {
+    console.error('Erro ao inicializar Firebase:', e);
+    db = null;
+    return false;
+  }
+}
+
+function excData() { return db.collection('excelencia_data'); }
+
+// ═══════════════════════════════════════════════
+//  DADOS
+// ═══════════════════════════════════════════════
+let excColaboradores = [];  // {id, nome, cargo, bonusBase, pin}
+let excOcorrencias   = [];  // {id, colaboradorId, mes, categoria, pontos, obs, data}
+let excChecklist     = [];  // {id, colaboradorId, data, itens:{...}, hora}
+let excBonusExtras   = [];  // {id, colaboradorId, mes, tipo, valor, valorEconomizado?}
+let _adminPin = '0000';
+
+const EXC_CATEGORIAS = [
+  { id:'entregas',        nome:'Entregas',        icone:'🚚', peso:30, penalidade:5 },
+  { id:'estoque',         nome:'Estoque',         icone:'📦', peso:25, penalidade:5 },
+  { id:'organizacao',     nome:'Organização',     icone:'🧹', peso:15, penalidade:3 },
+  { id:'veiculo',         nome:'Veículo',         icone:'🚗', peso:10, penalidade:3 },
+  { id:'equipamentos',    nome:'Equipamentos',    icone:'🛠️', peso:10, penalidade:2 },
+  { id:'comprometimento', nome:'Comprometimento', icone:'⭐', peso:10, penalidade:0 },
+];
+const EXC_BONUS_TIERS = [
+  { min:95, pct:100 }, { min:90, pct:80 }, { min:85, pct:60 }, { min:80, pct:40 }, { min:0, pct:0 },
+];
+const EXC_EXTRAS_DEFAULT = [
+  { tipo:'zero_erros',     nome:'Zero erros no mês',             valor:100 },
+  { tipo:'estoque_ok',     nome:'Estoque sem divergência',       valor:100 },
+  { tipo:'sem_reclamacao', nome:'Nenhuma reclamação de clientes', valor:100 },
+  { tipo:'inventario_ok',  nome:'Inventário aprovado',            valor:100 },
+];
+const EXC_ECONOMIA_PCT = 0.05;
+const EXC_ECONOMIA_TETO = 200;
+const EXC_CHECKLIST_ITENS = [
+  'Veículo limpo', 'Estoque organizado', 'Pedidos separados', 'Produtos conferidos',
+  'Notas entregues', 'Coletas registradas', 'Lixo retirado', 'Portas fechadas', 'Equipamentos desligados',
+];
+
+function excMesAtual() { return new Date().toISOString().slice(0,7); }
+function excHojeISO()  { return new Date().toISOString().slice(0,10); }
+
+// ═══════════════════════════════════════════════
+//  PERSISTÊNCIA — Firestore próprio ou localStorage (fallback)
+// ═══════════════════════════════════════════════
+function saveExcelencia() {
+  if (db) {
+    excData().doc('main').set({
+      colaboradores: excColaboradores, ocorrencias: excOcorrencias,
+      checklist: excChecklist, bonusExtras: excBonusExtras,
+    }).catch(e => { console.error(e); alert('Erro ao salvar: ' + e.message); });
+  } else {
+    localStorage.setItem('exc_colaboradores', JSON.stringify(excColaboradores));
+    localStorage.setItem('exc_ocorrencias',   JSON.stringify(excOcorrencias));
+    localStorage.setItem('exc_checklist',     JSON.stringify(excChecklist));
+    localStorage.setItem('exc_bonusExtras',   JSON.stringify(excBonusExtras));
+  }
+}
+
+function saveAuth() {
+  if (db) excData().doc('auth').set({ adminPin: _adminPin }).catch(console.error);
+  else localStorage.setItem('exc_admin_pin', _adminPin);
+}
+
+async function loadAll() {
+  if (db) {
+    const [mainSnap, authSnap] = await Promise.all([excData().doc('main').get(), excData().doc('auth').get()]);
+    if (mainSnap.exists) {
+      const d = mainSnap.data();
+      excColaboradores = d.colaboradores || [];
+      excOcorrencias   = d.ocorrencias   || [];
+      excChecklist     = d.checklist     || [];
+      excBonusExtras   = d.bonusExtras   || [];
+    }
+    if (authSnap.exists) _adminPin = authSnap.data().adminPin || '0000';
+    excData().doc('main').onSnapshot(snap => {
+      if (!snap.exists) return;
+      const d = snap.data();
+      excColaboradores = d.colaboradores || [];
+      excOcorrencias   = d.ocorrencias   || [];
+      excChecklist     = d.checklist     || [];
+      excBonusExtras   = d.bonusExtras   || [];
+      if (document.getElementById('app').style.display !== 'none') renderExcelencia();
+    });
+  } else {
+    excColaboradores = JSON.parse(localStorage.getItem('exc_colaboradores') || '[]');
+    excOcorrencias   = JSON.parse(localStorage.getItem('exc_ocorrencias')   || '[]');
+    excChecklist     = JSON.parse(localStorage.getItem('exc_checklist')    || '[]');
+    excBonusExtras   = JSON.parse(localStorage.getItem('exc_bonusExtras')  || '[]');
+    _adminPin = localStorage.getItem('exc_admin_pin') || '0000';
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  LÓGICA DE PONTUAÇÃO
+// ═══════════════════════════════════════════════
+function excComputeMes(colaboradorId, mes) {
+  const colaborador = excColaboradores.find(c => c.id === colaboradorId);
+  const categorias = EXC_CATEGORIAS.map(cat => {
+    const pts = excOcorrencias
+      .filter(o => o.colaboradorId === colaboradorId && o.mes === mes && o.categoria === cat.id)
+      .reduce((s,o) => s + Number(o.pontos||0), 0);
+    const nota = Math.max(0, Math.min(cat.peso, cat.peso + pts));
+    return { ...cat, pontosLancados: pts, nota };
+  });
+  const total = categorias.reduce((s,c) => s + c.nota, 0);
+  const tier = EXC_BONUS_TIERS.find(t => total >= t.min) || EXC_BONUS_TIERS[EXC_BONUS_TIERS.length-1];
+  const bonusBase = colaborador ? Number(colaborador.bonusBase||500) : 500;
+  const bonusValor = bonusBase * tier.pct / 100;
+  const extras = excBonusExtras.filter(e => e.colaboradorId === colaboradorId && e.mes === mes);
+  const extrasValor = extras.reduce((s,e) => s + Number(e.valor||0), 0);
+  return { colaborador, categorias, total, tier, bonusBase, bonusValor, extras, extrasValor, totalFinal: bonusValor + extrasValor };
+}
+
+// ═══════════════════════════════════════════════
+//  AÇÕES — colaboradores, ocorrências, extras, checklist
+// ═══════════════════════════════════════════════
+function excAddColaborador() {
+  const nome = (document.getElementById('exc-new-nome').value||'').trim().toUpperCase();
+  const cargo = (document.getElementById('exc-new-cargo').value||'').trim();
+  const bonusBase = Number(document.getElementById('exc-new-bonus').value||500);
+  const pin = (document.getElementById('exc-new-pin').value||'').trim();
+  const msg = document.getElementById('exc-new-msg');
+  if (!nome) { msg.style.color='#c62828'; msg.textContent='❌ Informe o nome.'; return; }
+  if (!/^\d{4}$/.test(pin)) { msg.style.color='#c62828'; msg.textContent='❌ PIN deve ter exatamente 4 dígitos.'; return; }
+  if (excColaboradores.find(c => c.nome === nome)) { msg.style.color='#c62828'; msg.textContent='❌ Colaborador já cadastrado.'; return; }
+  excColaboradores.push({ id:'col_'+Date.now(), nome, cargo, bonusBase, pin });
+  saveExcelencia();
+  document.getElementById('exc-new-nome').value = '';
+  document.getElementById('exc-new-cargo').value = '';
+  document.getElementById('exc-new-pin').value = '';
+  msg.style.color='#2e7d32'; msg.textContent='✅ Colaborador cadastrado!';
+  renderExcelencia();
+}
+
+function excEditColaborador(id) {
+  const c = excColaboradores.find(x => x.id === id);
+  if (!c) return;
+  const cargo = prompt('Cargo/função:', c.cargo||'');
+  if (cargo === null) return;
+  const bonusBase = prompt('Valor do bônus mensal (R$) para 100% da pontuação:', c.bonusBase);
+  if (bonusBase === null) return;
+  const pin = prompt('PIN de acesso (4 dígitos):', c.pin);
+  if (pin === null) return;
+  if (!/^\d{4}$/.test(pin)) { alert('PIN deve ter exatamente 4 dígitos.'); return; }
+  c.cargo = cargo.trim();
+  c.bonusBase = Number(bonusBase||500);
+  c.pin = pin.trim();
+  saveExcelencia();
+  renderExcelencia();
+}
+
+function excRemoveColaborador(id) {
+  const c = excColaboradores.find(x => x.id === id);
+  if (!c) return;
+  if (!confirm(`Remover "${c.nome}" do Programa Excelência? O histórico será mantido, mas ele não terá mais acesso.`)) return;
+  excColaboradores = excColaboradores.filter(x => x.id !== id);
+  saveExcelencia();
+  renderExcelencia();
+}
+
+function excPreencherPontosSugeridos() {
+  const catId = document.getElementById('exc-oc-categoria').value;
+  const cat = EXC_CATEGORIAS.find(c => c.id === catId);
+  const input = document.getElementById('exc-oc-pontos');
+  if (cat && input) input.value = cat.penalidade ? -cat.penalidade : 0;
+}
+
+function excLancarOcorrencia() {
+  const colaboradorId = document.getElementById('exc-sel-colaborador').value;
+  const mes = document.getElementById('exc-sel-mes').value || excMesAtual();
+  const categoria = document.getElementById('exc-oc-categoria').value;
+  const pontos = Number(document.getElementById('exc-oc-pontos').value);
+  const obs = (document.getElementById('exc-oc-obs').value||'').trim();
+  const data = document.getElementById('exc-oc-data').value || excHojeISO();
+  if (!colaboradorId) { alert('Selecione um colaborador.'); return; }
+  if (!pontos) { alert('Informe a pontuação (positiva para ganho, negativa para perda).'); return; }
+  excOcorrencias.push({ id:'oc_'+Date.now(), colaboradorId, mes, categoria, pontos, obs, data });
+  saveExcelencia();
+  document.getElementById('exc-oc-obs').value = '';
+  renderExcelencia();
+}
+
+function excRemoveOcorrencia(id) {
+  if (!confirm('Excluir esta ocorrência?')) return;
+  excOcorrencias = excOcorrencias.filter(o => o.id !== id);
+  saveExcelencia();
+  renderExcelencia();
+}
+
+function excToggleExtra(colaboradorId, mes, tipo, valorPadrao) {
+  const idx = excBonusExtras.findIndex(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo===tipo);
+  if (idx >= 0) excBonusExtras.splice(idx,1);
+  else excBonusExtras.push({ id:'be_'+Date.now(), colaboradorId, mes, tipo, valor:valorPadrao });
+  saveExcelencia();
+  renderExcelencia();
+}
+
+function excSetEconomia(colaboradorId, mes) {
+  const valorEconomizado = Number(document.getElementById('exc-economia-input').value||0);
+  const valor = Math.min(valorEconomizado * EXC_ECONOMIA_PCT, EXC_ECONOMIA_TETO);
+  const idx = excBonusExtras.findIndex(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo==='economia');
+  const entry = { id:'be_econ_'+colaboradorId+'_'+mes, colaboradorId, mes, tipo:'economia', valorEconomizado, valor };
+  if (valorEconomizado <= 0) { if (idx >= 0) excBonusExtras.splice(idx,1); }
+  else if (idx >= 0) excBonusExtras[idx] = entry;
+  else excBonusExtras.push(entry);
+  saveExcelencia();
+  renderExcelencia();
+}
+
+function excChecklistDoDia(colaboradorId, data) {
+  return excChecklist.find(c => c.colaboradorId === colaboradorId && c.data === data);
+}
+
+function excSalvarChecklistHoje() {
+  const colaborador = excColaboradorLogado();
+  if (!colaborador) return;
+  const hoje = excHojeISO();
+  const itens = {};
+  EXC_CHECKLIST_ITENS.forEach((_,i) => { itens[i] = !!document.getElementById('exc-chk-'+i)?.checked; });
+  const idx = excChecklist.findIndex(c => c.colaboradorId===colaborador.id && c.data===hoje);
+  const entry = {
+    id: idx>=0 ? excChecklist[idx].id : 'chk_'+Date.now(),
+    colaboradorId: colaborador.id, data: hoje, itens,
+    hora: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}),
+  };
+  if (idx >= 0) excChecklist[idx] = entry; else excChecklist.push(entry);
+  saveExcelencia();
+  renderExcelencia();
+}
+
+function excAlterarPinAdmin() {
+  const novo = prompt('Novo PIN do administrador (4 dígitos):');
+  if (novo === null) return;
+  if (!/^\d{4}$/.test(novo)) { alert('PIN deve ter exatamente 4 dígitos.'); return; }
+  _adminPin = novo;
+  saveAuth();
+  alert('✅ PIN do administrador atualizado.');
+}
+
+// ═══════════════════════════════════════════════
+//  LOGIN
+// ═══════════════════════════════════════════════
+let loginMode = null;          // 'admin' | 'colaborador'
+let selectedColaboradorId = null;
+let pinBuffer = '';
+
+function selectAdminLogin() {
+  loginMode = 'admin';
+  pinBuffer = '';
+  updatePinDots();
+  document.getElementById('login-selected-label').textContent = 'Administrador';
+  document.getElementById('pin-hint').textContent = 'Informe seu PIN de 4 dígitos';
+  document.getElementById('pin-hint').classList.remove('pin-error');
+  document.getElementById('login-step-select').style.display = 'none';
+  document.getElementById('login-step-pin').style.display = '';
+}
+
+function showColaboradorPicker() {
+  if (!excColaboradores.length) { alert('Nenhum colaborador cadastrado ainda. Peça ao administrador para cadastrar você no Programa Excelência.'); return; }
+  const listEl = document.getElementById('login-colaborador-list');
+  listEl.innerHTML = excColaboradores.map(c =>
+    `<div class="login-user-card" style="flex-direction:row;justify-content:flex-start" onclick="selectColaboradorForLogin('${c.id}')">
+      <span class="luc-avatar">🏅</span><span>${c.nome}</span>
+    </div>`).join('');
+  document.getElementById('login-step-select').style.display = 'none';
+  document.getElementById('login-step-colaborador').style.display = '';
+}
+
+function colaboradorPickerGoBack() {
+  document.getElementById('login-step-colaborador').style.display = 'none';
+  document.getElementById('login-step-select').style.display = '';
+}
+
+function selectColaboradorForLogin(id) {
+  const c = excColaboradores.find(x => x.id === id);
+  if (!c) return;
+  selectedColaboradorId = id;
+  loginMode = 'colaborador';
+  pinBuffer = '';
+  updatePinDots();
+  document.getElementById('login-selected-label').textContent = c.nome;
+  document.getElementById('pin-hint').textContent = 'Informe seu PIN de 4 dígitos';
+  document.getElementById('pin-hint').classList.remove('pin-error');
+  document.getElementById('login-step-colaborador').style.display = 'none';
+  document.getElementById('login-step-pin').style.display = '';
+}
+
+function loginGoBack() {
+  pinBuffer = '';
+  updatePinDots();
+  document.getElementById('login-step-pin').style.display = 'none';
+  if (loginMode === 'colaborador') document.getElementById('login-step-colaborador').style.display = '';
+  else document.getElementById('login-step-select').style.display = '';
+}
+
+function pinKey(d) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += d;
+  updatePinDots();
+  if (pinBuffer.length === 4) setTimeout(tryLogin, 180);
+}
+function pinDelete() { pinBuffer = pinBuffer.slice(0,-1); updatePinDots(); }
+function pinClear()  { pinBuffer = ''; updatePinDots(); }
+function updatePinDots(error) {
+  for (let i=0; i<4; i++) {
+    const dot = document.getElementById('dot-'+i);
+    dot.className = 'pin-dot';
+    if (error) dot.classList.add('error');
+    else if (i < pinBuffer.length) dot.classList.add('filled');
+  }
+}
+function pinError(msg) {
+  updatePinDots(true);
+  const hint = document.getElementById('pin-hint');
+  hint.textContent = msg;
+  hint.classList.add('pin-error');
+  setTimeout(() => { updatePinDots(false); hint.textContent = 'Informe seu PIN de 4 dígitos'; hint.classList.remove('pin-error'); }, 1400);
+}
+
+function tryLogin() {
+  const pin = pinBuffer;
+  pinBuffer = '';
+  if (loginMode === 'admin') {
+    if (pin === _adminPin) { doLogin('admin', 'ADMINISTRADOR'); return; }
+    pinError('PIN incorreto. Tente novamente.');
+  } else if (loginMode === 'colaborador') {
+    const c = excColaboradores.find(x => x.id === selectedColaboradorId);
+    if (c && pin === c.pin) {
+      sessionStorage.setItem('sv_colaborador_id', c.id);
+      doLogin('colaborador', c.nome);
+      return;
+    }
+    pinError('PIN incorreto. Tente novamente.');
+  }
+}
+
+function doLogin(role, name) {
+  sessionStorage.setItem('sv_role', role);
+  sessionStorage.setItem('sv_user', name);
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('hdr-user').textContent = name;
+  document.getElementById('hdr-role').textContent = role === 'admin' ? '🔐 Administrador' : '🏅 Colaborador';
+  renderExcelencia();
+}
+
+function logout() {
+  if (!confirm('Deseja sair da sessão atual?')) return;
+  sessionStorage.removeItem('sv_role');
+  sessionStorage.removeItem('sv_user');
+  sessionStorage.removeItem('sv_colaborador_id');
+  pinBuffer = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-step-pin').style.display = 'none';
+  document.getElementById('login-step-colaborador').style.display = 'none';
+  document.getElementById('login-step-select').style.display = '';
+  document.getElementById('login-overlay').style.display = 'flex';
+}
+
+function isAdmin() { return sessionStorage.getItem('sv_role') === 'admin'; }
+function excColaboradorLogado() {
+  const id = sessionStorage.getItem('sv_colaborador_id');
+  return excColaboradores.find(c => c.id === id) || null;
+}
+
+// ═══════════════════════════════════════════════
+//  TELAS
+// ═══════════════════════════════════════════════
+let _excSelColaboradorId = null;
+let _excSelMes = null;
+
+function renderExcelencia() {
+  const el = document.getElementById('exc-content');
+  if (!el) return;
+  const role = sessionStorage.getItem('sv_role');
+  if (role === 'colaborador') { el.innerHTML = excRenderColaborador(); return; }
+  if (!isAdmin()) { el.innerHTML = '<div class="card"><div class="empty-state"><div class="icon">🔒</div>Acesso restrito.</div></div>'; return; }
+  const selEl = document.getElementById('exc-sel-colaborador');
+  const mesEl = document.getElementById('exc-sel-mes');
+  if (selEl && selEl.value) _excSelColaboradorId = selEl.value;
+  if (mesEl && mesEl.value) _excSelMes = mesEl.value;
+  if (!_excSelColaboradorId || !excColaboradores.find(c=>c.id===_excSelColaboradorId)) {
+    _excSelColaboradorId = excColaboradores[0] ? excColaboradores[0].id : null;
+  }
+  if (!_excSelMes) _excSelMes = excMesAtual();
+  el.innerHTML = excRenderAdmin();
+}
+
+function excFormNovoColaborador() {
+  return `
+    <div class="form-group"><label>Nome</label><input type="text" id="exc-new-nome" placeholder="Ex: FELIPE"></div>
+    <div class="form-group"><label>Cargo/função</label><input type="text" id="exc-new-cargo" placeholder="Ex: Estoquista e Motorista"></div>
+    <div style="display:flex;gap:10px">
+      <div class="form-group" style="flex:1"><label>Bônus mensal (100%)</label><input type="number" id="exc-new-bonus" value="500"></div>
+      <div class="form-group" style="flex:1"><label>PIN de acesso (4 dígitos)</label><input type="text" id="exc-new-pin" maxlength="4" placeholder="0000"></div>
+    </div>
+    <button class="btn btn-primary" onclick="excAddColaborador()">Cadastrar</button>
+    <div id="exc-new-msg" style="font-size:12px;margin-top:6px"></div>`;
+}
+
+function excBarraCategoria(c) {
+  const pct = Math.round((c.nota / c.peso) * 100);
+  const cor = pct >= 90 ? '#388E3C' : pct >= 70 ? '#FDD835' : '#e53935';
+  const corTexto = (pct >= 70 && pct < 90) ? '#333' : '#fff';
+  return `<div class="chart-bar-row">
+    <div class="chart-label">${c.icone} ${c.nome}</div>
+    <div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${Math.max(pct,6)}%;background:${cor}">
+      <span style="color:${corTexto}">${c.nota}/${c.peso}</span></div></div>
+  </div>`;
+}
+function excCorTier(pct) { return pct >= 100 ? '#388E3C' : pct >= 60 ? '#FDD835' : pct > 0 ? '#F57F17' : '#e53935'; }
+
+function excBannerConfig() {
+  if (FIREBASE_CONFIGURADO) return '';
+  return `<div id="config-banner" style="display:block">⚠️ Este app ainda está salvando os dados só neste aparelho (Firebase não configurado). Veja o <strong>README.md</strong> do projeto para conectar um banco de dados próprio e sincronizar entre celulares.</div>`;
+}
+
+function excRenderAdmin() {
+  const banner = excBannerConfig();
+  if (!excColaboradores.length) {
+    return `${banner}
+    <div class="card"><h2>🏆 Programa Excelência</h2>
+      <div class="empty-state"><div class="icon">🏆</div>Cadastre o primeiro colaborador para começar.</div>
+    </div>
+    <div class="card"><h2>➕ Cadastrar colaborador</h2>${excFormNovoColaborador()}</div>`;
+  }
+
+  const colaboradorId = _excSelColaboradorId;
+  const mes = _excSelMes;
+  const colabOptions = excColaboradores.map(c =>
+    `<option value="${c.id}" ${c.id===colaboradorId?'selected':''}>${c.nome}${c.cargo?' — '+c.cargo:''}</option>`).join('');
+
+  const r = excComputeMes(colaboradorId, mes);
+  const categoriaBars = r.categorias.map(excBarraCategoria).join('');
+  const corTier = excCorTier(r.tier.pct);
+
+  const ocorrenciasMes = excOcorrencias.filter(o => o.colaboradorId===colaboradorId && o.mes===mes)
+    .sort((a,b) => (b.data||'').localeCompare(a.data||''));
+  const ocList = ocorrenciasMes.map(o => {
+    const cat = EXC_CATEGORIAS.find(c => c.id === o.categoria);
+    const sinal = o.pontos > 0 ? '+' : '';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #f0f0f0;font-size:12px">
+      <div><strong>${cat ? cat.icone+' '+cat.nome : o.categoria}</strong>
+        <span style="color:${o.pontos<0?'#e53935':'#2e7d32'};font-weight:700">${sinal}${o.pontos} pts</span><br>
+        <span style="color:#888;font-size:11px">${o.data||''}${o.obs?' · '+o.obs:''}</span></div>
+      <button class="btn btn-danger btn-sm" onclick="excRemoveOcorrencia('${o.id}')">✕</button>
+    </div>`;
+  }).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhuma ocorrência lançada neste mês.</div>';
+
+  const extrasChecks = EXC_EXTRAS_DEFAULT.map(ex => {
+    const ativo = !!excBonusExtras.find(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo===ex.tipo);
+    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;cursor:pointer">
+      <input type="checkbox" ${ativo?'checked':''} onchange="excToggleExtra('${colaboradorId}','${mes}','${ex.tipo}',${ex.valor})">
+      ${ex.nome} <span style="margin-left:auto;color:#2e7d32;font-weight:700">+R$ ${ex.valor}</span>
+    </label>`;
+  }).join('');
+  const economiaEntry = excBonusExtras.find(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo==='economia');
+
+  const checklistMes = excChecklist.filter(c => c.colaboradorId===colaboradorId && (c.data||'').startsWith(mes))
+    .sort((a,b) => b.data.localeCompare(a.data));
+  const checklistList = checklistMes.slice(0,10).map(c => {
+    const n = Object.values(c.itens||{}).filter(Boolean).length;
+    return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #f5f5f5">
+      <span>${c.data.split('-').reverse().join('/')}</span><span>${n}/${EXC_CHECKLIST_ITENS.length} itens · ${c.hora}</span>
+    </div>`;
+  }).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhum checklist enviado neste mês.</div>';
+
+  const colabList = excColaboradores.map(c => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;margin-bottom:6px;background:#fafafa">
+      <div><div style="font-weight:700;font-size:13px">🏅 ${c.nome}</div>
+        <div style="font-size:10px;color:#888">${c.cargo||'—'} · Bônus base: R$ ${Number(c.bonusBase).toFixed(2).replace('.',',')}</div></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-secondary btn-sm" onclick="excEditColaborador('${c.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="excRemoveColaborador('${c.id}')">✕</button>
+      </div>
+    </div>`).join('');
+
+  return `${banner}
+  <div class="card">
+    <h2>🏆 Programa Excelência — Estoque e Logística</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+      <div class="form-group" style="flex:2;min-width:160px;margin:0"><label>Colaborador</label>
+        <select id="exc-sel-colaborador" onchange="renderExcelencia()">${colabOptions}</select></div>
+      <div class="form-group" style="flex:1;min-width:130px;margin:0"><label>Mês</label>
+        <input type="month" id="exc-sel-mes" value="${mes}" onchange="renderExcelencia()"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📊 Painel do mês</h2>
+    ${categoriaBars}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:10px;border-top:2px solid #e0e0e0">
+      <div><div style="font-size:11px;color:#888">Pontuação total</div><div style="font-size:24px;font-weight:900;color:var(--gold-dark)">${r.total}/100</div></div>
+      <div style="text-align:right"><div style="font-size:11px;color:#888">Bônus previsto</div>
+        <div style="font-size:20px;font-weight:900;color:${corTier}">${r.tier.pct}% · R$ ${r.bonusValor.toFixed(2).replace('.',',')}</div></div>
+    </div>
+    ${r.extrasValor>0 ? `<div style="margin-top:8px;font-size:12px;color:#2e7d32;font-weight:700">+ R$ ${r.extrasValor.toFixed(2).replace('.',',')} em bônus extras</div>` : ''}
+    <div style="margin-top:4px;font-size:15px;font-weight:900;color:var(--gold-dark)">Total do mês: R$ ${r.totalFinal.toFixed(2).replace('.',',')}</div>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="exportExcelenciaPDF('${colaboradorId}','${mes}')">📄 Gerar PDF do mês</button>
+  </div>
+
+  <div class="card">
+    <h2>➕ Lançar ocorrência</h2>
+    <div class="form-group"><label>Categoria</label>
+      <select id="exc-oc-categoria" onchange="excPreencherPontosSugeridos()">
+        ${EXC_CATEGORIAS.map(c => `<option value="${c.id}">${c.icone} ${c.nome} (peso ${c.peso})</option>`).join('')}
+      </select></div>
+    <div style="display:flex;gap:10px">
+      <div class="form-group" style="flex:1"><label>Pontos (negativo=perda, positivo=ganho)</label>
+        <input type="number" id="exc-oc-pontos" value="-5"></div>
+      <div class="form-group" style="flex:1"><label>Data</label>
+        <input type="date" id="exc-oc-data" value="${excHojeISO()}"></div>
+    </div>
+    <div class="form-group"><label>Observação</label><input type="text" id="exc-oc-obs" placeholder="Ex: atraso na entrega do pedido X"></div>
+    <button class="btn btn-primary" onclick="excLancarOcorrencia()">Lançar ocorrência</button>
+    <div style="margin-top:12px">${ocList}</div>
+  </div>
+
+  <div class="card">
+    <h2>🎁 Bônus extras do mês</h2>
+    ${extrasChecks}
+    <div class="form-group" style="margin-top:8px"><label>Economia comprovada (R$ economizado no mês)</label>
+      <input type="number" id="exc-economia-input" value="${economiaEntry?economiaEntry.valorEconomizado:''}" placeholder="0,00" onchange="excSetEconomia('${colaboradorId}','${mes}')"></div>
+    ${economiaEntry ? `<div style="font-size:11px;color:#2e7d32">Bônus de economia: R$ ${economiaEntry.valor.toFixed(2).replace('.',',')} (5%, teto R$ ${EXC_ECONOMIA_TETO})</div>` : ''}
+  </div>
+
+  <div class="card"><h2>📋 Checklist diário — histórico do mês</h2>${checklistList}</div>
+
+  <div class="card"><h2>👥 Colaboradores cadastrados</h2>${colabList}</div>
+
+  <div class="card"><h2>➕ Cadastrar colaborador</h2>${excFormNovoColaborador()}</div>
+
+  <div class="card">
+    <h2>⚙️ Configurações</h2>
+    <button class="btn btn-secondary" onclick="excAlterarPinAdmin()">🔐 Alterar PIN do administrador</button>
+  </div>`;
+}
+
+function excRenderColaborador() {
+  const colaborador = excColaboradorLogado();
+  if (!colaborador) return '<div class="card"><div class="empty-state"><div class="icon">🏆</div>Colaborador não encontrado.</div></div>';
+  const mes = excMesAtual();
+  const r = excComputeMes(colaborador.id, mes);
+  const categoriaBars = r.categorias.map(excBarraCategoria).join('');
+  const corTier = excCorTier(r.tier.pct);
+
+  const hoje = excHojeISO();
+  const jaEnviado = excChecklistDoDia(colaborador.id, hoje);
+  const checklistForm = EXC_CHECKLIST_ITENS.map((item,i) => `
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer">
+      <input type="checkbox" id="exc-chk-${i}" ${jaEnviado && jaEnviado.itens[i] ? 'checked':''}> ${item}
+    </label>`).join('');
+
+  const base = new Date();
+  const meses = [];
+  for (let i=0; i<6; i++) meses.push(new Date(base.getFullYear(), base.getMonth()-i, 1).toISOString().slice(0,7));
+  const historico = meses.map(m => {
+    const rm = excComputeMes(colaborador.id, m);
+    return `<div class="summary-row"><span>${m.split('-').reverse().join('/')}</span><span>${rm.total}/100 · R$ ${rm.totalFinal.toFixed(2).replace('.',',')}</span></div>`;
+  }).join('');
+
+  return `
+  <div class="card">
+    <h2>🏆 ${colaborador.nome}</h2>
+    <div style="font-size:12px;color:#888;margin-bottom:8px">${colaborador.cargo||''} · ${mes.split('-').reverse().join('/')}</div>
+    ${categoriaBars}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:10px;border-top:2px solid #e0e0e0">
+      <div><div style="font-size:11px;color:#888">Pontuação total</div><div style="font-size:24px;font-weight:900;color:var(--gold-dark)">${r.total}/100</div></div>
+      <div style="text-align:right"><div style="font-size:11px;color:#888">Bônus previsto</div>
+        <div style="font-size:20px;font-weight:900;color:${corTier}">${r.tier.pct}% · R$ ${r.bonusValor.toFixed(2).replace('.',',')}</div></div>
+    </div>
+    ${r.extrasValor>0 ? `<div style="margin-top:8px;font-size:12px;color:#2e7d32;font-weight:700">+ R$ ${r.extrasValor.toFixed(2).replace('.',',')} em bônus extras conquistados</div>` : ''}
+    <div style="margin-top:4px;font-size:15px;font-weight:900;color:var(--gold-dark)">Total do mês: R$ ${r.totalFinal.toFixed(2).replace('.',',')}</div>
+  </div>
+
+  <div class="card">
+    <h2>📋 Checklist de hoje ${jaEnviado ? '· ✅ enviado às '+jaEnviado.hora : ''}</h2>
+    ${checklistForm}
+    <button class="btn btn-primary" style="margin-top:8px" onclick="excSalvarChecklistHoje()">${jaEnviado ? 'Atualizar checklist' : 'Salvar checklist de hoje'}</button>
+  </div>
+
+  <div class="card"><h2>📁 Histórico mensal</h2>${historico}</div>`;
+}
+
+function exportExcelenciaPDF(colaboradorId, mes) {
+  const r = excComputeMes(colaboradorId, mes);
+  if (!r.colaborador) { alert('Colaborador não encontrado.'); return; }
+  const now = new Date();
+  const rows = r.categorias.map(c => `<tr><td>${c.icone} ${c.nome}</td><td>${c.peso}</td><td>${c.nota}</td></tr>`).join('');
+  const extrasRows = r.extras.map(e => {
+    const nomeExtra = e.tipo === 'economia' ? 'Economia comprovada' : ((EXC_EXTRAS_DEFAULT.find(x=>x.tipo===e.tipo)||{}).nome || e.tipo);
+    return `<tr><td>${nomeExtra}</td><td>R$ ${Number(e.valor).toFixed(2).replace('.',',')}</td></tr>`;
+  }).join('') || '<tr><td colspan="2">Nenhum bônus extra no mês.</td></tr>';
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Programa Excelência — ${r.colaborador.nome}</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:24px}
+    h1{color:#8D6E00;font-size:18px;margin-bottom:4px}
+    .sub{font-size:12px;color:#555;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px}
+    th{background:#8D6E00;color:#fff;padding:6px;text-align:left}
+    td{padding:6px;border-bottom:1px solid #ddd}
+    .total{font-size:16px;font-weight:700;color:#8D6E00;margin:10px 0}
+    .sig{display:flex;gap:40px;margin-top:60px}
+    .sig div{flex:1;border-top:1px solid #333;text-align:center;padding-top:6px;font-size:12px}
+    @media print{ button{display:none} }
+    #btn-voltar{position:fixed;top:12px;right:12px;background:#8D6E00;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;z-index:999}
+  </style></head><body>
+    <button id="btn-voltar" onclick="window.close()">← Voltar ao App</button>
+    <h1>🏆 Programa Excelência — Higgika</h1>
+    <div class="sub">Colaborador: <strong>${r.colaborador.nome}</strong> ${r.colaborador.cargo?'('+r.colaborador.cargo+')':''} · Mês: ${mes.split('-').reverse().join('/')} · Gerado em ${now.toLocaleDateString('pt-BR')}</div>
+    <table><thead><tr><th>Critério</th><th>Peso</th><th>Nota obtida</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="total">Pontuação total: ${r.total}/100 — Bônus: ${r.tier.pct}% de R$ ${r.bonusBase.toFixed(2).replace('.',',')} = R$ ${r.bonusValor.toFixed(2).replace('.',',')}</div>
+    <table><thead><tr><th>Bônus extra</th><th>Valor</th></tr></thead><tbody>${extrasRows}</tbody></table>
+    <div class="total">Total do mês: R$ ${r.totalFinal.toFixed(2).replace('.',',')}</div>
+    <div class="sig"><div>Assinatura do Gestor</div><div>Assinatura do Colaborador</div></div>
+    <script>window.onload = () => { window.print(); };${'</' + 'script>'}
+  </body></html>`;
+  const w = window.open('', '_blank');
+  if (!w) { alert('Popup bloqueado. Permita popups para este site e tente novamente.'); return; }
+  w.document.write(html);
+  w.document.close();
+}
+
+// ═══════════════════════════════════════════════
+//  PWA — instalação
+// ═══════════════════════════════════════════════
+let _pwaPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _pwaPrompt = e;
+  const btn = document.getElementById('login-install-btn');
+  if (btn) btn.style.display = 'inline-block';
+});
+function triggerInstall() {
+  if (!_pwaPrompt) return;
+  _pwaPrompt.prompt();
+  _pwaPrompt = null;
+}
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(console.error));
+}
+
+// ═══════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════
+async function startApp() {
+  await initFirebase();
+  await loadAll();
+  showColaboradorPickerIfLoggedIn();
+}
+
+function showColaboradorPickerIfLoggedIn() {
+  // Sessão não persiste entre reloads de propósito (login sempre pedido ao abrir o app).
+}
+
+startApp();
+</script>
+</body>
+</html>
