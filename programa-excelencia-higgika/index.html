@@ -243,7 +243,9 @@ const EXC_CATEGORIAS = [
 const EXC_BONUS_TIERS = [
   { min:95, pct:100 }, { min:90, pct:80 }, { min:85, pct:60 }, { min:80, pct:40 }, { min:0, pct:0 },
 ];
-const EXC_EXTRAS_DEFAULT = [
+// Configuráveis pelo administrador (Configurações) — valores iniciais abaixo,
+// mas podem ganhar itens novos, ter itens removidos, e são salvos no banco.
+let excExtrasConfig = [
   { tipo:'zero_erros',     nome:'Zero erros no mês',             valor:100 },
   { tipo:'estoque_ok',     nome:'Estoque sem divergência',       valor:100 },
   { tipo:'sem_reclamacao', nome:'Nenhuma reclamação de clientes', valor:100 },
@@ -251,9 +253,16 @@ const EXC_EXTRAS_DEFAULT = [
 ];
 const EXC_ECONOMIA_PCT = 0.05;
 const EXC_ECONOMIA_TETO = 200;
-const EXC_CHECKLIST_ITENS = [
-  'Veículo limpo', 'Estoque organizado', 'Pedidos separados', 'Produtos conferidos',
-  'Notas entregues', 'Coletas registradas', 'Lixo retirado', 'Portas fechadas', 'Equipamentos desligados',
+let excChecklistItens = [
+  { id:'chk_veiculo_limpo',    texto:'Veículo limpo' },
+  { id:'chk_estoque_org',      texto:'Estoque organizado' },
+  { id:'chk_pedidos_sep',      texto:'Pedidos separados' },
+  { id:'chk_produtos_conf',    texto:'Produtos conferidos' },
+  { id:'chk_notas_entregues',  texto:'Notas entregues' },
+  { id:'chk_coletas_reg',      texto:'Coletas registradas' },
+  { id:'chk_lixo_retirado',    texto:'Lixo retirado' },
+  { id:'chk_portas_fechadas',  texto:'Portas fechadas' },
+  { id:'chk_equip_desligados', texto:'Equipamentos desligados' },
 ];
 
 function excMesAtual() { return new Date().toISOString().slice(0,7); }
@@ -267,12 +276,15 @@ function saveExcelencia() {
     excData().doc('main').set({
       colaboradores: excColaboradores, ocorrencias: excOcorrencias,
       checklist: excChecklist, bonusExtras: excBonusExtras,
+      extrasConfig: excExtrasConfig, checklistItens: excChecklistItens,
     }).catch(e => { console.error(e); alert('Erro ao salvar: ' + e.message); });
   } else {
     localStorage.setItem('exc_colaboradores', JSON.stringify(excColaboradores));
     localStorage.setItem('exc_ocorrencias',   JSON.stringify(excOcorrencias));
     localStorage.setItem('exc_checklist',     JSON.stringify(excChecklist));
     localStorage.setItem('exc_bonusExtras',   JSON.stringify(excBonusExtras));
+    localStorage.setItem('exc_extrasConfig',  JSON.stringify(excExtrasConfig));
+    localStorage.setItem('exc_checklistItens',JSON.stringify(excChecklistItens));
   }
 }
 
@@ -290,6 +302,8 @@ async function loadAll() {
       excOcorrencias   = d.ocorrencias   || [];
       excChecklist     = d.checklist     || [];
       excBonusExtras   = d.bonusExtras   || [];
+      if (d.extrasConfig)   excExtrasConfig   = d.extrasConfig;
+      if (d.checklistItens) excChecklistItens = d.checklistItens;
     }
     if (authSnap.exists) _adminPin = authSnap.data().adminPin || '0000';
     excData().doc('main').onSnapshot(snap => {
@@ -299,6 +313,8 @@ async function loadAll() {
       excOcorrencias   = d.ocorrencias   || [];
       excChecklist     = d.checklist     || [];
       excBonusExtras   = d.bonusExtras   || [];
+      if (d.extrasConfig)   excExtrasConfig   = d.extrasConfig;
+      if (d.checklistItens) excChecklistItens = d.checklistItens;
       if (document.getElementById('app').style.display !== 'none') renderExcelencia();
     });
   } else {
@@ -306,6 +322,8 @@ async function loadAll() {
     excOcorrencias   = JSON.parse(localStorage.getItem('exc_ocorrencias')   || '[]');
     excChecklist     = JSON.parse(localStorage.getItem('exc_checklist')    || '[]');
     excBonusExtras   = JSON.parse(localStorage.getItem('exc_bonusExtras')  || '[]');
+    excExtrasConfig   = JSON.parse(localStorage.getItem('exc_extrasConfig')   || 'null') || excExtrasConfig;
+    excChecklistItens = JSON.parse(localStorage.getItem('exc_checklistItens') || 'null') || excChecklistItens;
     _adminPin = localStorage.getItem('exc_admin_pin') || '0000';
   }
 }
@@ -418,10 +436,29 @@ function excZerarMes(colaboradorId, mes) {
   renderExcelencia();
 }
 
-function excToggleExtra(colaboradorId, mes, tipo, valorPadrao) {
+function excToggleExtra(colaboradorId, mes, tipo, valorPadrao, nomePadrao) {
   const idx = excBonusExtras.findIndex(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo===tipo);
   if (idx >= 0) excBonusExtras.splice(idx,1);
-  else excBonusExtras.push({ id:'be_'+Date.now(), colaboradorId, mes, tipo, valor:valorPadrao });
+  else excBonusExtras.push({ id:'be_'+Date.now(), colaboradorId, mes, tipo, valor:valorPadrao, nome:nomePadrao });
+  saveExcelencia();
+  renderExcelencia();
+}
+
+function excAddExtraConfig() {
+  const nome = (document.getElementById('exc-new-extra-nome').value||'').trim();
+  const valor = Number(document.getElementById('exc-new-extra-valor').value||0);
+  if (!nome) { alert('Informe o nome do bônus extra.'); return; }
+  if (!valor) { alert('Informe o valor do bônus extra.'); return; }
+  excExtrasConfig.push({ tipo:'extra_'+Date.now(), nome, valor });
+  document.getElementById('exc-new-extra-nome').value = '';
+  document.getElementById('exc-new-extra-valor').value = '';
+  saveExcelencia();
+  renderExcelencia();
+}
+
+function excRemoveExtraConfig(tipo) {
+  if (!confirm('Remover esta opção de bônus extra da lista? Meses que já usaram esse bônus continuam valendo no histórico — ela só deixa de aparecer para marcar em meses futuros.')) return;
+  excExtrasConfig = excExtrasConfig.filter(e => e.tipo !== tipo);
   saveExcelencia();
   renderExcelencia();
 }
@@ -442,12 +479,28 @@ function excChecklistDoDia(colaboradorId, data) {
   return excChecklist.find(c => c.colaboradorId === colaboradorId && c.data === data);
 }
 
+function excAddChecklistItem() {
+  const texto = (document.getElementById('exc-new-chk-item').value||'').trim();
+  if (!texto) return;
+  excChecklistItens.push({ id:'chk_'+Date.now(), texto });
+  document.getElementById('exc-new-chk-item').value = '';
+  saveExcelencia();
+  renderExcelencia();
+}
+
+function excRemoveChecklistItem(id) {
+  if (!confirm('Remover este item do checklist diário? Ele deixará de aparecer nos próximos preenchimentos.')) return;
+  excChecklistItens = excChecklistItens.filter(i => i.id !== id);
+  saveExcelencia();
+  renderExcelencia();
+}
+
 function excSalvarChecklistHoje() {
   const colaborador = excColaboradorLogado();
   if (!colaborador) return;
   const hoje = excHojeISO();
   const itens = {};
-  EXC_CHECKLIST_ITENS.forEach((_,i) => { itens[i] = !!document.getElementById('exc-chk-'+i)?.checked; });
+  excChecklistItens.forEach(item => { itens[item.id] = !!document.getElementById('exc-chk-'+item.id)?.checked; });
   const idx = excChecklist.findIndex(c => c.colaboradorId===colaborador.id && c.data===hoje);
   const entry = {
     id: idx>=0 ? excChecklist[idx].id : 'chk_'+Date.now(),
@@ -678,13 +731,14 @@ function excRenderAdmin() {
     </div>`;
   }).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhuma ocorrência lançada neste mês.</div>';
 
-  const extrasChecks = EXC_EXTRAS_DEFAULT.map(ex => {
+  const extrasChecks = excExtrasConfig.map(ex => {
     const ativo = !!excBonusExtras.find(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo===ex.tipo);
+    const nomeEsc = ex.nome.replace(/'/g, "\\'");
     return `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;cursor:pointer">
-      <input type="checkbox" ${ativo?'checked':''} onchange="excToggleExtra('${colaboradorId}','${mes}','${ex.tipo}',${ex.valor})">
+      <input type="checkbox" ${ativo?'checked':''} onchange="excToggleExtra('${colaboradorId}','${mes}','${ex.tipo}',${ex.valor},'${nomeEsc}')">
       ${ex.nome} <span style="margin-left:auto;color:#2e7d32;font-weight:700">+R$ ${ex.valor}</span>
     </label>`;
-  }).join('');
+  }).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhuma opção de bônus extra cadastrada. Adicione em Configurações.</div>';
   const economiaEntry = excBonusExtras.find(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo==='economia');
 
   const checklistMes = excChecklist.filter(c => c.colaboradorId===colaboradorId && (c.data||'').startsWith(mes))
@@ -692,9 +746,21 @@ function excRenderAdmin() {
   const checklistList = checklistMes.slice(0,10).map(c => {
     const n = Object.values(c.itens||{}).filter(Boolean).length;
     return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #f5f5f5">
-      <span>${c.data.split('-').reverse().join('/')}</span><span>${n}/${EXC_CHECKLIST_ITENS.length} itens · ${c.hora}</span>
+      <span>${c.data.split('-').reverse().join('/')}</span><span>${n}/${excChecklistItens.length} itens · ${c.hora}</span>
     </div>`;
   }).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhum checklist enviado neste mês.</div>';
+
+  const checklistItensList = excChecklistItens.map(item => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #f5f5f5;font-size:12px">
+      <span>${item.texto}</span>
+      <button class="btn btn-danger btn-sm" onclick="excRemoveChecklistItem('${item.id}')">✕</button>
+    </div>`).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhum item cadastrado.</div>';
+
+  const extrasConfigList = excExtrasConfig.map(ex => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #f5f5f5;font-size:12px">
+      <span>${ex.nome} <strong style="color:#2e7d32">+R$ ${Number(ex.valor).toFixed(2).replace('.',',')}</strong></span>
+      <button class="btn btn-danger btn-sm" onclick="excRemoveExtraConfig('${ex.tipo}')">✕</button>
+    </div>`).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhuma opção cadastrada.</div>';
 
   const colabList = excColaboradores.map(c => `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;margin-bottom:6px;background:#fafafa">
@@ -765,6 +831,25 @@ function excRenderAdmin() {
   <div class="card"><h2>➕ Cadastrar colaborador</h2>${excFormNovoColaborador()}</div>
 
   <div class="card">
+    <h2>📋 Itens do checklist diário</h2>
+    ${checklistItensList}
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input type="text" id="exc-new-chk-item" placeholder="Ex: Chave do galpão entregue" style="flex:1;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
+      <button class="btn btn-primary" onclick="excAddChecklistItem()">➕ Adicionar</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🎁 Opções de bônus extra</h2>
+    ${extrasConfigList}
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input type="text" id="exc-new-extra-nome" placeholder="Nome do bônus" style="flex:2;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
+      <input type="number" id="exc-new-extra-valor" placeholder="R$" style="flex:1;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
+      <button class="btn btn-primary" onclick="excAddExtraConfig()">➕</button>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>⚙️ Configurações</h2>
     <button class="btn btn-secondary" onclick="excAlterarPinAdmin()">🔐 Alterar PIN do administrador</button>
   </div>`;
@@ -780,10 +865,10 @@ function excRenderColaborador() {
 
   const hoje = excHojeISO();
   const jaEnviado = excChecklistDoDia(colaborador.id, hoje);
-  const checklistForm = EXC_CHECKLIST_ITENS.map((item,i) => `
+  const checklistForm = excChecklistItens.map(item => `
     <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer">
-      <input type="checkbox" id="exc-chk-${i}" ${jaEnviado && jaEnviado.itens[i] ? 'checked':''}> ${item}
-    </label>`).join('');
+      <input type="checkbox" id="exc-chk-${item.id}" ${jaEnviado && jaEnviado.itens[item.id] ? 'checked':''}> ${item.texto}
+    </label>`).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhum item de checklist cadastrado pelo administrador.</div>';
 
   const base = new Date();
   const meses = [];
@@ -822,7 +907,7 @@ function exportExcelenciaPDF(colaboradorId, mes) {
   const now = new Date();
   const rows = r.categorias.map(c => `<tr><td>${c.icone} ${c.nome}</td><td>${c.peso}</td><td>${c.nota}</td></tr>`).join('');
   const extrasRows = r.extras.map(e => {
-    const nomeExtra = e.tipo === 'economia' ? 'Economia comprovada' : ((EXC_EXTRAS_DEFAULT.find(x=>x.tipo===e.tipo)||{}).nome || e.tipo);
+    const nomeExtra = e.tipo === 'economia' ? 'Economia comprovada' : (e.nome || (excExtrasConfig.find(x=>x.tipo===e.tipo)||{}).nome || e.tipo);
     return `<tr><td>${nomeExtra}</td><td>R$ ${Number(e.valor).toFixed(2).replace('.',',')}</td></tr>`;
   }).join('') || '<tr><td colspan="2">Nenhum bônus extra no mês.</td></tr>';
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Programa Excelência — ${r.colaborador.nome}</title>
