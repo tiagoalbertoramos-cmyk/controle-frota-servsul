@@ -72,31 +72,7 @@
   .login-box .logo { font-size: 44px; margin-bottom: 6px; }
   .login-box h2 { font-size: 17px; color: var(--gold-dark); margin: 0 0 4px; }
   .login-box .sub { font-size: 12px; color: #888; margin-bottom: 20px; }
-  .login-role-grid { display: flex; gap: 12px; }
-  .login-user-card {
-    flex: 1; border: 2px solid #eee; border-radius: 12px; padding: 16px 8px; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #555;
-  }
-  .login-user-card:hover { border-color: var(--gold-dark); background: #fbf7ec; color: var(--gold-dark); }
-  .luc-avatar { font-size: 28px; }
-  .login-user-list { max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-  .login-back-btn { text-align: left; font-size: 12px; color: #999; cursor: pointer; margin-bottom: 8px; }
-  .login-back-btn:hover { color: var(--gold-dark); }
-  .login-selected-user { font-size: 15px; font-weight: 700; color: var(--gold-dark); margin-bottom: 4px; }
-  .pin-title { font-size: 12px; color: #888; margin-bottom: 16px; }
-  .pin-dots { display: flex; gap: 10px; justify-content: center; margin-bottom: 14px; }
-  .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #ddd; }
-  .pin-dot.filled { background: var(--gold-dark); border-color: var(--gold-dark); }
-  .pin-dot.error { background: var(--red); border-color: var(--red); }
-  .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .pin-key {
-    padding: 14px 0; font-size: 18px; font-weight: 700; border: 1.5px solid #eee; border-radius: 10px;
-    background: #fafafa; cursor: pointer; color: #333;
-  }
-  .pin-key:active, .pin-key:hover { background: var(--gold-dark); color: #fff; border-color: var(--gold-dark); }
-  .pin-key.del { font-size: 13px; }
-  .pin-hint { font-size: 11px; color: #999; margin-top: 12px; min-height: 14px; }
-  .pin-hint.pin-error { color: var(--red); font-weight: 700; }
+  .login-box .form-group label { text-align: left; }
   #login-install-btn {
     position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
     background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.4);
@@ -113,52 +89,16 @@
 <!-- ══════════════ LOGIN ══════════════ -->
 <div id="login-overlay">
   <div class="login-box">
-    <div id="login-step-select">
-      <div class="logo">🏆</div>
-      <h2>Programa Excelência</h2>
-      <div class="sub">Higgika — Estoque e Logística</div>
-      <div class="login-role-grid">
-        <div class="login-user-card" onclick="selectAdminLogin()">
-          <span class="luc-avatar">🔐</span><span>Administrador</span>
-        </div>
-        <div class="login-user-card" onclick="showColaboradorPicker()">
-          <span class="luc-avatar">🏅</span><span>Colaborador</span>
-        </div>
-      </div>
-    </div>
-
-    <div id="login-step-colaborador" style="display:none">
-      <div class="login-back-btn" onclick="colaboradorPickerGoBack()">← Voltar</div>
-      <h2 style="margin-bottom:14px">Qual colaborador é você?</h2>
-      <div class="login-user-list" id="login-colaborador-list"></div>
-    </div>
-
-    <div id="login-step-pin" style="display:none">
-      <div class="login-back-btn" onclick="loginGoBack()">← Voltar</div>
-      <div class="login-selected-user" id="login-selected-label">—</div>
-      <div class="pin-title" id="pin-title">Digite seu PIN de 4 dígitos</div>
-      <div class="pin-dots">
-        <div class="pin-dot" id="dot-0"></div>
-        <div class="pin-dot" id="dot-1"></div>
-        <div class="pin-dot" id="dot-2"></div>
-        <div class="pin-dot" id="dot-3"></div>
-      </div>
-      <div class="pin-pad">
-        <button class="pin-key" onclick="pinKey('1')">1</button>
-        <button class="pin-key" onclick="pinKey('2')">2</button>
-        <button class="pin-key" onclick="pinKey('3')">3</button>
-        <button class="pin-key" onclick="pinKey('4')">4</button>
-        <button class="pin-key" onclick="pinKey('5')">5</button>
-        <button class="pin-key" onclick="pinKey('6')">6</button>
-        <button class="pin-key" onclick="pinKey('7')">7</button>
-        <button class="pin-key" onclick="pinKey('8')">8</button>
-        <button class="pin-key" onclick="pinKey('9')">9</button>
-        <button class="pin-key del" onclick="pinClear()">Limpar</button>
-        <button class="pin-key" onclick="pinKey('0')">0</button>
-        <button class="pin-key del" onclick="pinDelete()">⌫</button>
-      </div>
-      <div class="pin-hint" id="pin-hint">Informe seu PIN de 4 dígitos</div>
-    </div>
+    <div class="logo">🏆</div>
+    <h2>Programa Excelência</h2>
+    <div class="sub">Higgika — Estoque e Logística</div>
+    <div class="form-group"><label>E-mail</label>
+      <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="username"></div>
+    <div class="form-group"><label>Senha</label>
+      <input type="password" id="login-password" placeholder="Senha" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter') doEmailLogin()"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="doEmailLogin()">Entrar</button>
+    <div id="login-error" style="color:#c62828;font-size:12px;margin-top:10px;min-height:14px"></div>
   </div>
   <button id="login-install-btn" onclick="triggerInstall()">📲 Instalar App no celular</button>
 </div>
@@ -208,11 +148,7 @@ async function initFirebase() {
   try {
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    const auth = firebase.auth();
-    await auth.signInAnonymously();
-    await new Promise((resolve, reject) => {
-      const unsub = auth.onAuthStateChanged(user => { unsub(); user ? resolve(user) : reject(new Error('Auth falhou')); }, reject);
-    });
+    firebase.auth(); // garante que o Auth foi inicializado
     return true;
   } catch (e) {
     console.error('Erro ao inicializar Firebase:', e);
@@ -221,16 +157,23 @@ async function initFirebase() {
   }
 }
 
+// Instância secundária do Firebase Auth, usada só para o administrador criar
+// a conta de um colaborador sem perder a própria sessão logada.
+function getSecondaryAuth() {
+  let app2 = firebase.apps.find(a => a.name === 'secondary');
+  if (!app2) app2 = firebase.initializeApp(FIREBASE_CONFIG, 'secondary');
+  return app2.auth();
+}
+
 function excData() { return db.collection('excelencia_data'); }
 
 // ═══════════════════════════════════════════════
 //  DADOS
 // ═══════════════════════════════════════════════
-let excColaboradores = [];  // {id, nome, cargo, bonusBase, pin}
+let excColaboradores = [];  // {id, nome, cargo, bonusBase, email, uid}
 let excOcorrencias   = [];  // {id, colaboradorId, mes, categoria, pontos, obs, data}
-let excChecklist     = [];  // {id, colaboradorId, data, itens:{...}, hora}
+let excChecklist     = [];  // {colaboradorId, data, itens:{...}, hora} — 1 documento por colaborador+dia
 let excBonusExtras   = [];  // {id, colaboradorId, mes, tipo, valor, valorEconomizado?}
-let _adminPin = '0000';
 
 const EXC_CATEGORIAS = [
   { id:'entregas',        nome:'Entregas',        icone:'🚚', peso:30, penalidade:5 },
@@ -271,61 +214,70 @@ function excHojeISO()  { return new Date().toISOString().slice(0,10); }
 // ═══════════════════════════════════════════════
 //  PERSISTÊNCIA — Firestore próprio ou localStorage (fallback)
 // ═══════════════════════════════════════════════
+// excelencia_data/main: colaboradores, ocorrências, bônus extras e configs —
+// só o administrador tem permissão de escrita (ver README/regras do Firestore).
+// excelencia_checklist/{colaboradorId}_{data}: 1 documento por colaborador+dia,
+// cada colaborador só pode escrever no seu próprio, o admin escreve em qualquer um.
 function saveExcelencia() {
   if (db) {
     excData().doc('main').set({
       colaboradores: excColaboradores, ocorrencias: excOcorrencias,
-      checklist: excChecklist, bonusExtras: excBonusExtras,
-      extrasConfig: excExtrasConfig, checklistItens: excChecklistItens,
+      bonusExtras: excBonusExtras, extrasConfig: excExtrasConfig, checklistItens: excChecklistItens,
     }).catch(e => { console.error(e); alert('Erro ao salvar: ' + e.message); });
   } else {
     localStorage.setItem('exc_colaboradores', JSON.stringify(excColaboradores));
     localStorage.setItem('exc_ocorrencias',   JSON.stringify(excOcorrencias));
-    localStorage.setItem('exc_checklist',     JSON.stringify(excChecklist));
     localStorage.setItem('exc_bonusExtras',   JSON.stringify(excBonusExtras));
     localStorage.setItem('exc_extrasConfig',  JSON.stringify(excExtrasConfig));
     localStorage.setItem('exc_checklistItens',JSON.stringify(excChecklistItens));
   }
 }
 
-function saveAuth() {
-  if (db) excData().doc('auth').set({ adminPin: _adminPin }).catch(console.error);
-  else localStorage.setItem('exc_admin_pin', _adminPin);
+function saveChecklistEntry(entry) {
+  if (db) {
+    db.collection('excelencia_checklist').doc(entry.colaboradorId + '_' + entry.data).set(entry)
+      .catch(e => { console.error(e); alert('Erro ao salvar checklist: ' + e.message); });
+  } else {
+    localStorage.setItem('exc_checklist', JSON.stringify(excChecklist));
+  }
 }
 
-async function loadAll() {
-  if (db) {
-    const [mainSnap, authSnap] = await Promise.all([excData().doc('main').get(), excData().doc('auth').get()]);
-    if (mainSnap.exists) {
-      const d = mainSnap.data();
-      excColaboradores = d.colaboradores || [];
-      excOcorrencias   = d.ocorrencias   || [];
-      excChecklist     = d.checklist     || [];
-      excBonusExtras   = d.bonusExtras   || [];
-      if (d.extrasConfig)   excExtrasConfig   = d.extrasConfig;
-      if (d.checklistItens) excChecklistItens = d.checklistItens;
-    }
-    if (authSnap.exists) _adminPin = authSnap.data().adminPin || '0000';
-    excData().doc('main').onSnapshot(snap => {
-      if (!snap.exists) return;
-      const d = snap.data();
-      excColaboradores = d.colaboradores || [];
-      excOcorrencias   = d.ocorrencias   || [];
-      excChecklist     = d.checklist     || [];
-      excBonusExtras   = d.bonusExtras   || [];
-      if (d.extrasConfig)   excExtrasConfig   = d.extrasConfig;
-      if (d.checklistItens) excChecklistItens = d.checklistItens;
-      if (document.getElementById('app').style.display !== 'none') renderExcelencia();
-    });
-  } else {
-    excColaboradores = JSON.parse(localStorage.getItem('exc_colaboradores') || '[]');
-    excOcorrencias   = JSON.parse(localStorage.getItem('exc_ocorrencias')   || '[]');
-    excChecklist     = JSON.parse(localStorage.getItem('exc_checklist')    || '[]');
-    excBonusExtras   = JSON.parse(localStorage.getItem('exc_bonusExtras')  || '[]');
-    excExtrasConfig   = JSON.parse(localStorage.getItem('exc_extrasConfig')   || 'null') || excExtrasConfig;
-    excChecklistItens = JSON.parse(localStorage.getItem('exc_checklistItens') || 'null') || excChecklistItens;
-    _adminPin = localStorage.getItem('exc_admin_pin') || '0000';
+async function loadAllFirestore() {
+  const mainSnap = await excData().doc('main').get();
+  if (mainSnap.exists) {
+    const d = mainSnap.data();
+    excColaboradores = d.colaboradores || [];
+    excOcorrencias   = d.ocorrencias   || [];
+    excBonusExtras   = d.bonusExtras   || [];
+    if (d.extrasConfig)   excExtrasConfig   = d.extrasConfig;
+    if (d.checklistItens) excChecklistItens = d.checklistItens;
   }
+  const checklistSnap = await db.collection('excelencia_checklist').get();
+  excChecklist = checklistSnap.docs.map(doc => doc.data());
+
+  excData().doc('main').onSnapshot(snap => {
+    if (!snap.exists) return;
+    const d = snap.data();
+    excColaboradores = d.colaboradores || [];
+    excOcorrencias   = d.ocorrencias   || [];
+    excBonusExtras   = d.bonusExtras   || [];
+    if (d.extrasConfig)   excExtrasConfig   = d.extrasConfig;
+    if (d.checklistItens) excChecklistItens = d.checklistItens;
+    if (document.getElementById('app').style.display !== 'none') renderExcelencia();
+  });
+  db.collection('excelencia_checklist').onSnapshot(snap => {
+    excChecklist = snap.docs.map(doc => doc.data());
+    if (document.getElementById('app').style.display !== 'none') renderExcelencia();
+  });
+}
+
+function loadAllLocal() {
+  excColaboradores = JSON.parse(localStorage.getItem('exc_colaboradores') || '[]');
+  excOcorrencias   = JSON.parse(localStorage.getItem('exc_ocorrencias')   || '[]');
+  excChecklist     = JSON.parse(localStorage.getItem('exc_checklist')    || '[]');
+  excBonusExtras   = JSON.parse(localStorage.getItem('exc_bonusExtras')  || '[]');
+  excExtrasConfig   = JSON.parse(localStorage.getItem('exc_extrasConfig')   || 'null') || excExtrasConfig;
+  excChecklistItens = JSON.parse(localStorage.getItem('exc_checklistItens') || 'null') || excChecklistItens;
 }
 
 // ═══════════════════════════════════════════════
@@ -352,21 +304,43 @@ function excComputeMes(colaboradorId, mes) {
 // ═══════════════════════════════════════════════
 //  AÇÕES — colaboradores, ocorrências, extras, checklist
 // ═══════════════════════════════════════════════
-function excAddColaborador() {
+async function excAddColaborador() {
   const nome = (document.getElementById('exc-new-nome').value||'').trim().toUpperCase();
   const cargo = (document.getElementById('exc-new-cargo').value||'').trim();
   const bonusBase = Number(document.getElementById('exc-new-bonus').value||500);
-  const pin = (document.getElementById('exc-new-pin').value||'').trim();
+  const email = (document.getElementById('exc-new-email').value||'').trim();
+  const senha = (document.getElementById('exc-new-senha').value||'').trim();
   const msg = document.getElementById('exc-new-msg');
   if (!nome) { msg.style.color='#c62828'; msg.textContent='❌ Informe o nome.'; return; }
-  if (!/^\d{4}$/.test(pin)) { msg.style.color='#c62828'; msg.textContent='❌ PIN deve ter exatamente 4 dígitos.'; return; }
   if (excColaboradores.find(c => c.nome === nome)) { msg.style.color='#c62828'; msg.textContent='❌ Colaborador já cadastrado.'; return; }
-  excColaboradores.push({ id:'col_'+Date.now(), nome, cargo, bonusBase, pin });
-  saveExcelencia();
+  const colaboradorId = 'col_'+Date.now();
+
+  if (db) {
+    if (!email || senha.length < 6) { msg.style.color='#c62828'; msg.textContent='❌ Informe e-mail e uma senha com no mínimo 6 caracteres.'; return; }
+    msg.style.color='#666'; msg.textContent='Criando conta de acesso...';
+    try {
+      const secAuth = getSecondaryAuth();
+      const cred = await secAuth.createUserWithEmailAndPassword(email, senha);
+      const uid = cred.user.uid;
+      await secAuth.signOut();
+      await db.collection('excelencia_roles').doc(uid).set({ role:'colaborador', colaboradorId });
+      excColaboradores.push({ id:colaboradorId, nome, cargo, bonusBase, email, uid });
+      saveExcelencia();
+      msg.style.color='#2e7d32'; msg.textContent='✅ Colaborador cadastrado! Repasse o e-mail e a senha para ele.';
+    } catch (e) {
+      msg.style.color='#c62828';
+      msg.textContent = e.code === 'auth/email-already-in-use' ? '❌ Este e-mail já está em uso por outra conta.' : '❌ Erro ao criar conta: ' + e.message;
+      return;
+    }
+  } else {
+    excColaboradores.push({ id:colaboradorId, nome, cargo, bonusBase, email });
+    saveExcelencia();
+    msg.style.color='#2e7d32'; msg.textContent='✅ Colaborador cadastrado (modo local)!';
+  }
   document.getElementById('exc-new-nome').value = '';
   document.getElementById('exc-new-cargo').value = '';
-  document.getElementById('exc-new-pin').value = '';
-  msg.style.color='#2e7d32'; msg.textContent='✅ Colaborador cadastrado!';
+  document.getElementById('exc-new-email').value = '';
+  document.getElementById('exc-new-senha').value = '';
   renderExcelencia();
 }
 
@@ -377,12 +351,8 @@ function excEditColaborador(id) {
   if (cargo === null) return;
   const bonusBase = prompt('Valor do bônus mensal (R$) para 100% da pontuação:', c.bonusBase);
   if (bonusBase === null) return;
-  const pin = prompt('PIN de acesso (4 dígitos):', c.pin);
-  if (pin === null) return;
-  if (!/^\d{4}$/.test(pin)) { alert('PIN deve ter exatamente 4 dígitos.'); return; }
   c.cargo = cargo.trim();
   c.bonusBase = Number(bonusBase||500);
-  c.pin = pin.trim();
   saveExcelencia();
   renderExcelencia();
 }
@@ -390,9 +360,10 @@ function excEditColaborador(id) {
 function excRemoveColaborador(id) {
   const c = excColaboradores.find(x => x.id === id);
   if (!c) return;
-  if (!confirm(`Remover "${c.nome}" do Programa Excelência? O histórico será mantido, mas ele não terá mais acesso.`)) return;
+  if (!confirm(`Remover "${c.nome}" do Programa Excelência? O histórico será mantido, mas o acesso dele será revogado.`)) return;
   excColaboradores = excColaboradores.filter(x => x.id !== id);
   saveExcelencia();
+  if (db && c.uid) db.collection('excelencia_roles').doc(c.uid).delete().catch(console.error);
   renderExcelencia();
 }
 
@@ -503,118 +474,55 @@ function excSalvarChecklistHoje() {
   excChecklistItens.forEach(item => { itens[item.id] = !!document.getElementById('exc-chk-'+item.id)?.checked; });
   const idx = excChecklist.findIndex(c => c.colaboradorId===colaborador.id && c.data===hoje);
   const entry = {
-    id: idx>=0 ? excChecklist[idx].id : 'chk_'+Date.now(),
     colaboradorId: colaborador.id, data: hoje, itens,
     hora: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}),
   };
   if (idx >= 0) excChecklist[idx] = entry; else excChecklist.push(entry);
-  saveExcelencia();
+  saveChecklistEntry(entry);
   renderExcelencia();
 }
 
-function excAlterarPinAdmin() {
-  const novo = prompt('Novo PIN do administrador (4 dígitos):');
-  if (novo === null) return;
-  if (!/^\d{4}$/.test(novo)) { alert('PIN deve ter exatamente 4 dígitos.'); return; }
-  _adminPin = novo;
-  saveAuth();
-  alert('✅ PIN do administrador atualizado.');
+function excAlterarSenhaAdmin() {
+  const user = db && firebase.auth().currentUser;
+  if (!user || !user.email) { alert('Disponível apenas com o Firebase configurado (veja README.md).'); return; }
+  if (!confirm(`Enviar e-mail de redefinição de senha para ${user.email}?`)) return;
+  firebase.auth().sendPasswordResetEmail(user.email)
+    .then(() => alert('✅ E-mail de redefinição enviado! Confira sua caixa de entrada.'))
+    .catch(e => alert('Erro: ' + e.message));
 }
 
 // ═══════════════════════════════════════════════
-//  LOGIN
+//  LOGIN — e-mail/senha reais (Firebase Auth) ou modo local de teste
 // ═══════════════════════════════════════════════
-let loginMode = null;          // 'admin' | 'colaborador'
-let selectedColaboradorId = null;
-let pinBuffer = '';
-
-function selectAdminLogin() {
-  loginMode = 'admin';
-  pinBuffer = '';
-  updatePinDots();
-  document.getElementById('login-selected-label').textContent = 'Administrador';
-  document.getElementById('pin-hint').textContent = 'Informe seu PIN de 4 dígitos';
-  document.getElementById('pin-hint').classList.remove('pin-error');
-  document.getElementById('login-step-select').style.display = 'none';
-  document.getElementById('login-step-pin').style.display = '';
-}
-
-function showColaboradorPicker() {
-  if (!excColaboradores.length) { alert('Nenhum colaborador cadastrado ainda. Peça ao administrador para cadastrar você no Programa Excelência.'); return; }
-  const listEl = document.getElementById('login-colaborador-list');
-  listEl.innerHTML = excColaboradores.map(c =>
-    `<div class="login-user-card" style="flex-direction:row;justify-content:flex-start" onclick="selectColaboradorForLogin('${c.id}')">
-      <span class="luc-avatar">🏅</span><span>${c.nome}</span>
-    </div>`).join('');
-  document.getElementById('login-step-select').style.display = 'none';
-  document.getElementById('login-step-colaborador').style.display = '';
-}
-
-function colaboradorPickerGoBack() {
-  document.getElementById('login-step-colaborador').style.display = 'none';
-  document.getElementById('login-step-select').style.display = '';
-}
-
-function selectColaboradorForLogin(id) {
-  const c = excColaboradores.find(x => x.id === id);
-  if (!c) return;
-  selectedColaboradorId = id;
-  loginMode = 'colaborador';
-  pinBuffer = '';
-  updatePinDots();
-  document.getElementById('login-selected-label').textContent = c.nome;
-  document.getElementById('pin-hint').textContent = 'Informe seu PIN de 4 dígitos';
-  document.getElementById('pin-hint').classList.remove('pin-error');
-  document.getElementById('login-step-colaborador').style.display = 'none';
-  document.getElementById('login-step-pin').style.display = '';
-}
-
-function loginGoBack() {
-  pinBuffer = '';
-  updatePinDots();
-  document.getElementById('login-step-pin').style.display = 'none';
-  if (loginMode === 'colaborador') document.getElementById('login-step-colaborador').style.display = '';
-  else document.getElementById('login-step-select').style.display = '';
-}
-
-function pinKey(d) {
-  if (pinBuffer.length >= 4) return;
-  pinBuffer += d;
-  updatePinDots();
-  if (pinBuffer.length === 4) setTimeout(tryLogin, 180);
-}
-function pinDelete() { pinBuffer = pinBuffer.slice(0,-1); updatePinDots(); }
-function pinClear()  { pinBuffer = ''; updatePinDots(); }
-function updatePinDots(error) {
-  for (let i=0; i<4; i++) {
-    const dot = document.getElementById('dot-'+i);
-    dot.className = 'pin-dot';
-    if (error) dot.classList.add('error');
-    else if (i < pinBuffer.length) dot.classList.add('filled');
+async function doEmailLogin() {
+  const email = (document.getElementById('login-email').value||'').trim();
+  const senha = document.getElementById('login-password').value||'';
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  if (!email || !senha) { errEl.textContent = 'Informe e-mail e senha.'; return; }
+  try {
+    await firebase.auth().signInWithEmailAndPassword(email, senha);
+    // A troca de tela acontece em onAuthStateChanged (startApp), após carregar os dados.
+  } catch (e) {
+    errEl.textContent = 'E-mail ou senha incorretos.';
   }
 }
-function pinError(msg) {
-  updatePinDots(true);
-  const hint = document.getElementById('pin-hint');
-  hint.textContent = msg;
-  hint.classList.add('pin-error');
-  setTimeout(() => { updatePinDots(false); hint.textContent = 'Informe seu PIN de 4 dígitos'; hint.classList.remove('pin-error'); }, 1400);
-}
 
-function tryLogin() {
-  const pin = pinBuffer;
-  pinBuffer = '';
-  if (loginMode === 'admin') {
-    if (pin === _adminPin) { doLogin('admin', 'ADMINISTRADOR'); return; }
-    pinError('PIN incorreto. Tente novamente.');
-  } else if (loginMode === 'colaborador') {
-    const c = excColaboradores.find(x => x.id === selectedColaboradorId);
-    if (c && pin === c.pin) {
-      sessionStorage.setItem('sv_colaborador_id', c.id);
-      doLogin('colaborador', c.nome);
-      return;
-    }
-    pinError('PIN incorreto. Tente novamente.');
+async function resolveRoleAndEnter(user) {
+  const errEl = document.getElementById('login-error');
+  const roleDoc = await db.collection('excelencia_roles').doc(user.uid).get();
+  if (!roleDoc.exists) {
+    if (errEl) errEl.textContent = 'Esta conta não tem acesso liberado no Programa Excelência. Peça ao administrador para configurá-la.';
+    await firebase.auth().signOut();
+    return;
+  }
+  const roleData = roleDoc.data();
+  if (roleData.role === 'admin') {
+    doLogin('admin', 'ADMINISTRADOR');
+  } else {
+    sessionStorage.setItem('sv_colaborador_id', roleData.colaboradorId);
+    const colab = excColaboradores.find(c => c.id === roleData.colaboradorId);
+    doLogin('colaborador', colab ? colab.nome : 'Colaborador');
   }
 }
 
@@ -628,17 +536,31 @@ function doLogin(role, name) {
   renderExcelencia();
 }
 
+function enterLocalMode() {
+  sessionStorage.setItem('sv_role', 'admin');
+  sessionStorage.setItem('sv_user', 'ADMINISTRADOR (local)');
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('hdr-user').textContent = 'ADMINISTRADOR';
+  document.getElementById('hdr-role').textContent = '🔐 Admin (modo local)';
+  renderExcelencia();
+}
+
 function logout() {
   if (!confirm('Deseja sair da sessão atual?')) return;
   sessionStorage.removeItem('sv_role');
   sessionStorage.removeItem('sv_user');
   sessionStorage.removeItem('sv_colaborador_id');
-  pinBuffer = '';
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-step-pin').style.display = 'none';
-  document.getElementById('login-step-colaborador').style.display = 'none';
-  document.getElementById('login-step-select').style.display = '';
-  document.getElementById('login-overlay').style.display = 'flex';
+  if (db) {
+    firebase.auth().signOut();
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('login-email').value = '';
+    document.getElementById('login-password').value = '';
+    document.getElementById('login-error').textContent = '';
+    document.getElementById('login-overlay').style.display = 'flex';
+  } else {
+    location.reload();
+  }
 }
 
 function isAdmin() { return sessionStorage.getItem('sv_role') === 'admin'; }
@@ -675,13 +597,16 @@ function renderExcelencia() {
 }
 
 function excFormNovoColaborador() {
+  const camposConta = FIREBASE_CONFIGURADO ? `
+    <div class="form-group"><label>E-mail de acesso do colaborador</label><input type="email" id="exc-new-email" placeholder="felipe@email.com"></div>
+    <div class="form-group"><label>Senha inicial (mín. 6 caracteres)</label><input type="text" id="exc-new-senha" placeholder="Ex: uma senha simples"></div>` :
+    `<div class="form-group"><label>E-mail (opcional em modo local)</label><input type="email" id="exc-new-email" placeholder="felipe@email.com"></div>
+     <input type="hidden" id="exc-new-senha" value="">`;
   return `
     <div class="form-group"><label>Nome</label><input type="text" id="exc-new-nome" placeholder="Ex: FELIPE"></div>
     <div class="form-group"><label>Cargo/função</label><input type="text" id="exc-new-cargo" placeholder="Ex: Estoquista e Motorista"></div>
-    <div style="display:flex;gap:10px">
-      <div class="form-group" style="flex:1"><label>Bônus mensal (100%)</label><input type="number" id="exc-new-bonus" value="500"></div>
-      <div class="form-group" style="flex:1"><label>PIN de acesso (4 dígitos)</label><input type="text" id="exc-new-pin" maxlength="4" placeholder="0000"></div>
-    </div>
+    <div class="form-group"><label>Bônus mensal (100%)</label><input type="number" id="exc-new-bonus" value="500"></div>
+    ${camposConta}
     <button class="btn btn-primary" onclick="excAddColaborador()">Cadastrar</button>
     <div id="exc-new-msg" style="font-size:12px;margin-top:6px"></div>`;
 }
@@ -891,7 +816,7 @@ function excRenderAdmin() {
 
   <div class="card">
     <h2>⚙️ Configurações</h2>
-    <button class="btn btn-secondary" onclick="excAlterarPinAdmin()">🔐 Alterar PIN do administrador</button>
+    <button class="btn btn-secondary" onclick="excAlterarSenhaAdmin()">🔐 Redefinir minha senha</button>
   </div>`;
 }
 
@@ -1040,13 +965,24 @@ if ('serviceWorker' in navigator) {
 //  BOOT
 // ═══════════════════════════════════════════════
 async function startApp() {
-  await initFirebase();
-  await loadAll();
-  showColaboradorPickerIfLoggedIn();
-}
-
-function showColaboradorPickerIfLoggedIn() {
-  // Sessão não persiste entre reloads de propósito (login sempre pedido ao abrir o app).
+  const ok = await initFirebase();
+  if (!ok || !db) {
+    loadAllLocal();
+    enterLocalMode();
+    return;
+  }
+  firebase.auth().onAuthStateChanged(async (user) => {
+    if (!user) return;
+    try {
+      await loadAllFirestore();
+      await resolveRoleAndEnter(user);
+    } catch (e) {
+      console.error(e);
+      const errEl = document.getElementById('login-error');
+      if (errEl) errEl.textContent = 'Erro ao carregar dados: ' + e.message;
+      firebase.auth().signOut();
+    }
+  });
 }
 
 startApp();
