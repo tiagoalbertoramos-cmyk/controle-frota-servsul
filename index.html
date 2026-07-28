@@ -1493,7 +1493,7 @@
 </div>
 
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -2393,6 +2393,13 @@ function setSaFilter(f) {
   renderSaTenantList();
 }
 
+// Escapa texto antes de inserir em innerHTML (nome/responsável/e-mail vêm de campos livres)
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : String(str);
+  return div.innerHTML;
+}
+
 // Classifica uma empresa em: status de pagamento (badge) + se está ativa/em dia
 function classificaEmpresa(t, hoje) {
   const ativo = t.ativo !== false;
@@ -2453,8 +2460,8 @@ function renderSaTenantList() {
     return `<div style="border:1px solid #e0e0e0;border-radius:12px;margin-bottom:10px;background:#fff;overflow:hidden">
       <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f0f0f0">
         <div>
-          <div style="font-weight:700;font-size:14px">${t.nome || d_id}</div>
-          <div style="font-size:11px;color:#888">Código: <b>${d_id}</b>${t.responsavel ? ' · ' + t.responsavel : ''}${t.email ? ' · ' + t.email : ''}</div>
+          <div style="font-weight:700;font-size:14px">${escapeHtml(t.nome) || d_id}</div>
+          <div style="font-size:11px;color:#888">Código: <b>${d_id}</b>${t.responsavel ? ' · ' + escapeHtml(t.responsavel) : ''}${t.email ? ' · ' + escapeHtml(t.email) : ''}</div>
         </div>
         <div style="background:${c.statusBg};color:${c.statusCor};padding:4px 8px;border-radius:8px;font-size:11px;font-weight:700">${c.statusTxt}</div>
       </div>
@@ -4397,7 +4404,8 @@ function handleComprovanteFile(e) {
 async function recognizeComprovante(dataUrl) {
   if (typeof Tesseract === 'undefined') return true; // OCR indisponível: não bloqueia
   try {
-    const { data: { text } } = await Tesseract.recognize(dataUrl, 'por');
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Tempo esgotado no OCR')), 12000));
+    const { data: { text } } = await Promise.race([Tesseract.recognize(dataUrl, 'por'), timeout]);
     const norm = text.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const keywords = [
       'NFC-E', 'NFCE', 'NOTA FISCAL', 'CUPOM FISCAL', 'CONSUMIDOR ELETRONICA',
@@ -4455,23 +4463,24 @@ function deleteComprovante() {
   closePhotoModal();
 }
 
-// ── Zera todos os comprovantes de abastecimento anexados (somente admin) ──
-async function zerarComprovantes() {
+// ── Zera todos os comprovantes de abastecimento anexados (somente admin, com confirmação por PIN) ──
+function zerarComprovantes() {
   if (sessionStorage.getItem('sv_role') !== 'admin') { alert('Apenas o administrador pode zerar os comprovantes.'); return; }
   const total = requisicoes.filter(r => r.comprovante).length;
   if (!total) { alert('Não há comprovantes anexados para zerar.'); return; }
-  if (!confirm(`Tem certeza que deseja apagar os ${total} comprovante(s) de abastecimento anexados? Esta ação não pode ser desfeita.`)) return;
-  requisicoes.forEach(r => {
-    if (r.comprovante) {
-      deleteComprovanteDoc(r.num);
-      delete r.comprovante;
-      delete r.comprovanteBy;
-      delete r.comprovanteDate;
-    }
+  requirePinThen('🗑️ Zerar Comprovantes', `Informe o PIN de administrador para apagar os ${total} comprovante(s) anexados. Esta ação não pode ser desfeita.`, () => {
+    requisicoes.forEach(r => {
+      if (r.comprovante) {
+        deleteComprovanteDoc(r.num);
+        delete r.comprovante;
+        delete r.comprovanteBy;
+        delete r.comprovanteDate;
+      }
+    });
+    saveRequisicoes();
+    renderRequisicoes();
+    alert('Comprovantes zerados com sucesso.');
   });
-  saveRequisicoes();
-  renderRequisicoes();
-  alert('Comprovantes zerados com sucesso.');
 }
 
 // ── Excluir requisição (somente administrador, com confirmação por PIN) ──
