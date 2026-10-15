@@ -1,4 +1,4 @@
-const CACHE = 'excelencia-higgika-v5';
+const CACHE = 'excelencia-higgika-v6';
 const SHELL = ['/', '/index.html', '/manifest.json', '/icon-192.svg', '/icon-512.svg'];
 
 self.addEventListener('install', e => {
