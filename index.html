@@ -31,12 +31,33 @@
     background: var(--green-dark);
     color: #fff;
     padding: 12px 16px;
+    /* iPhone instalado na tela inicial: não deixa o relógio/notch cobrir o cabeçalho */
+    padding-top: calc(12px + env(safe-area-inset-top));
+    padding-left: calc(16px + env(safe-area-inset-left));
+    padding-right: calc(16px + env(safe-area-inset-right));
     display: flex; align-items: center; justify-content: space-between;
     position: sticky; top: 0; z-index: 100;
     box-shadow: var(--shadow);
   }
   .header h1 { font-size: 16px; font-weight: 700; letter-spacing: .5px; }
   .header .subtitle { font-size: 11px; opacity: .85; margin-top: 2px; }
+  .hdr-title { font-size: 16px; font-weight: 700; color: #fff; }
+  @media (max-width: 600px) {
+    .header { padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: 8px; padding-left: calc(12px + env(safe-area-inset-left)); padding-right: calc(12px + env(safe-area-inset-right)); gap: 8px; }
+    .hdr-title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .header > div:first-child { min-width: 0; flex: 1 1 auto; }
+    .header > div:last-child { flex-shrink: 0; gap: 6px !important; }
+    .user-badge .ub-name { max-width: 72px; }
+    #hdr-install-btn { display: none !important; }
+    .header .subtitle { font-size: 10px; }
+    .nav { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .nav::-webkit-scrollbar { display: none; }
+    .nav button { flex: 0 0 auto; padding: 10px 12px; white-space: nowrap; }
+    /* espaço para o botão de ajuda não cobrir os últimos botões da tela */
+    .screen { padding-bottom: 84px; }
+    #btn-como-usar { padding: 0 !important; width: 44px; height: 44px; justify-content: center; border-radius: 50% !important; }
+    #btn-como-usar .cu-txt { display: none; }
+  }
   .header-logo { font-size: 11px; font-weight: 700; background: var(--yellow); color: #333;
     padding: 4px 8px; border-radius: 4px; }
 
@@ -51,7 +72,7 @@
     border-bottom: 3px solid transparent; transition: all .2s;
   }
   .nav button.active { color: var(--green-dark); border-bottom-color: var(--green-dark); background: #f1f8e9; }
-  .nav button:hover:not(.active) { background: #f5f5f5; }
+  @media (hover: hover) { .nav button:hover:not(.active) { background: #f5f5f5; } }
 
   /* ── SCREENS ── */
   .screen { display: none; padding: 16px; max-width: 800px; margin: 0 auto; }
@@ -365,6 +386,11 @@
   }
 
   /* ── USER BADGE IN HEADER ── */
+  .sync-status { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 10px; white-space: nowrap; cursor: pointer; }
+  .sync-status.ok   { background: rgba(255,255,255,.15); color: #C8E6C9; }
+  .sync-status.busy { background: #FFF8E1; color: #F57F17; }
+  .sync-status.off  { background: #FFCDD2; color: #B71C1C; }
+  @media (max-width: 420px) { .sync-status.ok { font-size: 0; padding: 0; width: 10px; height: 10px; background: #81C784; } }
   .user-badge {
     display: flex; align-items: center; gap: 6px;
     background: rgba(255,255,255,.15); border-radius: 8px; padding: 4px 8px;
@@ -938,7 +964,7 @@
 <!-- HEADER -->
 <div class="header">
   <div>
-    <div class="header h1" style="font-size:16px;font-weight:700;color:#fff">🚗 Controle de Frota</div>
+    <div class="hdr-title">🚗 Controle de Frota</div>
     <div class="subtitle" id="hdr-sub">DRA / SERVSUL</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
@@ -948,6 +974,7 @@
         <div class="ub-role" id="hdr-role">—</div>
       </div>
     </div>
+    <span id="sync-status" class="sync-status" style="display:none" onclick="flushAll()" title="Toque para sincronizar agora"></span>
     <button id="hdr-install-btn" onclick="triggerInstall()" title="Instalar app">📲</button>
     <button id="btn-suporte" onclick="openAjuda()" title="Fale com o assistente" style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;background:#1B5E20;color:#FDD835;font-size:18px;border:none;cursor:pointer;flex-shrink:0">💬</button>
     <button class="ub-logout" onclick="logout()">Sair</button>
@@ -1254,6 +1281,7 @@
         <option value="DELTA">DELTA</option>
       </select>
       <button class="btn btn-primary" onclick="exportFuelPDF()">📄 Gerar PDF</button>
+      <button class="btn btn-danger admin-only" id="fuel-del-filtered" onclick="deleteFilteredFuel()" style="display:none">🗑 Excluir filtrados</button>
     </div>
     <div class="fuel-summary" id="fuel-summary"></div>
     <div style="overflow-x:auto" id="fuel-table-wrap"></div>
@@ -1492,7 +1520,7 @@
   </div>
 </div>
 
-<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -1529,26 +1557,460 @@ let sigDay = null;       // which day we're signing
 let sigCanvas, sigCtx, sigDrawing = false;
 
 // ═══════════════════════════════════════════════
-//  PERSIST — Firestore ou localStorage (fallback)
+//  PERSIST — Firestore (com sincronização entre aparelhos) ou localStorage (fallback)
 // ═══════════════════════════════════════════════
+// Os documentos de lista (settings, auth, fuel, requisicoes, fornecedores) são
+// gravados com uma mesclagem de 3 vias dentro de uma transação: só as mudanças
+// feitas NESTE aparelho (local × última versão vista do servidor) são aplicadas
+// sobre a versão atual do servidor. Assim, dois aparelhos salvando ao mesmo tempo
+// não apagam o trabalho um do outro. Sem internet, as mudanças ficam pendentes
+// (também no localStorage, para sobreviver ao fechamento do app) e são enviadas
+// automaticamente quando a conexão volta.
+function localSave() {
+  localStorage.setItem('sv_vehicles', JSON.stringify(vehicles));
+  localStorage.setItem('sv_drivers',  JSON.stringify(drivers));
+  localStorage.setItem('sv_records',  JSON.stringify(records));
+}
 function save() {
-  if (db) {
-    // Salva registro atual no Firestore
-    if (currentKey && records[currentKey]) {
-      tenantRecords().doc(currentKey).set(records[currentKey]).catch(e => { console.error(e); alert('Erro ao salvar checklist: ' + e.message); });
+  // Usado por veículos/motoristas: sincroniza o documento de configurações
+  if (db) queueSync('settings'); else localSave();
+}
+function saveSettings() { save(); }
+// Salva só o dia alterado do checklist (mesclagem no servidor: dois aparelhos
+// editando dias/campos diferentes do mesmo mês não se sobrescrevem)
+function saveRecordDay(key, day) {
+  if (!db) { localSave(); return; }
+  const rec = records[key];
+  if (!rec) return;
+  const { days, ...meta } = rec;
+  const payload = { ...meta, days: {} };
+  if (day != null && days && days[day]) payload.days[day] = days[day];
+  tenantRecords().doc(key).set(payload, { merge: true })
+    .catch(e => { console.error('Erro ao salvar checklist:', e); syncReportError(e); });
+}
+
+function uid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID().replace(/-/g, '');
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+}
+function stableStr(v) {
+  if (v === undefined) return 'u';
+  if (v === null || typeof v !== 'object') return JSON.stringify(v);
+  if (Array.isArray(v)) return '[' + v.map(stableStr).join(',') + ']';
+  return '{' + Object.keys(v).filter(k => v[k] !== undefined).sort().map(k => JSON.stringify(k) + ':' + stableStr(v[k])).join(',') + '}';
+}
+function deepClone(v) { return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
+function hashStr(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+// Chave estável de cada item. Itens novos recebem `_k` (id único); itens antigos
+// usam uma chave derivada do conteúdo (igual em todos os aparelhos).
+function fuelKey(e)  { return e._k || ('L' + hashStr([e.date, e.plate, e.items, e.value, e.client, e.fatura].join('|'))); }
+function reqKey(r)   { return r.num || ('L' + hashStr([r.date, r.plate, r.motorista, r.valor].join('|'))); }
+function fornKey(f)  { return f._k || ('L' + hashStr([f.nome, f.cnpj, f.telefone].join('|'))); }
+// Fixa a chave antes de editar um item antigo (a chave por conteúdo mudaria)
+function pinKey_(item, keyFn) { if (!item._k) item._k = keyFn(item); return item; }
+
+function keyedList(list, keyFn) {
+  const m = new Map(), seen = {};
+  (list || []).forEach(it => {
+    let k = keyFn(it);
+    if (seen[k] !== undefined) { seen[k]++; k = k + '#' + seen[k]; } else seen[k] = 0;
+    m.set(k, it);
+  });
+  return m;
+}
+function mergeFields(b, l, s) {
+  const out = { ...s };
+  const keys = new Set([...Object.keys(b || {}), ...Object.keys(l || {})]);
+  keys.forEach(f => {
+    const lv = l ? l[f] : undefined, bv = b ? b[f] : undefined;
+    if (stableStr(lv) !== stableStr(bv)) {
+      if (lv === undefined) delete out[f]; else out[f] = lv;
     }
-    // Salva configurações (debounced)
-    clearTimeout(save._t);
-    save._t = setTimeout(() => {
-      tenantData().doc('settings').set({ vehicles, drivers }).catch(e => { console.error(e); alert('Erro ao salvar configurações: ' + e.message); });
-    }, 800);
-  } else {
-    // Fallback: localStorage
-    localStorage.setItem('sv_vehicles', JSON.stringify(vehicles));
-    localStorage.setItem('sv_drivers',  JSON.stringify(drivers));
-    localStorage.setItem('sv_records',  JSON.stringify(records));
+  });
+  return out;
+}
+function mergeList(keyFn, baseL, localL, serverL, onCollision) {
+  const B = keyedList(baseL, keyFn), L = keyedList(localL, keyFn), S = keyedList(serverL, keyFn);
+  const out = new Map(S);
+  for (const k of B.keys()) if (!L.has(k)) out.delete(k);           // excluído aqui
+  for (const [k, li] of L) {
+    const bi = B.get(k);
+    if (!bi) {                                                        // adicionado aqui
+      if (out.has(k)) {
+        if (stableStr(out.get(k)) === stableStr(li)) continue;
+        if (onCollision) { const ni = onCollision(li, [...out.values()]); out.set(keyFn(ni), ni); }
+        else out.set(k, mergeFields(undefined, li, out.get(k)));
+      } else out.set(k, li);
+    } else if (stableStr(bi) !== stableStr(li)) {                     // alterado aqui
+      if (!out.has(k)) continue;                                      // excluído em outro aparelho: exclusão vence
+      out.set(k, mergeFields(bi, li, out.get(k)));
+    }
+  }
+  return [...out.values()];
+}
+function mergeDoc(spec, base, local, server) {
+  base = base || {}; server = server || {};
+  const out = { ...server };
+  Object.entries(spec.lists).forEach(([f, keyFn]) => {
+    out[f] = mergeList(keyFn, base[f] || [], local[f] || [], server[f] || [], spec.onCollision && spec.onCollision[f]);
+  });
+  (spec.scalars || []).forEach(f => {
+    if (stableStr(local[f]) !== stableStr(base[f])) out[f] = local[f];
+  });
+  return out;
+}
+
+// ── Requisições: assinatura e foto ficam em documentos próprios ──
+// sig_{sigId} = assinatura, comp_{num} = foto do comprovante. A lista principal
+// fica leve e nunca estoura o limite de 1MB por documento do Firestore.
+const _attach = { sig: {}, comp: {} };
+function reqStrip(r) {
+  const o = { ...r };
+  delete o.comprovante;
+  if (o.sigId) delete o.sig;
+  return o;
+}
+function reqAttach(list, prevList) {
+  const prev = keyedList(prevList || [], reqKey);
+  return list.map(r => {
+    const o = { ...r };
+    if (o.sigId) {
+      const p = prev.get(reqKey(o));
+      const s = _attach.sig[o.sigId] || (p && p.sigId === o.sigId ? p.sig : undefined);
+      if (s) o.sig = s; else delete o.sig;
+    }
+    const c = o.num && _attach.comp[o.num];
+    if (c) o.comprovante = c.image; else delete o.comprovante;
+    return o;
+  });
+}
+function reqHasSig(r) { return !!(r && (r.sig || r.sigId)); }
+// Cópia de segurança das fotos/assinaturas até o servidor confirmar o recebimento
+// (protege o caso de o app ser fechado sem internet e sem cache do navegador)
+let _uploads = {};
+function uploadsKey() { return 'sv_uploads_' + _tenantId; }
+function saveUploads() {
+  try {
+    if (Object.keys(_uploads).length) localStorage.setItem(uploadsKey(), JSON.stringify(_uploads));
+    else localStorage.removeItem(uploadsKey());
+  } catch (e) { console.warn('Sem espaço para a cópia de segurança da foto:', e); }
+}
+function sendUpload(docId, data) {
+  _uploads[docId] = data;
+  saveUploads();
+  if (!db) return Promise.resolve();
+  return tenantData().doc(docId).set(data);
+}
+// Reenvia o que não foi confirmado, se a requisição ainda existir
+function resendUploads() {
+  try { _uploads = JSON.parse(localStorage.getItem(uploadsKey()) || '{}'); } catch (e) { _uploads = {}; }
+  Object.entries(_uploads).forEach(([docId, data]) => {
+    let still = false, onServer = false;
+    if (docId.startsWith('sig_')) {
+      const sid = docId.slice(4);
+      onServer = !!_attach.sig[sid];
+      still = requisicoes.some(r => r.sigId === sid);
+      if (still && !onServer) { _attach.sig[sid] = data.image; requisicoes.forEach(r => { if (r.sigId === sid) r.sig = data.image; }); }
+    } else if (docId.startsWith('comp_')) {
+      const num = docId.slice(5);
+      onServer = !!_attach.comp[num];
+      still = requisicoes.some(r => r.num === num && r.comprovanteBy);
+      if (still && !onServer) { _attach.comp[num] = data; requisicoes.forEach(r => { if (r.num === num) r.comprovante = data.image; }); }
+    }
+    if (!still || onServer) { delete _uploads[docId]; return; }
+    tenantData().doc(docId).set(data).catch(e => { console.warn('Reenvio pendente:', e); syncReportError(e); });
+  });
+  saveUploads();
+}
+// Ações da lista usam a chave da requisição (não a posição): outro aparelho pode
+// incluir/excluir itens entre o toque e a confirmação, mudando as posições.
+function reqIdx(k) { return requisicoes.findIndex(r => reqKey(r) === k); }
+function reqGone() { alert('Esta requisição não existe mais (pode ter sido excluída em outro aparelho).'); renderRequisicoes(); }
+// Texto seguro para usar como argumento JS dentro de onclick="..."
+function jsq(v) { return "'" + String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/</g, '&lt;') + "'"; }
+function uploadReqSig(r) {
+  if (!r.sig) return;
+  if (!r.sigId) r.sigId = uid();
+  _attach.sig[r.sigId] = r.sig;
+  if (!db) return;
+  sendUpload('sig_' + r.sigId, { image: r.sig, by: r.sigBy || '', num: r.num || '' })
+    .catch(e => { console.error('Erro ao salvar assinatura:', e); syncReportError(e); });
+}
+function uploadReqComp(r) {
+  if (!r.comprovante || !r.num) return;
+  _attach.comp[r.num] = { image: r.comprovante, by: r.comprovanteBy || '', date: r.comprovanteDate || '' };
+  if (!db) return;
+  sendUpload('comp_' + r.num, _attach.comp[r.num])
+    .catch(e => { console.error('Erro ao salvar comprovante:', e); syncReportError(e); alert('Erro ao salvar a foto do comprovante: ' + e.message); });
+}
+function reqRenumber(item, serverList) {
+  let max = 0;
+  serverList.concat(requisicoes).forEach(r => { if (r.seq && r.seq > max) max = r.seq; });
+  const seq = max + 1;
+  const ano = (item.num && item.num.split('-')[1]) || new Date().getFullYear();
+  const ni = { ...item, seq, num: 'REQ-' + ano + '-' + String(seq).padStart(4, '0') };
+  const local = requisicoes.find(r => r.num === item.num && r.sigId === item.sigId);
+  if (local) { local.seq = ni.seq; local.num = ni.num; }
+  return ni;
+}
+
+const SYNC_DOCS = {
+  settings: {
+    lists: { vehicles: v => (v.plate || '').toUpperCase(), drivers: d => (d.name || '').toUpperCase() },
+    get: () => ({ vehicles: deepClone(vehicles), drivers: deepClone(drivers) }),
+    set: (d, exists) => {
+      vehicles = exists && d.vehicles ? d.vehicles : (_tenantId === LEGACY_TENANT ? [...FLEET_DEFAULT] : []);
+      drivers  = exists && d.drivers ? d.drivers : [];
+    },
+  },
+  auth: {
+    lists: { appUsers: u => (u.name || '').toUpperCase() },
+    scalars: ['adminPin'],
+    get: () => ({ appUsers: deepClone(_appUsers), adminPin: _adminPin }),
+    set: (d) => { _appUsers = d.appUsers || []; _adminPin = d.adminPin || DEFAULT_ADMIN_PIN; },
+  },
+  fuel: {
+    lists: { entries: fuelKey },
+    get: () => ({ entries: deepClone(fuelEntries) }),
+    set: (d, exists) => { fuelEntries = exists && d.entries ? d.entries : (_tenantId === LEGACY_TENANT ? [...FUEL_DATA] : []); },
+  },
+  requisicoes: {
+    lists: { list: reqKey },
+    onCollision: { list: reqRenumber },
+    get: () => ({ list: requisicoes.map(reqStrip).map(deepClone) }),
+    set: (d) => { requisicoes = reqAttach(d.list || [], requisicoes); },
+    // Migra assinaturas antigas (embutidas na lista) para documentos próprios
+    beforeWrite: (doc, tx) => {
+      (doc.list || []).forEach(r => {
+        if (r.sig && !r.sigId) {
+          r.sigId = 'm' + hashStr(reqKey(r));
+          _attach.sig[r.sigId] = r.sig;
+          tx.set(tenantData().doc('sig_' + r.sigId), { image: r.sig, by: r.sigBy || '', num: r.num || '' });
+          delete r.sig;
+        }
+      });
+    },
+  },
+  fornecedores: {
+    lists: { list: fornKey },
+    get: () => ({ list: deepClone(fornecedores) }),
+    set: (d) => { fornecedores = d.list || []; },
+  },
+};
+
+const _base = {};          // última versão do servidor vista, por documento
+const _dirty = new Set();  // documentos com mudanças locais não enviadas
+const _flushing = {};
+let _syncTimer = null, _retryTimer = null, _retryDelay = 3000, _unsubs = [], _lastSyncError = '';
+
+function pendingKey() { return 'sv_pending_' + _tenantId; }
+function persistPending() {
+  if (!_tenantId) return;
+  try {
+    const p = {};
+    _dirty.forEach(id => { p[id] = { base: _base[id] || {}, local: SYNC_DOCS[id].get() }; });
+    if (Object.keys(p).length) localStorage.setItem(pendingKey(), JSON.stringify(p));
+    else localStorage.removeItem(pendingKey());
+  } catch (e) { console.warn('Não foi possível guardar alterações pendentes:', e); }
+}
+function readPending() {
+  try { return JSON.parse(localStorage.getItem(pendingKey()) || '{}'); } catch (e) { return {}; }
+}
+
+function queueSync(docId) {
+  if (!db || !_tenantId || _tenantId === SUPER_ADMIN_CODE) return;
+  _dirty.add(docId);
+  persistPending();
+  updateSyncIndicator();
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(flushAll, 250);
+}
+function flushAll() {
+  clearTimeout(_retryTimer);
+  [..._dirty].forEach(flushDoc);
+}
+async function flushDoc(docId) {
+  if (!db || !_tenantId || !_dirty.has(docId)) return;
+  if (_flushing[docId]) { _flushing[docId] = 'again'; return; }
+  _flushing[docId] = true;
+  updateSyncIndicator();
+  const spec = SYNC_DOCS[docId];
+  const ref = tenantData().doc(docId);
+  const tenantAtStart = _tenantId;
+  let result, localAtTx;
+  try {
+    await db.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      const server = snap.exists ? snap.data() : {};
+      localAtTx = spec.get();
+      result = mergeDoc(spec, _base[docId], localAtTx, server);
+      if (spec.beforeWrite) spec.beforeWrite(result, tx);
+      tx.set(ref, result);
+    });
+    if (_tenantId !== tenantAtStart) return;
+    _base[docId] = deepClone(result);
+    const now = spec.get();
+    const changedSince = stableStr(now) !== stableStr(localAtTx);
+    spec.set(changedSince ? mergeDoc(spec, localAtTx, now, result) : deepClone(result), true);
+    if (!changedSince) _dirty.delete(docId);
+    persistPending();
+    _retryDelay = 3000; _lastSyncError = '';
+    scheduleRender();
+  } catch (e) {
+    console.warn('Sincronização de "' + docId + '" falhou, tentando novamente:', e);
+    syncReportError(e);
+    clearTimeout(_retryTimer);
+    _retryTimer = setTimeout(flushAll, _retryDelay);
+    _retryDelay = Math.min(_retryDelay * 2, 30000);
+  } finally {
+    const again = _flushing[docId] === 'again';
+    _flushing[docId] = false;
+    updateSyncIndicator();
+    if (again && _dirty.has(docId)) flushDoc(docId);
   }
 }
+function syncReportError(e) {
+  const code = (e && e.code) || '';
+  _lastSyncError = code;
+  updateSyncIndicator();
+  if (code === 'permission-denied' && !syncReportError._warned) {
+    syncReportError._warned = true;
+    alert('Sem permissão para salvar no servidor. Avise o administrador.');
+  }
+}
+
+// Recebe uma versão nova de um documento do servidor
+function receiveServerDoc(docId, exists, data) {
+  const spec = SYNC_DOCS[docId];
+  const server = exists ? data : {};
+  if (_dirty.has(docId)) spec.set(mergeDoc(spec, _base[docId], spec.get(), server), true);
+  else spec.set(deepClone(server), exists);
+  _base[docId] = deepClone(server);
+}
+
+function onTenantDataSnap(snap) {
+  let touched = false;
+  snap.docChanges().forEach(ch => {
+    const id = ch.doc.id, removed = ch.type === 'removed';
+    if (_uploads[id] && (removed || !ch.doc.metadata.hasPendingWrites)) { delete _uploads[id]; saveUploads(); }
+    if (id.startsWith('sig_')) {
+      const sid = id.slice(4);
+      if (removed) delete _attach.sig[sid]; else _attach.sig[sid] = ch.doc.data().image;
+      requisicoes.forEach(r => { if (r.sigId === sid) { if (removed) delete r.sig; else r.sig = _attach.sig[sid]; } });
+      touched = true;
+    } else if (id.startsWith('comp_')) {
+      const num = id.slice(5);
+      if (removed) delete _attach.comp[num]; else _attach.comp[num] = ch.doc.data();
+      const match = requisicoes.find(r => r.num === num);
+      if (match) {
+        if (removed) { delete match.comprovante; }
+        else { match.comprovante = _attach.comp[num].image; }
+      }
+      touched = true;
+    } else if (SYNC_DOCS[id]) {
+      receiveServerDoc(id, !removed, removed ? {} : ch.doc.data());
+      if (id === 'auth') renderLoginUsers();
+      touched = true;
+    }
+  });
+  if (touched) scheduleRender();
+}
+function onRecordsSnap(snap) {
+  let touchedCurrent = false;
+  snap.docChanges().forEach(ch => {
+    if (ch.type === 'removed') delete records[ch.doc.id];
+    else records[ch.doc.id] = ch.doc.data();
+    if (ch.doc.id === currentKey) touchedCurrent = true;
+  });
+  scheduleRender(touchedCurrent);
+}
+
+function stopListeners() {
+  _unsubs.forEach(u => { try { u(); } catch (e) {} });
+  _unsubs = [];
+}
+function resetTenantState() {
+  stopListeners();
+  Object.keys(_base).forEach(k => delete _base[k]);
+  _dirty.clear();
+  _attach.sig = {}; _attach.comp = {};
+  _uploads = {};
+  records = {}; requisicoes = []; fornecedores = []; fuelEntries = [];
+  vehicles = []; drivers = []; _appUsers = []; _adminPin = DEFAULT_ADMIN_PIN;
+  currentKey = null;
+}
+
+// ── Atualiza a tela aberta quando chegam dados de outro aparelho ──
+let _renderTimer = null, _renderChecklist = false;
+function scheduleRender(checklistToo) {
+  if (checklistToo) _renderChecklist = true;
+  clearTimeout(_renderTimer);
+  _renderTimer = setTimeout(refreshActiveScreen, 150);
+}
+function refreshActiveScreen() {
+  if (!sessionStorage.getItem('sv_role')) return;
+  // Não atrapalha quem está digitando: espera o campo perder o foco
+  const ae = document.activeElement;
+  if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.closest('.screen.active')) {
+    ae.addEventListener('blur', () => scheduleRender(), { once: true });
+    return;
+  }
+  const active = document.querySelector('.screen.active');
+  const id = active ? active.id.replace('screen-', '') : '';
+  try {
+    if (id === 'home') renderHome();
+    else if (id === 'vehicles') renderVehicles();
+    else if (id === 'drivers') { renderDrivers(); renderUsersMgmt(); renderAlmoxMgmt(); }
+    else if (id === 'history') renderHistory();
+    else if (id === 'fuel') renderFuel();
+    else if (id === 'requisicao') renderRequisicoes();
+    else if (id === 'fornecedores') renderFornecedores();
+    else if (id === 'relatorios') renderRelatorios();
+    else if (id === 'checklist' && _renderChecklist && currentKey && records[currentKey]) loadChecklist(currentKey, null, true);
+  } catch (e) { console.error('Erro ao atualizar a tela:', e); }
+  _renderChecklist = false;
+}
+
+// A barra de abas fica grudada logo abaixo do cabeçalho (cuja altura muda no celular)
+function syncNavTop() {
+  const h = document.querySelector('.header'), n = document.querySelector('.nav');
+  if (h && n) n.style.top = h.offsetHeight + 'px';
+}
+window.addEventListener('resize', syncNavTop);
+window.addEventListener('orientationchange', () => setTimeout(syncNavTop, 300));
+document.addEventListener('DOMContentLoaded', syncNavTop);
+if (window.ResizeObserver) document.addEventListener('DOMContentLoaded', () => {
+  const h = document.querySelector('.header'); if (h) new ResizeObserver(syncNavTop).observe(h);
+});
+
+// ── Indicador de sincronização no cabeçalho ──
+function updateSyncIndicator() {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  const pending = _dirty.size;
+  // Celular com sinal fraco pode dizer "online" e mesmo assim falhar: usa também o último erro
+  const offline = !navigator.onLine || (_lastSyncError === 'unavailable' && pending > 0);
+  const busy = Object.values(_flushing).some(Boolean);
+  let txt, cls;
+  if (!db) { txt = ''; cls = ''; }
+  else if (offline) { txt = pending ? '⚠ Offline · ' + pending + ' pendente' + (pending > 1 ? 's' : '') : '⚠ Offline'; cls = 'off'; }
+  else if (busy || pending) { txt = '⟳ Sincronizando…'; cls = 'busy'; }
+  else if (_lastSyncError) { txt = '⚠ Erro ao sincronizar'; cls = 'off'; }
+  else { txt = '● Sincronizado'; cls = 'ok'; }
+  el.textContent = txt;
+  el.className = 'sync-status ' + cls;
+  el.style.display = txt ? '' : 'none';
+}
+window.addEventListener('online',  () => { _retryDelay = 3000; updateSyncIndicator(); flushAll(); });
+window.addEventListener('offline', updateSyncIndicator);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && _dirty.size) flushAll(); });
+// Ao fechar/minimizar o app, garante que o pendente fique salvo no aparelho
+window.addEventListener('pagehide', persistPending);
 
 // ── Firebase: configuração e carga ──────────────
 const FIREBASE_CONFIG = {
@@ -1565,88 +2027,72 @@ async function initFirebase() {
   try {
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
+    // Cache offline no aparelho: o app abre sem internet e as gravações
+    // simples ficam na fila até a conexão voltar.
+    try { await db.enablePersistence({ synchronizeTabs: true }); }
+    catch (e) { console.warn('Cache offline indisponível:', e.code || e); }
     const auth = firebase.auth();
-    await auth.signInAnonymously();
-    await new Promise((resolve, reject) => {
-      const unsub = auth.onAuthStateChanged(user => {
-        unsub();
-        if (user) resolve(user); else reject(new Error('Auth falhou'));
-      }, reject);
+    // Reaproveita a sessão anônima salva (funciona offline); só cria outra se não houver
+    let user = await new Promise(resolve => {
+      const unsub = auth.onAuthStateChanged(u => { unsub(); resolve(u); }, () => resolve(null));
     });
-    return true;
+    if (!user) user = (await auth.signInAnonymously()).user;
+    return !!user;
   } catch(e) {
     console.error('Erro ao inicializar Firebase:', e);
     return false;
   }
 }
 
+// Carrega os dados da empresa e mantém tudo atualizado em tempo real
 async function loadFromFirestore() {
   if (!_tenantId || _tenantId === SUPER_ADMIN_CODE) return;
+  resetTenantState();
   setLoadingOverlay(true, 'Carregando dados...');
   try {
-    const [settingsSnap, authSnap, recordsSnap, fuelSnap, reqSnap, fornSnap] = await Promise.all([
-      tenantData().doc('settings').get(),
-      tenantData().doc('auth').get(),
-      tenantRecords().get(),
-      tenantData().doc('fuel').get(),
-      tenantData().doc('requisicoes').get(),
-      tenantData().doc('fornecedores').get(),
-    ]);
-    if (settingsSnap.exists) {
-      const s = settingsSnap.data();
-      vehicles = s.vehicles || [...FLEET_DEFAULT];
-      drivers  = s.drivers  || [];
-    }
-    if (authSnap.exists) {
-      const a = authSnap.data();
-      if (Array.isArray(a.appUsers) && a.appUsers.length > 0) _appUsers = a.appUsers;
-      _adminPin = a.adminPin || DEFAULT_ADMIN_PIN;
-      if (_adminPin === '1234') { _adminPin = DEFAULT_ADMIN_PIN; saveAuth(); }
-    }
-    records = {};
-    recordsSnap.forEach(doc => { records[doc.id] = doc.data(); });
-
-    if (fuelSnap.exists && fuelSnap.data().entries) { fuelEntries = fuelSnap.data().entries; }
-    if (reqSnap.exists && reqSnap.data().list) { requisicoes = reqSnap.data().list; }
-    if (fornSnap.exists && fornSnap.data().list) { fornecedores = fornSnap.data().list; }
-
-    // Mescla fotos de comprovante (docs separados com id "comp_{num}") de volta nas requisições
-    try {
-      const allDataDocs = await tenantData().get();
-      allDataDocs.forEach(doc => {
-        if (!doc.id.startsWith('comp_')) return;
-        const num = doc.id.slice(5); // remove "comp_"
-        const data = doc.data();
-        const match = requisicoes.find(r => r.num === num);
-        if (match) { match.comprovante = data.image; match.comprovanteBy = data.by; match.comprovanteDate = data.date; }
-      });
-    } catch (e) { console.error('Erro ao carregar comprovantes:', e); }
-
-    // Listeners em tempo real
-    tenantRecords().onSnapshot(snap => {
-      snap.docChanges().forEach(ch => {
-        if (ch.type === 'removed') { delete records[ch.doc.id]; return; }
-        records[ch.doc.id] = ch.doc.data();
-      });
+    await new Promise((resolve, reject) => {
+      let gotData = false, gotRecs = false, done = false;
+      const finish = () => { if (!done && gotData && gotRecs) { done = true; resolve(); } };
+      // Sem internet e sem cache: não fica preso na tela de carregamento
+      const t = setTimeout(() => { if (!done) { done = true; resolve(); } }, 15000);
+      _unsubs.push(tenantData().onSnapshot(snap => {
+        // Sem cache local: espera a resposta do servidor antes de liberar
+        if (!gotData && snap.metadata.fromCache && snap.empty) return;
+        onTenantDataSnap(snap);
+        if (!gotData) { gotData = true; finish(); }
+      }, e => { console.error('Listener de dados:', e); if (!done) { done = true; clearTimeout(t); reject(e); } }));
+      _unsubs.push(tenantRecords().onSnapshot(snap => {
+        onRecordsSnap(snap);
+        if (!gotRecs) { gotRecs = true; finish(); }
+      }, e => { console.error('Listener de checklists:', e); if (!gotRecs) { gotRecs = true; finish(); } }));
     });
-    tenantData().onSnapshot(snap => {
-      snap.docChanges().forEach(ch => {
-        if (ch.doc.id === 'settings') { const s=ch.doc.data(); vehicles=s.vehicles||vehicles; drivers=s.drivers||drivers; }
-        if (ch.doc.id === 'auth')     { const a=ch.doc.data(); _appUsers=a.appUsers||_appUsers; _adminPin=a.adminPin||_adminPin; renderLoginUsers(); }
-        if (ch.doc.id.startsWith('comp_')) {
-          const num = ch.doc.id.slice(5);
-          const match = requisicoes.find(r => r.num === num);
-          if (!match) return;
-          if (ch.type === 'removed') { delete match.comprovante; delete match.comprovanteBy; delete match.comprovanteDate; }
-          else { const data = ch.doc.data(); match.comprovante = data.image; match.comprovanteBy = data.by; match.comprovanteDate = data.date; }
-          if (document.getElementById('screen-requisicao')?.classList.contains('active')) renderRequisicoes();
-        }
-      });
+    // Documentos que ainda não existem no servidor: valores padrão
+    Object.keys(SYNC_DOCS).forEach(id => { if (!_base[id]) { SYNC_DOCS[id].set({}, false); _base[id] = {}; } });
+    // Reaplica mudanças que ficaram pendentes (ex.: app fechado sem internet)
+    const pend = readPending();
+    Object.entries(pend).forEach(([id, p]) => {
+      const spec = SYNC_DOCS[id];
+      if (!spec || !p) return;
+      spec.set(mergeDoc(spec, p.base, p.local, _base[id] || {}), true);
+      _dirty.add(id);
     });
+    if (_dirty.size) flushAll();
+    resendUploads();
+    afterTenantLoaded();
     setLoadingOverlay(false);
+    updateSyncIndicator();
   } catch(e) {
-    setLoadingOverlay(false, 'Erro ao carregar: ' + e.message);
+    setLoadingOverlay(true, 'Erro ao carregar', 'Verifique a internet e toque para tentar novamente. (' + (e.message || e) + ')');
+    const el = document.getElementById('loading-overlay');
+    if (el) el.onclick = () => { el.onclick = null; loadFromFirestore().then(() => finishInit()); };
   }
+}
+
+// Ajustes iniciais que gravam no servidor: só depois dos dados reais carregados
+function afterTenantLoaded() {
+  if (_adminPin === '1234') { _adminPin = DEFAULT_ADMIN_PIN; saveAuth(); }
+  initDefaultDrivers();
+  ensureDefaultGestoraUser();
 }
 
 function setLoadingOverlay(show, msg, err) {
@@ -1654,7 +2100,7 @@ function setLoadingOverlay(show, msg, err) {
   if (!el) return;
   el.style.display = show ? 'flex' : 'none';
   if (msg) el.querySelector('.lo-msg').textContent = msg;
-  if (err) el.querySelector('.lo-err').textContent = err;
+  el.querySelector('.lo-err').textContent = err || '';
 }
 
 function useLocalMode() {
@@ -1670,9 +2116,7 @@ function useLocalMode() {
 
 function saveAuth() {
   if (db) {
-    tenantData().doc('auth').set({ adminPin: _adminPin, appUsers: _appUsers })
-      .then(() => console.log('✅ Auth salvo no Firestore:', _adminPin))
-      .catch(e => { console.error('❌ Erro ao salvar auth:', e); alert('Erro ao salvar no Firebase: ' + e.message); });
+    queueSync('auth');
   } else {
     localStorage.setItem('sv_app_users', JSON.stringify(_appUsers));
     localStorage.setItem('sv_admin_pin', _adminPin);
@@ -1690,7 +2134,11 @@ function showScreen(id) {
   if (id === 'superadmin') { renderSuperAdminPanel(); return; }
   if (id === 'empresa') { renderEmpresaScreen(); }
   const idx = {home:0,checklist:1,vehicles:2,drivers:3,history:4,fuel:5,requisicao:6,fornecedores:7,relatorios:8,empresa:9}[id];
-  if (idx !== undefined) document.querySelectorAll('.nav button')[idx]?.classList.add('active');
+  if (idx !== undefined) {
+    const nb = document.querySelectorAll('.nav button')[idx];
+    if (nb) { nb.classList.add('active'); try { nb.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) {} }
+  }
+  window.scrollTo(0, 0);
   if (id === 'home')      renderHome();
   if (id === 'vehicles')  renderVehicles();
   if (id === 'drivers')   { renderDrivers(); renderUsersMgmt(); renderAlmoxMgmt(); }
@@ -1705,8 +2153,10 @@ function showScreen(id) {
 //  HOME
 // ═══════════════════════════════════════════════
 function renderHome() {
-  // Vehicle selector
+  // Vehicle selector (mantém a seleção atual ao atualizar)
   const vs = document.getElementById('sel-vehicle');
+  const prevVeh = vs.value, prevDrv = document.getElementById('sel-driver').value;
+  const prevDate = document.getElementById('sel-month').value;
   vs.innerHTML = '<option value="">— Selecione o veículo —</option>' +
     vehicles.map(v => `<option value="${v.plate}">${v.model} – ${v.plate}</option>`).join('');
 
@@ -1718,9 +2168,13 @@ function renderHome() {
       return `<option value="${d.name}">${d.name}${cat}</option>`;
     }).join('');
 
-  // Default date = today
+  if (prevVeh && vehicles.some(v => v.plate === prevVeh)) vs.value = prevVeh;
+  if (prevDrv && drivers.some(d => d.name === prevDrv)) ds.value = prevDrv;
+
+  // Data padrão = hoje (no fuso local; toISOString usava UTC e podia pular de dia à noite)
   const now = new Date();
-  document.getElementById('sel-month').value = now.toISOString().split('T')[0];
+  const hoje = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  document.getElementById('sel-month').value = prevDate || hoje;
 
   // Active / recent controls
   const keys = Object.keys(records);
@@ -1789,7 +2243,7 @@ function openChecklist() {
   // Gravar o motorista selecionado no dia escolhido
   if (!records[key].days[selectedDay]) records[key].days[selectedDay] = {};
   records[key].days[selectedDay].motorista = driver;
-  save();
+  saveRecordDay(key, selectedDay);
   loadChecklist(key, selectedDay);
 }
 
@@ -1848,9 +2302,11 @@ function getHolidayName(dateStr) {
 // ═══════════════════════════════════════════════
 //  CHECKLIST
 // ═══════════════════════════════════════════════
-function loadChecklist(key, scrollToDay) {
+function loadChecklist(key, scrollToDay, silent) {
   currentKey = key;
   const rec = records[key];
+  if (!rec) return;
+  const prevScroll = window.scrollY;
   const [yr, mo] = rec.month.split('-').map(Number);
   const daysInMonth = new Date(yr, mo, 0).getDate();
   const monthName = new Date(yr, mo-1, 1).toLocaleString('pt-BR', {month:'long',year:'numeric'});
@@ -1926,6 +2382,7 @@ function loadChecklist(key, scrollToDay) {
   }
 
   renderClSummary(rec, daysInMonth);
+  if (silent) { window.scrollTo(0, prevScroll); return; }
   showScreen('checklist');
 
   if (jumpRow) {
@@ -1948,7 +2405,7 @@ function saveKmDay(day, field, val) {
       if (tdMot) tdMot.textContent = user;
     }
   }
-  save();
+  saveRecordDay(currentKey, day);
   renderClSummary(rec, new Date(rec.month.split('-')[0], rec.month.split('-')[1], 0).getDate());
 }
 
@@ -1975,7 +2432,7 @@ function markFeriado() {
   if (!dia || dia < 1 || dia > 31) return alert('Informe um dia válido.');
   if (!rec.days[dia]) rec.days[dia] = {};
   rec.days[dia].feriado = nome;
-  save();
+  saveRecordDay(currentKey, dia);
   document.getElementById('feriado-dia').value  = '';
   document.getElementById('feriado-nome').value = '';
   loadChecklist(currentKey);
@@ -2026,7 +2483,7 @@ function saveSig() {
   // Auto-tag motorista on signature
   const user = getCurrentUser();
   if (user && !rec.days[sigDay].motorista) rec.days[sigDay].motorista = user;
-  save();
+  saveRecordDay(currentKey, sigDay);
   closeSigModal();
   loadChecklist(currentKey); // re-render
 }
@@ -2061,7 +2518,7 @@ function renderVehicles() {
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <div class="vi-plate">${v.plate}</div>
-        ${isAdmin() ? `<button class="btn btn-danger btn-sm" onclick="removeVehicle(${i})">✕</button>` : ''}
+        ${isAdmin() ? `<button class="btn btn-danger btn-sm" onclick="removeVehicle('${String(v.plate).replace(/'/g, "\\'")}')">✕</button>` : ''}
       </div>
     </div>
   `).join('');
@@ -2078,7 +2535,9 @@ function addVehicle() {
   document.getElementById('new-veh-plate').value = '';
 }
 
-function removeVehicle(i) {
+function removeVehicle(plate) {
+  const i = vehicles.findIndex(v => v.plate === plate);
+  if (i < 0) { renderVehicles(); return; }
   if (!confirm(`Remover ${vehicles[i].model} – ${vehicles[i].plate}?`)) return;
   vehicles.splice(i, 1);
   save(); renderVehicles();
@@ -2121,7 +2580,7 @@ function renderDrivers() {
         <div><div class="di-field">1ª Habilitação</div><div class="di-val">${d.primeiraHab||'—'}</div></div>
       </div>
       ${isAdmin() ? `<div class="driver-item-actions">
-        <button class="btn btn-danger btn-sm" onclick="removeDriver(${i})">🗑 Remover</button>
+        <button class="btn btn-danger btn-sm" onclick="removeDriver('${String(d.name).replace(/'/g, "\\'")}')">🗑 Remover</button>
       </div>` : ''}
     </div>`;
   }).join('');
@@ -2156,7 +2615,9 @@ function addDriver() {
   document.getElementById('new-driver-cat').value = '';
 }
 
-function removeDriver(i) {
+function removeDriver(name) {
+  const i = drivers.findIndex(d => d.name === name);
+  if (i < 0) { renderDrivers(); return; }
   if (!confirm(`Remover motorista "${drivers[i].name}"?`)) return;
   drivers.splice(i, 1);
   save(); renderDrivers();
@@ -2328,6 +2789,7 @@ async function confirmarEmpresa() {
   if (code === LEGACY_TENANT) {
     _tenantId = LEGACY_TENANT;
     sessionStorage.setItem('sv_tenant', LEGACY_TENANT);
+    localStorage.setItem('sv_last_tenant', LEGACY_TENANT);
     const nomeEl = document.getElementById('login-logo-subtitle');
     if (nomeEl) nomeEl.textContent = 'SERVSUL — Controle de Frota';
     errEl.textContent = '';
@@ -2352,6 +2814,7 @@ async function confirmarEmpresa() {
     }
     _tenantId = code;
     sessionStorage.setItem('sv_tenant', code);
+    localStorage.setItem('sv_last_tenant', code);
     const nomeEl = document.getElementById('login-logo-subtitle');
     if (nomeEl && td.nome) nomeEl.textContent = td.nome;
     errEl.textContent = '';
@@ -2846,7 +3309,11 @@ function applyRole() {
 }
 
 function logout() {
-  if (!confirm('Deseja sair da sessão atual?')) return;
+  if (_dirty.size && !confirm('Há alterações ainda não enviadas ao servidor. Elas ficam guardadas neste aparelho e serão enviadas quando você entrar de novo nesta empresa. Sair mesmo assim?')) return;
+  if (!_dirty.size && !confirm('Deseja sair da sessão atual?')) return;
+  persistPending();
+  resetTenantState();
+  updateSyncIndicator();
   sessionStorage.removeItem('sv_role');
   sessionStorage.removeItem('sv_user');
   sessionStorage.removeItem('sv_tenant');
@@ -2859,7 +3326,7 @@ function logout() {
   document.getElementById('login-step-almox').style.display    = 'none';
   document.getElementById('login-step-gestora').style.display  = 'none';
   document.getElementById('login-step-empresa').style.display  = '';
-  document.getElementById('empresa-code-input').value = '';
+  document.getElementById('empresa-code-input').value = localStorage.getItem('sv_last_tenant') || '';
   document.getElementById('empresa-code-error').textContent = '';
   document.getElementById('login-logo-subtitle').textContent = 'Tecnologia em Gestão de Frotas';
   document.getElementById('login-overlay').style.display = 'flex';
@@ -2968,23 +3435,24 @@ const DEFAULT_DRIVERS = [
 ];
 
 function initDefaultDrivers() {
-  DEFAULT_DRIVERS.forEach(def => {
-    const existing = drivers.find(x => x.name === def.name ||
-      x.name === 'WELLINGTON' && def.name.startsWith('WELLINGTON') ||
-      x.name === 'WENNIO' && def.name.startsWith('WENNIO'));
-    if (existing) {
-      // upgrade with full data
-      Object.assign(existing, def);
-    } else {
-      drivers.push({ ...def });
-    }
-  });
-  // Remove old short-name placeholders that got replaced
+  // Antes isto rodava em toda abertura do app, recriava motoristas excluídos,
+  // desfazia edições e regravava a lista inteira (também em outras empresas).
+  if (_tenantId !== LEGACY_TENANT) return;
+  let changed = false;
+  if (!drivers.length) {
+    DEFAULT_DRIVERS.forEach(def => drivers.push({ ...def }));
+    changed = true;
+  }
+  // Substitui os antigos nomes curtos provisórios, se ainda existirem
   ['WELLINGTON', 'WENNIO'].forEach(old => {
     const idx = drivers.findIndex(x => x.name === old);
-    if (idx !== -1) drivers.splice(idx, 1);
+    if (idx === -1) return;
+    const def = DEFAULT_DRIVERS.find(d => d.name.startsWith(old));
+    if (def && !drivers.some(x => x.name === def.name)) drivers[idx] = { ...def };
+    else drivers.splice(idx, 1);
+    changed = true;
   });
-  save();
+  if (changed) save();
 }
 
 // ═══════════════════════════════════════════════
@@ -2995,6 +3463,7 @@ function ensureDefaultMotoristUser() {
 }
 
 function ensureDefaultGestoraUser() {
+  if (!_tenantId || _tenantId === SUPER_ADMIN_CODE) return;
   const exists = _appUsers.some(u => u.role === 'gestora');
   if (!exists) {
     const pin = Math.floor(1000 + Math.random() * 9000).toString();
@@ -3005,9 +3474,6 @@ function ensureDefaultGestoraUser() {
 }
 
 function finishInit() {
-  initDefaultDrivers();
-  ensureDefaultMotoristUser();
-  ensureDefaultGestoraUser();
   renderLoginUsers();
   renderAlmoxMgmt();
   const existingSession = sessionStorage.getItem('sv_role');
@@ -3312,7 +3778,6 @@ const FUEL_DATA = [
   // sum: 510+430+580+350+490+310+420+560+470+520+380+1252.88 = 6272.88 ✓
 
   // ──── DELTA 22018 ────
-  {date:'03/01/2026',plate:'ATZ-5I86',items:'',value:130.00,client:'DELTA',fatura:'22018'},
   {date:'03/01/2026',plate:'',items:'',value:120.00,client:'DELTA',fatura:'22018'},
   {date:'06/01/2026',plate:'AXL-1427',items:'ETA,GAS',value:433.78,client:'DELTA',fatura:'22018'},
   {date:'07/01/2026',plate:'SHP-9D16',items:'GAS',value:251.44,client:'DELTA',fatura:'22018'},
@@ -3364,7 +3829,6 @@ const FUEL_DATA = [
   {date:'04/03/2026',plate:'TDE-9A05',items:'GAS',value:192.37,client:'DELTA',fatura:'22864'},
   {date:'05/03/2026',plate:'UAI-0J70',items:'GAS',value:235.40,client:'DELTA',fatura:'22864'},
   {date:'06/03/2026',plate:'',items:'',value:60.00,client:'DELTA',fatura:'22864'},
-  {date:'06/03/2026',plate:'ATZ-5I86',items:'GAA',value:331.30,client:'DELTA',fatura:'22864'},
   {date:'06/03/2026',plate:'SHP-9D16',items:'GAA',value:270.26,client:'DELTA',fatura:'22864'},
   {date:'09/03/2026',plate:'SHP-9D16',items:'GAS',value:240.79,client:'DELTA',fatura:'22864'},
   {date:'10/03/2026',plate:'AVY-3D04',items:'GAS',value:498.69,client:'DELTA',fatura:'22864'},
@@ -3378,11 +3842,9 @@ const FUEL_DATA = [
   {date:'18/03/2026',plate:'BAP-5D50',items:'GAS',value:174.12,client:'DELTA',fatura:'23289'},
   {date:'18/03/2026',plate:'SHP-9D16',items:'GAS',value:269.00,client:'DELTA',fatura:'23289'},
   {date:'18/03/2026',plate:'UAI-0J70',items:'GAS',value:264.77,client:'DELTA',fatura:'23289'},
-  {date:'19/03/2026',plate:'ATZ-5I86',items:'GAA',value:262.80,client:'DELTA',fatura:'23289'},
   {date:'20/03/2026',plate:'',items:'',value:130.00,client:'DELTA',fatura:'23289'},
   {date:'20/03/2026',plate:'TDE-9A05',items:'GAS',value:184.01,client:'DELTA',fatura:'23289'},
   {date:'20/03/2026',plate:'RVK-5G87',items:'GAS',value:240.79,client:'DELTA',fatura:'23289'},
-  {date:'21/03/2026',plate:'ATZ-5I86',items:'',value:130.00,client:'DELTA',fatura:'23289'},
   {date:'23/03/2026',plate:'AVY-3D04',items:'GAS',value:527.68,client:'DELTA',fatura:'23289'},
   {date:'26/03/2026',plate:'AVY-3D04',items:'PRO,GAS',value:273.80,client:'DELTA',fatura:'23289'},
   {date:'26/03/2026',plate:'TDE-9A05',items:'GAS',value:154.80,client:'DELTA',fatura:'23289'},
@@ -3399,7 +3861,6 @@ const FUEL_DATA = [
   {date:'01/04/2026',plate:'SHP-9D16',items:'GAS',value:124.37,client:'DELTA',fatura:'23496'},
   {date:'02/04/2026',plate:'AVY-3D04',items:'GAS',value:323.55,client:'DELTA',fatura:'23496'},
   {date:'07/04/2026',plate:'UAI-0J70',items:'PRO,GAS',value:302.05,client:'DELTA',fatura:'23496'},
-  {date:'08/04/2026',plate:'ATZ-5I86',items:'PRO,GAA',value:452.80,client:'DELTA',fatura:'23496'},
   {date:'09/04/2026',plate:'TDE-9A05',items:'GAS',value:189.74,client:'DELTA',fatura:'23496'},
   {date:'09/04/2026',plate:'AVY-3D04',items:'GAS',value:184.34,client:'DELTA',fatura:'23496'},
   {date:'10/04/2026',plate:'AVY-3D04',items:'GAS',value:383.72,client:'DELTA',fatura:'23496'},
@@ -3441,30 +3902,11 @@ let fornecedores = [];
 
 // ── Fuel helpers ──
 function saveFuel() {
-  if (!db) return;
-  tenantData().doc('fuel').set({ entries: fuelEntries });
+  if (db) queueSync('fuel');
 }
 function saveRequisicoes() {
-  if (!db) return;
-  // Salva a lista sem as fotos de comprovante: o documento principal tem limite de 1MB
-  // no Firestore e fotos em base64 facilmente estourariam esse limite com o tempo.
-  const lightList = requisicoes.map(r => {
-    if (!r.comprovante) return r;
-    const { comprovante, ...rest } = r;
-    return rest;
-  });
-  tenantData().doc('requisicoes').set({ list: lightList })
-    .catch(e => { console.error('Erro ao salvar requisições:', e); alert('Erro ao salvar requisição: ' + e.message); });
-
-  // Fotos de comprovante vão em documentos próprios (1 por requisição), evitando
-  // que o documento principal cresça demais e pare de salvar.
-  requisicoes.forEach(r => {
-    if (r.comprovante && r.num) {
-      tenantData().doc("comp_" + r.num).set({
-        image: r.comprovante, by: r.comprovanteBy || '', date: r.comprovanteDate || ''
-      }).catch(e => { console.error('Erro ao salvar comprovante:', e); alert('Erro ao salvar a foto do comprovante: ' + e.message); });
-    }
-  });
+  // A lista vai sem fotos/assinaturas (ficam em documentos próprios: comp_*, sig_*)
+  if (db) queueSync('requisicoes');
 }
 
 function deleteComprovanteDoc(num) {
@@ -3477,8 +3919,7 @@ function nextReqSeq() {
   return max + 1;
 }
 function saveFornecedores() {
-  if (!db) return;
-  tenantData().doc('fornecedores').set({ list: fornecedores });
+  if (db) queueSync('fornecedores');
 }
 
 let _lastFuelReport = null;
@@ -3574,17 +4015,21 @@ function renderFuel() {
   `;
 
   // Table
-  let html = '<table class="fuel-table"><thead><tr><th>Data</th><th>Placa</th><th>Itens</th><th>Valor</th><th>Cliente</th><th>Fatura</th></tr></thead><tbody>';
+  const canDel = isAdmin();
+  let html = '<table class="fuel-table"><thead><tr><th>Data</th><th>Placa</th><th>Itens</th><th>Valor</th><th>Cliente</th><th>Fatura</th>' + (canDel ? '<th></th>' : '') + '</tr></thead><tbody>';
   filtered.sort((a, b) => {
     const da = a.date.split('/').reverse().join('');
     const db2 = b.date.split('/').reverse().join('');
     return da.localeCompare(db2);
   });
   filtered.forEach(e => {
-    html += `<tr><td>${e.date}</td><td>${e.plate||'—'}</td><td>${e.items||'—'}</td><td class="val">R$ ${e.value.toFixed(2).replace('.',',')}</td><td>${e.client}</td><td>${e.fatura||'—'}</td></tr>`;
+    html += `<tr><td>${e.date}</td><td>${e.plate||'—'}</td><td>${e.items||'—'}</td><td class="val">R$ ${e.value.toFixed(2).replace('.',',')}</td><td>${e.client}</td><td>${e.fatura||'—'}</td>${canDel ? `<td><button class="btn btn-danger btn-sm" title="Excluir lançamento" onclick="deleteFuelEntry(${jsq(fuelKey(e))})">🗑</button></td>` : ''}</tr>`;
   });
   html += '</tbody></table>';
   document.getElementById('fuel-table-wrap').innerHTML = html;
+  // "Excluir filtrados" só aparece com algum filtro ativo (nunca apaga tudo sem querer)
+  const delBtn = document.getElementById('fuel-del-filtered');
+  if (delBtn) delBtn.style.display = canDel && (monthFilter || plateFilter || clientFilter) && filtered.length ? '' : 'none';
 
   // Guarda o relatório atual para geração de PDF
   _lastFuelReport = {
@@ -3627,6 +4072,7 @@ function addFuelEntry() {
   const parts = dateEl.value.split('-');
   const dateFmt = parts[2] + '/' + parts[1] + '/' + parts[0];
   fuelEntries.push({
+    _k: uid(),
     date: dateFmt,
     plate: plateEl.value.toUpperCase().trim(),
     items: itemsEl.value.toUpperCase().trim(),
@@ -3640,10 +4086,39 @@ function addFuelEntry() {
   alert('Lançamento salvo!');
 }
 
+// ── Excluir lançamentos de combustível (somente administrador, com PIN) ──
+function deleteFuelEntry(k) {
+  if (!isAdmin()) { alert('Apenas o administrador pode excluir lançamentos.'); return; }
+  const e = fuelEntries.find(x => fuelKey(x) === k);
+  if (!e) { renderFuel(); return; }
+  requirePinThen('🗑 Excluir lançamento', `${e.date} · ${e.plate || '—'} · R$ ${e.value.toFixed(2).replace('.', ',')} · ${e.client}. Informe o PIN de administrador.`, () => {
+    const i = fuelEntries.findIndex(x => fuelKey(x) === k);
+    if (i < 0) { renderFuel(); return; }
+    fuelEntries.splice(i, 1);
+    saveFuel();
+    renderFuel();
+  });
+}
+function deleteFilteredFuel() {
+  if (!isAdmin()) { alert('Apenas o administrador pode excluir lançamentos.'); return; }
+  const lista = (_lastFuelReport && _lastFuelReport.filtered) || [];
+  if (!lista.length) { alert('Nenhum lançamento no filtro atual.'); return; }
+  const r = _lastFuelReport;
+  const total = lista.reduce((s, e) => s + e.value, 0).toFixed(2).replace('.', ',');
+  const chaves = new Set(lista.map(fuelKey));
+  if (!confirm(`Excluir ${lista.length} lançamento(s) — R$ ${total}?\n\nFiltro: ${r.monthLabel} · ${r.plateLabel} · ${r.clientLabel}\n\nEsta ação não pode ser desfeita.`)) return;
+  requirePinThen('🗑 Excluir filtrados', `Informe o PIN de administrador para excluir ${lista.length} lançamento(s).`, () => {
+    fuelEntries = fuelEntries.filter(e => !chaves.has(fuelKey(e)));
+    saveFuel();
+    renderFuel();
+    alert(`${chaves.size} lançamento(s) excluído(s).`);
+  });
+}
+
 async function zerarCombustivel() {
   if (!confirm('Tem certeza que deseja apagar TODOS os lançamentos de combustível? Esta ação não pode ser desfeita.')) return;
   fuelEntries = [];
-  await tenantData().doc('fuel').set({ entries: [] });
+  saveFuel();
   renderFuel();
   alert('Todos os lançamentos foram apagados.');
 }
@@ -3651,7 +4126,9 @@ async function zerarCombustivel() {
 // ── Requisicoes ──
 function renderRequisicoes() {
   const sel = document.getElementById('req-vehicle');
+  const prevPlate = sel.value;
   sel.innerHTML = '<option value="">— Selecione —</option>' + vehicles.map(v => `<option value="${v.plate}">${v.plate} – ${v.model||''}</option>`).join('');
+  if (prevPlate && vehicles.some(v => v.plate === prevPlate)) sel.value = prevPlate;
 
   const list = document.getElementById('req-list');
   const role     = sessionStorage.getItem('sv_role');
@@ -3674,14 +4151,14 @@ function renderRequisicoes() {
     return;
   }
   list.innerHTML = listaVis.map(r => {
-    const i = requisicoes.indexOf(r); // índice real para os botões
-    const isSigned = r.status === 'Autorizada' && r.sig;
+    const i = jsq(reqKey(r)); // chave da requisição para os botões
+    const isSigned = r.status === 'Autorizada' && reqHasSig(r);
     const badgeClass = isSigned ? 'badge-approved' : r.status === 'Aprovada' ? 'badge-approved' : r.status === 'Negada' ? 'badge-denied' : 'badge-pending';
     const badgeLabel = isSigned ? '✅ Autorizada' : r.status;
 
     let actions = '';
     if (!isMoto) actions += `<button class="btn btn-secondary btn-sm" onclick="printRequisicao(${i})">🖨️</button>`;
-    if (isSigned || r.sig) {
+    if (isSigned || reqHasSig(r)) {
       if (!isMoto) actions += ` <button class="btn btn-primary btn-sm" onclick="openVoucherView(${i})">📄 Voucher</button>`;
       if (!isMoto) actions += ` <button class="btn btn-whatsapp btn-sm" onclick="shareReqWhatsApp(${i})">📤 WApp</button>`;
     }
@@ -3689,7 +4166,7 @@ function renderRequisicoes() {
       actions += ` <button class="btn btn-primary btn-sm" onclick="approveRequisicao(${i})">✅ Aprovar</button>`;
       actions += ` <button class="btn btn-danger btn-sm" onclick="denyRequisicao(${i})">❌ Negar</button>`;
     }
-    if (canManage && (r.status === 'Pendente' || r.status === 'Aprovada') && !r.sig) {
+    if (canManage && (r.status === 'Pendente' || r.status === 'Aprovada') && !reqHasSig(r)) {
       actions += ` <button class="btn btn-blue btn-sm" onclick="signExistingReq(${i})">✍️ Assinar</button>`;
     }
     if (isAdmin) {
@@ -3704,7 +4181,7 @@ function renderRequisicoes() {
         <div><div class="ct-text">📎 Comprovante anexado</div>
         <div class="ct-sub">${r.comprovanteDate || ''} ${r.comprovanteBy ? '· ' + r.comprovanteBy : ''}</div></div>
       </div>`;
-    } else if (isSigned || r.sig) {
+    } else if (isSigned || reqHasSig(r)) {
       compHtml = `<div style="margin-top:8px">
         <button class="btn btn-secondary btn-sm" onclick="attachComprovante(${i})">📷 Anexar Comprovante</button>
         <span style="font-size:11px;color:#aaa;margin-left:6px">Aguardando foto</span>
@@ -3761,8 +4238,9 @@ function openReqSign() {
 }
 
 // ── Requisição: assinar requisição já existente ──
-function signExistingReq(idx) {
-  _reqSigningIdx = idx;
+function signExistingReq(k) {
+  if (reqIdx(k) < 0) return reqGone();
+  _reqSigningIdx = k;
   _reqPendingData = null;
   openReqVoucherModal();
 }
@@ -3822,6 +4300,7 @@ function saveReqSig() {
     _reqPendingData.sig = sigData;
     _reqPendingData.sigBy = sessionStorage.getItem('sv_user') || 'Admin';
     requisicoes.push(_reqPendingData);
+    uploadReqSig(_reqPendingData);
     saveRequisicoes();
     // Limpa formulário
     ['req-vehicle','req-motorista','req-km','req-litros','req-valor','req-obs'].forEach(id => {
@@ -3829,11 +4308,16 @@ function saveReqSig() {
     });
     showVoucherInModal(_reqPendingData);
   } else if (_reqSigningIdx !== null) {
-    requisicoes[_reqSigningIdx].sig    = sigData;
-    requisicoes[_reqSigningIdx].sigBy  = sessionStorage.getItem('sv_user') || 'Admin';
-    requisicoes[_reqSigningIdx].status = 'Autorizada';
+    const idx = reqIdx(_reqSigningIdx);
+    if (idx < 0) { cancelReqVoucher(); reqGone(); return; }
+    const r = requisicoes[idx];
+    r.sig    = sigData;
+    r.sigId  = uid();
+    r.sigBy  = sessionStorage.getItem('sv_user') || 'Admin';
+    r.status = 'Autorizada';
+    uploadReqSig(r);
     saveRequisicoes();
-    showVoucherInModal(requisicoes[_reqSigningIdx]);
+    showVoucherInModal(r);
   }
   document.getElementById('req-sign-step').style.display = 'none';
   document.getElementById('req-voucher-step').style.display = '';
@@ -3859,8 +4343,9 @@ function showVoucherInModal(r) {
 }
 
 // ── Abrir voucher de req existente ──
-function openVoucherView(idx) {
-  const r = requisicoes[idx];
+function openVoucherView(k) {
+  const r = requisicoes[reqIdx(k)];
+  if (!r) return reqGone();
   document.getElementById('req-sign-step').style.display = 'none';
   document.getElementById('req-voucher-step').style.display = '';
   document.getElementById('req-voucher-modal').classList.add('open');
@@ -4011,8 +4496,9 @@ function shareVoucherWhatsApp() {
   _shareVoucherImage(r);
 }
 
-function shareReqWhatsApp(idx) {
-  const r = requisicoes[idx];
+function shareReqWhatsApp(k) {
+  const r = requisicoes[reqIdx(k)];
+  if (!r) return reqGone();
   _shareVoucherImage(r);
 }
 
@@ -4092,8 +4578,10 @@ function requirePinThen(title, sub, callback) {
   document.getElementById('confirm-pin-overlay').classList.add('open');
 }
 
-function approveRequisicao(idx) {
+function approveRequisicao(k) {
   requirePinThen('✅ Aprovar Requisição', 'Informe seu PIN para autorizar a aprovação', () => {
+    const idx = reqIdx(k);
+    if (idx < 0) return reqGone();
     requisicoes[idx].status = 'Aprovada';
     requisicoes[idx].approvedBy = sessionStorage.getItem('sv_user') || '';
     requisicoes[idx].approvedAt = new Date().toLocaleString('pt-BR');
@@ -4101,8 +4589,10 @@ function approveRequisicao(idx) {
     renderRequisicoes();
   });
 }
-function denyRequisicao(idx) {
+function denyRequisicao(k) {
   requirePinThen('❌ Negar Requisição', 'Informe seu PIN para confirmar a negação', () => {
+    const idx = reqIdx(k);
+    if (idx < 0) return reqGone();
     requisicoes[idx].status = 'Negada';
     requisicoes[idx].deniedBy = sessionStorage.getItem('sv_user') || '';
     requisicoes[idx].deniedAt = new Date().toLocaleString('pt-BR');
@@ -4110,8 +4600,9 @@ function denyRequisicao(idx) {
     renderRequisicoes();
   });
 }
-function printRequisicao(idx) {
-  const r = requisicoes[idx];
+function printRequisicao(k) {
+  const r = requisicoes[reqIdx(k)];
+  if (!r) return reqGone();
   const w = window.open('','','width=400,height=500');
   if (!w) { alert('Popup bloqueado. Permita popups para este site e tente novamente.'); return; }
   w.document.write(`<html><head><title>Requisição</title><style>body{font-family:Arial;padding:20px}h2{color:#2e7d32}table{width:100%;border-collapse:collapse}td{padding:6px;border-bottom:1px solid #ddd;font-size:13px}td:first-child{font-weight:700;width:40%}</style></head><body>
@@ -4127,6 +4618,7 @@ function renderFornecedores() {
   const search = (document.getElementById('forn-search')?.value || '').toLowerCase();
   const list = document.getElementById('forn-list');
   const isAdmin = sessionStorage.getItem('sv_role') === 'admin';
+  const openIds = new Set([...list.querySelectorAll('.forn-item-body.open')].map(el => el.id));
 
   let filtered = fornecedores.filter(f => {
     if (!search) return true;
@@ -4137,7 +4629,7 @@ function renderFornecedores() {
   filtered.forEach(f => {
     const cat = f.categoria || 'Outros';
     if (!groups[cat]) groups[cat] = [];
-    groups[cat].push({ ...f, _idx: fornecedores.indexOf(f) });
+    groups[cat].push({ ...f, _idx: jsq(fornKey(f)), _id: 'fb-' + hashStr(fornKey(f)) });
   });
 
   if (!Object.keys(groups).length) { list.innerHTML = '<p style="color:#999;font-size:13px">Nenhum fornecedor cadastrado.</p>'; return; }
@@ -4146,7 +4638,8 @@ function renderFornecedores() {
   Object.keys(groups).sort().forEach(cat => {
     html += `<div class="forn-category"><h3>${cat}</h3>`;
     groups[cat].forEach(f => {
-      const id = 'fb-' + f._idx;
+      const id = f._id;
+      const isOpen = openIds.has(id);
       const wppNum = (f.telefone||'').replace(/\D/g,'');
       const user = sessionStorage.getItem('sv_user') || 'usuário';
       const catLower = (f.categoria||'').toLowerCase();
@@ -4177,10 +4670,10 @@ function renderFornecedores() {
           <div class="fi-actions">
             ${isAdmin ? `<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();editFornecedor(${f._idx})">✏️</button>
             <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteFornecedor(${f._idx})">🗑️</button>` : ''}
-            <span class="forn-chevron">▼</span>
+            <span class="forn-chevron${isOpen ? ' open' : ''}">▼</span>
           </div>
         </div>
-        <div class="forn-item-body" id="${id}">
+        <div class="forn-item-body${isOpen ? ' open' : ''}" id="${id}">
           ${f.cnpj ? `<div class="forn-detail-row"><span>🏢</span><span>CNPJ: ${f.cnpj}</span></div>` : ''}
           ${f.inscricao ? `<div class="forn-detail-row"><span>📄</span><span>IE: ${f.inscricao}</span></div>` : ''}
           ${f.telefone ? `<div class="forn-detail-row"><span>📞</span><span>${f.telefone}${f.contato ? ' — '+f.contato : ''}</span></div>` : ''}
@@ -4198,8 +4691,9 @@ function renderFornecedores() {
   list.innerHTML = html;
 }
 
-async function solicitarFornecedor(idx) {
-  const f = fornecedores[idx];
+function fornIdx(k) { return fornecedores.findIndex(f => fornKey(f) === k); }
+async function solicitarFornecedor(k) {
+  const f = fornecedores[fornIdx(k)];
   if (!f || !db) return;
   const user = sessionStorage.getItem('sv_user') || '?';
   const role = sessionStorage.getItem('sv_role') || '?';
@@ -4212,10 +4706,10 @@ async function solicitarFornecedor(idx) {
     telefone: f.telefone || '—'
   };
   try {
-    const doc = await tenantData().doc('solicitacoes_forn').get();
-    const lista = doc.exists ? (doc.data().lista || []) : [];
-    lista.push(reg);
-    await tenantData().doc('solicitacoes_forn').set({ lista });
+    // arrayUnion: acrescenta no servidor sem ler/regravar a lista (funciona offline
+    // e não perde registros de outros aparelhos gravando ao mesmo tempo)
+    await tenantData().doc('solicitacoes_forn').set(
+      { lista: firebase.firestore.FieldValue.arrayUnion(reg) }, { merge: true });
   } catch(e) { console.warn('solicitarFornecedor:', e); }
 }
 
@@ -4230,7 +4724,7 @@ function addFornecedor() {
   const maps = document.getElementById('forn-maps').value.trim();
   const obs = document.getElementById('forn-obs').value.trim();
   if (!nome) { alert('Informe o nome do fornecedor.'); return; }
-  fornecedores.push({ nome, categoria, cnpj, inscricao, telefone, contato, endereco, maps, obs });
+  fornecedores.push({ _k: uid(), nome, categoria, cnpj, inscricao, telefone, contato, endereco, maps, obs });
   saveFornecedores();
   document.getElementById('forn-nome').value = '';
   document.getElementById('forn-cnpj').value = '';
@@ -4244,8 +4738,10 @@ function addFornecedor() {
   alert('Fornecedor salvo!');
 }
 
-function editFornecedor(idx) {
-  const f = fornecedores[idx];
+function editFornecedor(k) {
+  const idx = fornIdx(k);
+  if (idx < 0) { alert('Este fornecedor não existe mais (pode ter sido excluído em outro aparelho).'); renderFornecedores(); return; }
+  const f = pinKey_(fornecedores[idx], fornKey);
   const nome = prompt('Nome:', f.nome);
   if (nome === null) return;
   const cnpj = prompt('CNPJ:', f.cnpj||'');
@@ -4255,13 +4751,19 @@ function editFornecedor(idx) {
   const endereco = prompt('Endereço:', f.endereco);
   const maps = prompt('Link Google Maps:', f.maps||'');
   const obs = prompt('Observações:', f.obs);
-  fornecedores[idx] = { ...f, nome: nome||f.nome, cnpj: cnpj||'', inscricao: inscricao||'', telefone: telefone||'', contato: contato||'', endereco: endereco||'', maps: maps||'', obs: obs||'' };
+  const idx2 = fornIdx(k);
+  if (idx2 < 0) { alert('Este fornecedor foi excluído em outro aparelho.'); renderFornecedores(); return; }
+  fornecedores[idx2] = { ...f, nome: nome||f.nome, cnpj: cnpj||'', inscricao: inscricao||'', telefone: telefone||'', contato: contato||'', endereco: endereco||'', maps: maps||'', obs: obs||'' };
   saveFornecedores();
   renderFornecedores();
 }
 
-function deleteFornecedor(idx) {
-  if (confirm('Remover fornecedor ' + fornecedores[idx].nome + '?')) {
+function deleteFornecedor(k) {
+  const f = fornecedores[fornIdx(k)];
+  if (!f) { renderFornecedores(); return; }
+  if (confirm('Remover fornecedor ' + f.nome + '?')) {
+    const idx = fornIdx(k);
+    if (idx < 0) { renderFornecedores(); return; }
     fornecedores.splice(idx, 1);
     saveFornecedores();
     renderFornecedores();
@@ -4270,14 +4772,27 @@ function deleteFornecedor(idx) {
 
 async function startApp() {
   const fbOk = await initFirebase();
-  if (!fbOk) return;
+  if (!fbOk) {
+    setLoadingOverlay(true, 'Sem conexão com o servidor', 'Verifique a internet e toque aqui para tentar novamente.');
+    const el = document.getElementById('loading-overlay');
+    if (el) el.onclick = () => location.reload();
+    return;
+  }
+  // Lembra o código da empresa neste aparelho (só para preencher o campo)
+  const lastCode = localStorage.getItem('sv_last_tenant');
+  const codeInput = document.getElementById('empresa-code-input');
+  if (lastCode && codeInput && !codeInput.value) codeInput.value = lastCode;
   // Se já tem tenant na sessão (ex: recarregou a página), pula etapa 0
   const savedTenant = sessionStorage.getItem('sv_tenant');
   if (savedTenant && savedTenant !== SUPER_ADMIN_CODE) {
     _tenantId = savedTenant;
-    const tenantDoc = await db.collection('tenants').doc(_tenantId).get();
-    if (tenantDoc.exists && tenantDoc.data().ativo !== false) {
-      const td = tenantDoc.data();
+    let tenantDoc = null;
+    if (savedTenant !== LEGACY_TENANT) {
+      // Sem internet usa o cache; se nem isso houver, segue com o que tem
+      try { tenantDoc = await db.collection('tenants').doc(_tenantId).get(); } catch (e) { console.warn('Empresa (offline):', e); }
+    }
+    if (savedTenant === LEGACY_TENANT || !tenantDoc || (tenantDoc.exists && tenantDoc.data().ativo !== false)) {
+      const td = tenantDoc && tenantDoc.exists ? tenantDoc.data() : { nome: savedTenant === LEGACY_TENANT ? 'SERVSUL — Controle de Frota' : '' };
       const nomeEl = document.getElementById('login-logo-subtitle');
       if (nomeEl && td.nome) nomeEl.textContent = td.nome;
       document.getElementById('login-step-empresa').style.display = 'none';
@@ -4299,9 +4814,9 @@ async function startApp() {
 // ═══════════════════════════════════════════════
 let _compIdx = null;
 
-function attachComprovante(idx) {
-  const r = requisicoes[idx];
-  if (!r) return;
+function attachComprovante(k) {
+  const r = requisicoes[reqIdx(k)];
+  if (!r) return reqGone();
 
   // Segurança: motorista só pode anexar na própria requisição
   const role    = sessionStorage.getItem('sv_role') || '';
@@ -4314,7 +4829,7 @@ function attachComprovante(idx) {
   }
 
   // Segurança: requisição precisa estar autorizada (com assinatura)
-  if (r.status !== 'Autorizada' || !r.sig) {
+  if (r.status !== 'Autorizada' || !reqHasSig(r)) {
     alert('Esta requisição ainda não está autorizada. Aguarde a autorização antes de anexar o comprovante.');
     return;
   }
@@ -4325,7 +4840,7 @@ function attachComprovante(idx) {
     return;
   }
 
-  _compIdx = idx;
+  _compIdx = k;
   document.getElementById('comp-file-input').value = '';
   document.getElementById('comp-file-input').click();
 }
@@ -4334,7 +4849,8 @@ function handleComprovanteFile(e) {
   const file = e.target.files[0];
   if (!file || _compIdx === null) return;
 
-  const r = requisicoes[_compIdx];
+  const compKey = _compIdx;
+  const r = requisicoes[reqIdx(compKey)];
 
   // Segunda camada de validação no momento do salvamento
   const role    = sessionStorage.getItem('sv_role') || '';
@@ -4348,7 +4864,7 @@ function handleComprovanteFile(e) {
     return;
   }
 
-  if (r.status !== 'Autorizada' || !r.sig) {
+  if (r.status !== 'Autorizada' || !reqHasSig(r)) {
     alert('Operação não permitida: requisição não está autorizada.');
     _compIdx = null;
     return;
@@ -4385,9 +4901,14 @@ function handleComprovanteFile(e) {
         if (!proceed) { _compIdx = null; return; }
       }
 
-      requisicoes[_compIdx].comprovante     = compressed;
-      requisicoes[_compIdx].comprovanteBy   = curUser || sessionStorage.getItem('sv_user') || '—';
-      requisicoes[_compIdx].comprovanteDate = new Date().toLocaleString('pt-BR');
+      // Busca de novo pela chave: a lista pode ter mudado durante a análise da foto
+      const rr = requisicoes[reqIdx(compKey)];
+      if (!rr) { _compIdx = null; return reqGone(); }
+      if (rr.comprovante) { _compIdx = null; alert('Esta requisição já recebeu um comprovante em outro aparelho.'); renderRequisicoes(); return; }
+      rr.comprovante     = compressed;
+      rr.comprovanteBy   = curUser || sessionStorage.getItem('sv_user') || '—';
+      rr.comprovanteDate = new Date().toLocaleString('pt-BR');
+      uploadReqComp(rr);
       saveRequisicoes();
       renderRequisicoes();
       _compIdx = null;
@@ -4438,9 +4959,10 @@ function hideOcrOverlay() {
 
 let _viewingCompIdx = null;
 
-function viewComprovante(idx) {
-  _viewingCompIdx = idx;
-  const r = requisicoes[idx];
+function viewComprovante(k) {
+  const r = requisicoes[reqIdx(k)];
+  if (!r || !r.comprovante) return reqGone();
+  _viewingCompIdx = k;
   document.getElementById('photo-modal-img').src = r.comprovante;
   document.getElementById('photo-modal').classList.add('open');
 }
@@ -4454,10 +4976,13 @@ function deleteComprovante() {
   if (sessionStorage.getItem('sv_role') !== 'admin') { alert('Apenas o administrador pode remover comprovantes.'); return; }
   if (_viewingCompIdx === null) return;
   if (!confirm('Remover o comprovante desta requisição?')) return;
-  deleteComprovanteDoc(requisicoes[_viewingCompIdx].num);
-  delete requisicoes[_viewingCompIdx].comprovante;
-  delete requisicoes[_viewingCompIdx].comprovanteBy;
-  delete requisicoes[_viewingCompIdx].comprovanteDate;
+  const r = requisicoes[reqIdx(_viewingCompIdx)];
+  if (!r) { closePhotoModal(); return reqGone(); }
+  deleteComprovanteDoc(r.num);
+  if (r.num) delete _attach.comp[r.num];
+  delete r.comprovante;
+  delete r.comprovanteBy;
+  delete r.comprovanteDate;
   saveRequisicoes();
   renderRequisicoes();
   closePhotoModal();
@@ -4472,6 +4997,7 @@ function zerarComprovantes() {
     requisicoes.forEach(r => {
       if (r.comprovante) {
         deleteComprovanteDoc(r.num);
+        if (r.num) delete _attach.comp[r.num];
         delete r.comprovante;
         delete r.comprovanteBy;
         delete r.comprovanteDate;
@@ -4484,10 +5010,15 @@ function zerarComprovantes() {
 }
 
 // ── Excluir requisição (somente administrador, com confirmação por PIN) ──
-function deleteRequisicao(idx) {
+function deleteRequisicao(k) {
   if (sessionStorage.getItem('sv_role') !== 'admin') { alert('Apenas o administrador pode excluir requisições.'); return; }
   requirePinThen('🗑 Excluir Requisição', 'Informe o PIN de administrador para excluir definitivamente', () => {
-    requisicoes.splice(idx, 1);
+    const idx = reqIdx(k);
+    if (idx < 0) return reqGone();
+    const [r] = requisicoes.splice(idx, 1);
+    // Remove também a foto e a assinatura guardadas em documentos próprios
+    if (r.comprovante) { deleteComprovanteDoc(r.num); delete _attach.comp[r.num]; }
+    if (db && r.sigId) tenantData().doc('sig_' + r.sigId).delete().catch(console.error);
     saveRequisicoes();
     renderRequisicoes();
   });
@@ -4924,7 +5455,7 @@ function renderReqReport() {
   if (!card || !div) return;
 
   // Apenas requisições Autorizadas com comprovante
-  const autorizadas = requisicoes.filter(r => r.status === 'Autorizada' && r.sig);
+  const autorizadas = requisicoes.filter(r => r.status === 'Autorizada' && reqHasSig(r));
   if (!autorizadas.length) { card.style.display = 'none'; return; }
   card.style.display = '';
 
@@ -5277,10 +5808,10 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 <!-- FAB: Como usar o app -->
 <button id="btn-como-usar" onclick="openTutorial()" title="Como usar o app"
-  style="position:fixed;bottom:20px;right:20px;z-index:1200;display:flex;align-items:center;gap:8px;padding:12px 18px;border-radius:28px;border:none;background:#1B5E20;color:#FDD835;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);transition:transform .15s,box-shadow .15s"
+  style="position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));right:calc(16px + env(safe-area-inset-right));z-index:1200;display:flex;align-items:center;gap:8px;padding:12px 18px;border-radius:28px;border:none;background:#1B5E20;color:#FDD835;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);transition:transform .15s,box-shadow .15s"
   onmouseenter="this.style.transform='scale(1.05)';this.style.boxShadow='0 6px 20px rgba(0,0,0,.35)'"
   onmouseleave="this.style.transform='scale(1)';this.style.boxShadow='0 4px 16px rgba(0,0,0,.25)'">
-  ❓ Como usar o app
+  ❓<span class="cu-txt"> Como usar o app</span>
 </button>
 </body>
 </html>
