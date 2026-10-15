@@ -1585,8 +1585,40 @@ function saveRecordDay(key, day) {
   const { days, ...meta } = rec;
   const payload = { ...meta, days: {} };
   if (day != null && days && days[day]) payload.days[day] = days[day];
-  tenantRecords().doc(key).set(payload, { merge: true })
+  trackWrite(tenantRecords().doc(key).set(payload, { merge: true }))
     .catch(e => { console.error('Erro ao salvar checklist:', e); syncReportError(e); });
+}
+
+// Gravações simples (checklist, fotos, assinaturas) ficam na fila do Firestore
+// quando não há internet; a promessa só termina quando o servidor recebe.
+let _queuedWrites = 0, _olderQueued = false;
+function trackWrite(p) {
+  _queuedWrites++;
+  updateSyncIndicator();
+  const done = () => { _queuedWrites = Math.max(0, _queuedWrites - 1); updateSyncIndicator(); };
+  p.then(done, done);
+  return p;
+}
+// Gravações que ficaram na fila de uma sessão anterior (app fechado offline)
+function watchQueuedWrites() {
+  if (!db || !db.waitForPendingWrites) return;
+  _olderQueued = true;
+  updateSyncIndicator();
+  db.waitForPendingWrites().then(() => { _olderQueued = false; updateSyncIndicator(); }, () => { _olderQueued = false; updateSyncIndicator(); });
+}
+function toastOffline(msg) {
+  let el = document.getElementById('offline-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'offline-toast';
+    el.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:1300;background:#B71C1C;color:#fff;padding:12px 14px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.25)';
+    el.onclick = () => { el.style.display = 'none'; };
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(toastOffline._t);
+  toastOffline._t = setTimeout(() => { el.style.display = 'none'; }, 7000);
 }
 
 function uid() {
@@ -1704,7 +1736,7 @@ function sendUpload(docId, data) {
   _uploads[docId] = data;
   saveUploads();
   if (!db) return Promise.resolve();
-  return tenantData().doc(docId).set(data);
+  return trackWrite(tenantData().doc(docId).set(data));
 }
 // Reenvia o que não foi confirmado, se a requisição ainda existir
 function resendUploads() {
@@ -1723,7 +1755,7 @@ function resendUploads() {
       if (still && !onServer) { _attach.comp[num] = data; requisicoes.forEach(r => { if (r.num === num) r.comprovante = data.image; }); }
     }
     if (!still || onServer) { delete _uploads[docId]; return; }
-    tenantData().doc(docId).set(data).catch(e => { console.warn('Reenvio pendente:', e); syncReportError(e); });
+    trackWrite(tenantData().doc(docId).set(data)).catch(e => { console.warn('Reenvio pendente:', e); syncReportError(e); });
   });
   saveUploads();
 }
@@ -1895,7 +1927,7 @@ function receiveServerDoc(docId, exists, data) {
 
 function onTenantDataSnap(snap) {
   let touched = false;
-  snap.docChanges().forEach(ch => {
+  snap.docChanges({ includeMetadataChanges: true }).forEach(ch => {
     const id = ch.doc.id, removed = ch.type === 'removed';
     if (_uploads[id] && (removed || !ch.doc.metadata.hasPendingWrites)) { delete _uploads[id]; saveUploads(); }
     if (id.startsWith('sig_')) {
@@ -1936,6 +1968,7 @@ function stopListeners() {
 }
 function resetTenantState() {
   stopListeners();
+  _serverConfirmed = false; _afterLoadedDone = false;
   Object.keys(_base).forEach(k => delete _base[k]);
   _dirty.clear();
   _attach.sig = {}; _attach.comp = {};
@@ -1992,19 +2025,25 @@ if (window.ResizeObserver) document.addEventListener('DOMContentLoaded', () => {
 function updateSyncIndicator() {
   const el = document.getElementById('sync-status');
   if (!el) return;
-  const pending = _dirty.size;
+  const pending = _dirty.size + _queuedWrites + (_olderQueued && !_queuedWrites ? 1 : 0);
   // Celular com sinal fraco pode dizer "online" e mesmo assim falhar: usa também o último erro
   const offline = !navigator.onLine || (_lastSyncError === 'unavailable' && pending > 0);
   const busy = Object.values(_flushing).some(Boolean);
   let txt, cls;
   if (!db) { txt = ''; cls = ''; }
-  else if (offline) { txt = pending ? '⚠ Offline · ' + pending + ' pendente' + (pending > 1 ? 's' : '') : '⚠ Offline'; cls = 'off'; }
-  else if (busy || pending) { txt = '⟳ Sincronizando…'; cls = 'busy'; }
+  else if (offline) {
+    const curto = window.innerWidth <= 420; // celular: texto curto para caber no cabeçalho
+    txt = pending ? (curto ? '⚠ Offline (' + pending + ')' : '⚠ Offline · ' + pending + ' pendente' + (pending > 1 ? 's' : '')) : '⚠ Offline';
+    cls = 'off';
+  }
+  else if (busy || _dirty.size) { txt = '⟳ Sincronizando…'; cls = 'busy'; }
+  else if (pending) { txt = '⟳ Enviando ' + pending + '…'; cls = 'busy'; }
   else if (_lastSyncError) { txt = '⚠ Erro ao sincronizar'; cls = 'off'; }
   else { txt = '● Sincronizado'; cls = 'ok'; }
   el.textContent = txt;
   el.className = 'sync-status ' + cls;
   el.style.display = txt ? '' : 'none';
+  el.title = offline && pending ? pending + ' alteração(ões) aguardando internet — serão enviadas automaticamente' : 'Toque para sincronizar agora';
 }
 window.addEventListener('online',  () => { _retryDelay = 3000; updateSyncIndicator(); flushAll(); });
 window.addEventListener('offline', updateSyncIndicator);
@@ -2054,11 +2093,14 @@ async function loadFromFirestore() {
       let gotData = false, gotRecs = false, done = false;
       const finish = () => { if (!done && gotData && gotRecs) { done = true; resolve(); } };
       // Sem internet e sem cache: não fica preso na tela de carregamento
-      const t = setTimeout(() => { if (!done) { done = true; resolve(); } }, 15000);
-      _unsubs.push(tenantData().onSnapshot(snap => {
+      const t = setTimeout(() => { if (!done) { done = true; resolve(); } }, navigator.onLine ? 15000 : 4000);
+      // includeMetadataChanges: avisa também quando os dados do cache são
+      // confirmados pelo servidor e quando uma gravação offline é recebida
+      _unsubs.push(tenantData().onSnapshot({ includeMetadataChanges: true }, snap => {
         // Sem cache local: espera a resposta do servidor antes de liberar
         if (!gotData && snap.metadata.fromCache && snap.empty) return;
         onTenantDataSnap(snap);
+        if (!snap.metadata.fromCache && !_serverConfirmed) { _serverConfirmed = true; if (gotData) afterTenantLoaded(); }
         if (!gotData) { gotData = true; finish(); }
       }, e => { console.error('Listener de dados:', e); if (!done) { done = true; clearTimeout(t); reject(e); } }));
       _unsubs.push(tenantRecords().onSnapshot(snap => {
@@ -2078,8 +2120,12 @@ async function loadFromFirestore() {
     });
     if (_dirty.size) flushAll();
     resendUploads();
-    afterTenantLoaded();
+    // Só grava padrões (motoristas, gestora) com os dados reais do servidor:
+    // offline num aparelho sem cache isso sobrescreveria PINs e cadastros reais
+    if (_serverConfirmed) afterTenantLoaded();
+    else if (!_base.auth || !Object.keys(_base.auth).length) toastOffline('Sem internet: os dados da empresa ainda não foram baixados neste aparelho. Eles aparecem assim que a conexão voltar.');
     setLoadingOverlay(false);
+    watchQueuedWrites();
     updateSyncIndicator();
   } catch(e) {
     setLoadingOverlay(true, 'Erro ao carregar', 'Verifique a internet e toque para tentar novamente. (' + (e.message || e) + ')');
@@ -2089,7 +2135,10 @@ async function loadFromFirestore() {
 }
 
 // Ajustes iniciais que gravam no servidor: só depois dos dados reais carregados
+let _serverConfirmed = false, _afterLoadedDone = false;
 function afterTenantLoaded() {
+  if (_afterLoadedDone) return;
+  _afterLoadedDone = true;
   if (_adminPin === '1234') { _adminPin = DEFAULT_ADMIN_PIN; saveAuth(); }
   initDefaultDrivers();
   ensureDefaultGestoraUser();
@@ -3245,9 +3294,32 @@ function pinError(msg) {
   }, 1400);
 }
 
+// O iPhone/Android apaga o sessionStorage ao fechar o app: guardamos a sessão
+// no aparelho para reabrir direto (inclusive sem internet) até tocar em "Sair".
+function rememberSession() {
+  try {
+    const role = sessionStorage.getItem('sv_role');
+    if (!role || role === 'superadmin' || sessionStorage.getItem('sv_user') === 'SUPER ADMIN') return;
+    localStorage.setItem('sv_session', JSON.stringify({
+      role, user: sessionStorage.getItem('sv_user') || '', tenant: sessionStorage.getItem('sv_tenant') || ''
+    }));
+  } catch (e) {}
+}
+function restoreSession() {
+  try {
+    if (sessionStorage.getItem('sv_role')) return;
+    const s = JSON.parse(localStorage.getItem('sv_session') || 'null');
+    if (!s || !s.role || !s.tenant) return;
+    sessionStorage.setItem('sv_role', s.role);
+    sessionStorage.setItem('sv_user', s.user);
+    sessionStorage.setItem('sv_tenant', s.tenant);
+    _tenantId = s.tenant;
+  } catch (e) {}
+}
 function doLogin(role, name) {
   sessionStorage.setItem('sv_role', role);
   sessionStorage.setItem('sv_user', name);
+  rememberSession();
   document.getElementById('login-overlay').style.display = 'none';
   applyRole();
   if (role === 'motorista' || role === 'gestora') {
@@ -3317,6 +3389,7 @@ function logout() {
   sessionStorage.removeItem('sv_role');
   sessionStorage.removeItem('sv_user');
   sessionStorage.removeItem('sv_tenant');
+  try { localStorage.removeItem('sv_session'); } catch (e) {}
   _tenantId = '';
   pinBuffer = '';
   // Volta à etapa 0 (código da empresa)
@@ -4771,6 +4844,7 @@ function deleteFornecedor(k) {
 }
 
 async function startApp() {
+  restoreSession();
   const fbOk = await initFirebase();
   if (!fbOk) {
     setLoadingOverlay(true, 'Sem conexão com o servidor', 'Verifique a internet e toque aqui para tentar novamente.');
@@ -4802,6 +4876,9 @@ async function startApp() {
       return;
     } else {
       sessionStorage.removeItem('sv_tenant');
+      sessionStorage.removeItem('sv_role');
+      sessionStorage.removeItem('sv_user');
+      try { localStorage.removeItem('sv_session'); } catch (e) {}
       _tenantId = '';
     }
   }
@@ -4924,6 +5001,7 @@ function handleComprovanteFile(e) {
 // valor total etc.) antes de aceitá-la como comprovante válido.
 async function recognizeComprovante(dataUrl) {
   if (typeof Tesseract === 'undefined') return true; // OCR indisponível: não bloqueia
+  if (!navigator.onLine) return true; // sem internet o OCR não baixa o idioma: não faz o motorista esperar
   try {
     const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Tempo esgotado no OCR')), 12000));
     const { data: { text } } = await Promise.race([Tesseract.recognize(dataUrl, 'por'), timeout]);
@@ -5647,6 +5725,7 @@ async function sendAjudaMsg() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
   if (!text) return;
+  if (!navigator.onLine) { _appendChatMsg('bot', 'Estou sem internet agora. O app continua funcionando normalmente; tente o assistente quando a conexão voltar.'); return; }
   input.value = '';
   _appendChatMsg('user', text);
 
