@@ -1,4 +1,4 @@
-const CACHE = 'frota-servsul-v6';
+const CACHE = 'frota-servsul-v7';
 const SHELL = ['/', '/index.html', '/manifest.json', '/icon-192.svg', '/icon-512.svg', '/icon-apple.png'];
 // Bibliotecas externas (versões fixas): guardadas no aparelho para o app abrir sem internet
 const LIBS = [

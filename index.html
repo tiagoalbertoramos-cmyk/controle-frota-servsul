@@ -4253,7 +4253,7 @@ function renderRequisicoes() {
         <img src="${r.comprovante}" alt="comprovante">
         <div><div class="ct-text">📎 Comprovante anexado</div>
         <div class="ct-sub">${r.comprovanteDate || ''} ${r.comprovanteBy ? '· ' + r.comprovanteBy : ''}</div></div>
-      </div>`;
+      </div>${compVerifHtml(r, i, canManage)}`;
     } else if (isSigned || reqHasSig(r)) {
       compHtml = `<div style="margin-top:8px">
         <button class="btn btn-secondary btn-sm" onclick="attachComprovante(${i})">📷 Anexar Comprovante</button>
@@ -4969,19 +4969,28 @@ function handleComprovanteFile(e) {
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
       const compressed = canvas.toDataURL('image/jpeg', 0.72);
 
-      showOcrOverlay('🔎 Analisando comprovante...');
-      const recognized = await recognizeComprovante(compressed);
-      hideOcrOverlay();
+      showOcrOverlay('🔎 Conferindo o cupom (data, chave e valor)...');
+      let res;
+      try { res = await verifyComprovante(compressed, r, compKey); }
+      finally { hideOcrOverlay(); }
 
-      if (!recognized) {
-        const proceed = confirm('⚠️ Não conseguimos confirmar que esta foto é um cupom fiscal / NFC-e de abastecimento.\n\nVerifique se a foto está nítida e mostra o cupom completo (CNPJ do posto, itens e valor total).\n\nDeseja anexar mesmo assim?');
-        if (!proceed) { _compIdx = null; return; }
+      if (res.bloqueio) {
+        // Motorista não pode anexar um cupom reprovado; admin/gestora podem, marcado como divergente
+        const podeForcar = role === 'admin' || role === 'gestora';
+        if (!podeForcar) { alert('🚫 Comprovante não aceito\n\n' + res.bloqueio); _compIdx = null; return; }
+        if (!confirm('🚫 ' + res.bloqueio + '\n\nAnexar mesmo assim? O comprovante ficará marcado como DIVERGENTE.')) { _compIdx = null; return; }
+        res.verif = { ...res.verif, status: 'alerta', motivo: 'Anexado por ' + (curUser || role) + ' apesar de: ' + res.bloqueio };
       }
 
       // Busca de novo pela chave: a lista pode ter mudado durante a análise da foto
       const rr = requisicoes[reqIdx(compKey)];
       if (!rr) { _compIdx = null; return reqGone(); }
       if (rr.comprovante) { _compIdx = null; alert('Esta requisição já recebeu um comprovante em outro aparelho.'); renderRequisicoes(); return; }
+      delete _compTentativas[compKey];
+      rr.compVerif       = res.verif;
+      rr.compHash        = res.hash;
+      if (res.verif.status === 'pendente') alert('📎 Comprovante anexado.\n\n⏳ ' + res.verif.motivo + '\nO administrador vai conferir.');
+      else if (res.verif.status === 'alerta') alert('📎 Comprovante anexado, mas com observação para o administrador:\n\n⚠️ ' + res.verif.motivo);
       rr.comprovante     = compressed;
       rr.comprovanteBy   = curUser || sessionStorage.getItem('sv_user') || '—';
       rr.comprovanteDate = new Date().toLocaleString('pt-BR');
@@ -4995,28 +5004,213 @@ function handleComprovanteFile(e) {
   reader.readAsDataURL(file);
 }
 
-// ── Protocolo de reconhecimento do comprovante (OCR) ──
-// Confere, por OCR, se a foto anexada tem as características de um cupom
-// fiscal / NFC-e de abastecimento (chave de acesso, CNPJ, combustível,
-// valor total etc.) antes de aceitá-la como comprovante válido.
-async function recognizeComprovante(dataUrl) {
-  if (typeof Tesseract === 'undefined') return true; // OCR indisponível: não bloqueia
-  if (!navigator.onLine) return true; // sem internet o OCR não baixa o idioma: não faz o motorista esperar
-  try {
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Tempo esgotado no OCR')), 12000));
-    const { data: { text } } = await Promise.race([Tesseract.recognize(dataUrl, 'por'), timeout]);
-    const norm = text.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const keywords = [
-      'NFC-E', 'NFCE', 'NOTA FISCAL', 'CUPOM FISCAL', 'CONSUMIDOR ELETRONICA',
-      'CHAVE DE ACESSO', 'PROTOCOLO DE AUTORIZACAO', 'COMBUSTIVEL', 'GASOLINA',
-      'ETANOL', 'DIESEL', 'ANP', 'VALOR TOTAL', 'VL TOTAL', 'CNPJ'
-    ];
-    const hits = keywords.filter(k => norm.includes(k)).length;
-    return hits >= 2;
-  } catch (e) {
-    console.error('Erro no reconhecimento do comprovante:', e);
-    return true; // falha técnica de OCR não deve bloquear o motorista
+// ── Verificação antifraude do comprovante de abastecimento ──
+// O cupom precisa ser do MESMO DIA da requisição, não pode ter sido usado em
+// outra requisição (chave de acesso da NFC-e e "impressão digital" da foto) e
+// precisa ser reconhecido como cupom fiscal. Sem internet (OCR indisponível)
+// ou com foto ilegível após 2 tentativas, entra como "aguardando verificação".
+const COMP_TOLERANCIA_DIAS  = 0;    // 0 = mesmo dia da requisição
+const COMP_TOLERANCIA_VALOR = 0.05; // 5% acima do valor autorizado gera alerta
+const COMP_MAX_TENTATIVAS   = 2;
+const _compTentativas = {};
+
+function _normOcr(t) { return (t || '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function _dataReq(r) {
+  const m = (r.date || '').match(/(\d{2})\/(\d{2})\/(\d{4})(?:\D+(\d{1,2}):(\d{2}))?/);
+  return m ? { d: +m[1], m: +m[2], y: +m[3], min: m[4] != null ? (+m[4]) * 60 + (+m[5]) : null } : null;
+}
+function _fmtData(x) { return String(x.d).padStart(2, '0') + '/' + String(x.m).padStart(2, '0') + '/' + x.y; }
+function _diasEntre(a, b) { return Math.round((Date.UTC(b.y, b.m - 1, b.d) - Date.UTC(a.y, a.m - 1, a.d)) / 86400000); }
+function _extrairDatas(t) {
+  const out = []; let m;
+  const re = /(\d{2})\s?[\/\-.]\s?(\d{2})\s?[\/\-.]\s?(\d{4}|\d{2})(?!\d)/g;
+  while ((m = re.exec(t))) {
+    let y = +m[3]; if (y < 100) y += 2000;
+    const d = +m[1], mo = +m[2];
+    if (d >= 1 && d <= 31 && mo >= 1 && mo <= 12 && y >= 2020 && y <= 2100) {
+      const h = t.slice(m.index + m[0].length, m.index + m[0].length + 14).match(/(\d{2}):(\d{2})/);
+      out.push({ d, m: mo, y, min: h ? (+h[1]) * 60 + (+h[2]) : null });
+    }
   }
+  const re2 = /(20\d{2})-(\d{2})-(\d{2})/g;
+  while ((m = re2.exec(t))) out.push({ y: +m[1], m: +m[2], d: +m[3], min: null });
+  return out;
+}
+function _extrairChave(t) {
+  // Chave de acesso da NFC-e: 44 dígitos em blocos de 4, às vezes em 2 linhas
+  const pos = t.search(/CHAVE\s*DE\s*ACESSO/);
+  if (pos >= 0) {
+    const dg = (t.slice(pos, pos + 200).match(/(?:\d{4}[\s.]*){11}/) || [''])[0].replace(/\D/g, '');
+    if (dg.length === 44) return dg;
+  }
+  for (const run of (t.match(/\d[\d\s.]{40,100}\d/g) || [])) {
+    const dg = run.replace(/\D/g, '');
+    if (dg.length === 44) return dg;
+  }
+  return null;
+}
+function _extrairValor(t) {
+  const m = t.match(/(?:VALOR\s*TOTAL|VL\.?\s*TOTAL|VALOR\s*A\s*PAGAR|TOTAL\s*R\$)[^\d]{0,30}(\d{1,3}(?:\.\d{3})*,\d{2})/);
+  return m ? parseFloat(m[1].replace(/\./g, '').replace(',', '.')) : null;
+}
+// "Impressão digital" da foto (dHash 256 bits): pega a mesma imagem reenviada
+function _hashImagem(dataUrl) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const W = 17, H = 16;
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const x = c.getContext('2d'); x.drawImage(img, 0, 0, W, H);
+      const px = x.getImageData(0, 0, W, H).data;
+      let bits = '';
+      for (let y = 0; y < H; y++) for (let i = 0; i < W - 1; i++) {
+        const p = (y * W + i) * 4, q = p + 4;
+        bits += (px[p] + px[p + 1] + px[p + 2]) > (px[q] + px[q + 1] + px[q + 2]) ? '1' : '0';
+      }
+      let hex = ''; for (let i = 0; i < bits.length; i += 4) hex += parseInt(bits.slice(i, i + 4), 2).toString(16);
+      resolve(hex);
+    };
+    img.onerror = () => resolve('');
+    img.src = dataUrl;
+  });
+}
+function _distHash(a, b) {
+  if (!a || !b || a.length !== b.length) return 64;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) { let v = parseInt(a[i], 16) ^ parseInt(b[i], 16); while (v) { d += v & 1; v >>= 1; } }
+  return d;
+}
+async function _lerTextoOcr(dataUrl) {
+  if (typeof Tesseract === 'undefined' || !navigator.onLine) return null;
+  try {
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('Tempo esgotado no OCR')), 25000));
+    const { data: { text } } = await Promise.race([Tesseract.recognize(dataUrl, 'por'), timeout]);
+    return text || '';
+  } catch (e) { console.error('Erro no OCR do comprovante:', e); return null; }
+}
+
+// Resultado: { bloqueio: texto|null, verif: {status, motivo, ...}, hash }
+// status: 'ok' (conferido) · 'alerta' (anexado com observação) · 'pendente' (conferir depois)
+async function verifyComprovante(dataUrl, r, k, opts) {
+  opts = opts || {};
+  const em = new Date().toLocaleString('pt-BR');
+  const hash = await _hashImagem(dataUrl);
+  const outras = requisicoes.filter(q => reqKey(q) !== k && (q.compHash || q.compVerif));
+  const bloqueia = (msg, extra) => ({ bloqueio: msg, verif: { status: 'alerta', motivo: msg, em, ...(extra || {}) }, hash });
+
+  // 1) Foto praticamente idêntica à de outra requisição (vira observação)
+  const dupFoto = outras.find(q => q.compHash && q.compHash.length === hash.length && _distHash(q.compHash, hash) <= 6);
+  const avisoFoto = dupFoto ? `foto praticamente igual à do comprovante da requisição ${dupFoto.num || ''}` : '';
+
+  const reqD = _dataReq(r);
+  const tentativa = () => { if (opts.reverificar) return COMP_MAX_TENTATIVAS; _compTentativas[k] = (_compTentativas[k] || 0) + 1; return _compTentativas[k]; };
+  const pendente = (motivo, extra) => ({ bloqueio: null, verif: { status: 'pendente', motivo, em, ...(extra || {}) }, hash });
+
+  // 2) Sem internet / OCR indisponível: anexa e fica para conferência
+  const texto = await _lerTextoOcr(dataUrl);
+  if (texto === null) return pendente('Não foi possível conferir o cupom agora (sem internet ou leitor indisponível).' + (avisoFoto ? ' Atenção: ' + avisoFoto + '.' : ''));
+  const t = _normOcr(texto);
+
+  // 3) Precisa parecer um cupom fiscal de abastecimento
+  const palavras = ['NFC-E', 'NFCE', 'NOTA FISCAL', 'CUPOM FISCAL', 'CONSUMIDOR ELETRONICA', 'CHAVE DE ACESSO',
+    'PROTOCOLO DE AUTORIZACAO', 'COMBUSTIVEL', 'GASOLINA', 'ETANOL', 'DIESEL', 'ANP', 'VALOR TOTAL', 'VL TOTAL', 'CNPJ', 'DANFE'];
+  if (palavras.filter(p => t.includes(p)).length < 2) {
+    if (tentativa() < COMP_MAX_TENTATIVAS) return bloqueia('A foto não parece ser um cupom fiscal de abastecimento. Tire outra foto do cupom inteiro, bem iluminado e sem cortes (CNPJ do posto, itens, valor total e data).');
+    return pendente('Foto não reconhecida como cupom fiscal após ' + COMP_MAX_TENTATIVAS + ' tentativas.');
+  }
+
+  const chave = _extrairChave(t);
+  const valorCupom = _extrairValor(t);
+  const extra = { chave: chave || '', valorCupom: valorCupom == null ? '' : valorCupom };
+
+  // 4) Mesmo cupom (chave de acesso) já usado em outra requisição
+  if (chave) {
+    const dupChave = outras.find(q => q.compVerif && q.compVerif.chave === chave);
+    if (dupChave) return bloqueia(`Este cupom fiscal já foi usado como comprovante da requisição ${dupChave.num || ''}.`, extra);
+    // A chave traz ano/mês de emissão (posições 3 a 6: AAMM)
+    if (reqD) {
+      const aa = +chave.slice(2, 4), mm = +chave.slice(4, 6);
+      if (mm >= 1 && mm <= 12 && (aa !== reqD.y % 100 || mm !== reqD.m)) {
+        return bloqueia(`O cupom é de ${String(mm).padStart(2, '0')}/20${String(aa).padStart(2, '0')}, mas a requisição é de ${_fmtData(reqD)}. Anexe o cupom do abastecimento desta requisição.`, extra);
+      }
+    }
+  }
+
+  // 5) Data do cupom precisa ser o dia da requisição
+  const datas = _extrairDatas(t);
+  if (!reqD) return pendente('Requisição sem data para comparar com o cupom.', extra);
+  if (!datas.length) {
+    if (tentativa() < COMP_MAX_TENTATIVAS) return bloqueia('Não foi possível ler a DATA no cupom. Tire outra foto mais nítida, mostrando a data de emissão.', extra);
+    return pendente('Data do cupom não legível após ' + COMP_MAX_TENTATIVAS + ' tentativas.', extra);
+  }
+  const certa = datas.find(d => { const dd = _diasEntre(reqD, d); return dd >= 0 && dd <= COMP_TOLERANCIA_DIAS; });
+  if (!certa) {
+    return bloqueia(`O cupom é de ${_fmtData(datas[0])}, mas a requisição é de ${_fmtData(reqD)}. Só é aceito o cupom do abastecimento feito no dia da requisição.`, extra);
+  }
+  extra.dataCupom = _fmtData(certa);
+
+  // 6) Observações (anexa, mas avisa o administrador)
+  const obs = [];
+  if (avisoFoto && !chave) obs.push(avisoFoto);
+  if (valorCupom != null && r.valor > 0 && valorCupom > r.valor * (1 + COMP_TOLERANCIA_VALOR)) {
+    obs.push(`valor do cupom R$ ${valorCupom.toFixed(2).replace('.', ',')} acima do autorizado R$ ${Number(r.valor).toFixed(2).replace('.', ',')}`);
+  }
+  if (certa.min != null && reqD.min != null && _diasEntre(reqD, certa) === 0 && certa.min < reqD.min - 5) {
+    const hh = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+    obs.push(`abastecimento às ${hh(certa.min)}, antes da requisição (${hh(reqD.min)})`);
+  }
+  if (obs.length) return { bloqueio: null, verif: { status: 'alerta', motivo: obs.join('; '), em, ...extra }, hash };
+  return { bloqueio: null, verif: { status: 'ok', motivo: 'Cupom de ' + extra.dataCupom + (chave ? ' · chave conferida' : ''), em, ...extra }, hash };
+}
+
+// Admin/gestora: conferir de novo um comprovante pendente (ex.: enviado sem internet)
+async function reverificarComprovante(k) {
+  const r = requisicoes[reqIdx(k)];
+  if (!r || !r.comprovante) return reqGone();
+  if (!navigator.onLine) { alert('Sem internet: a conferência precisa de conexão.'); return; }
+  showOcrOverlay('🔎 Conferindo o cupom...');
+  let res;
+  try { res = await verifyComprovante(r.comprovante, r, k, { reverificar: true }); }
+  finally { hideOcrOverlay(); }
+  const rr = requisicoes[reqIdx(k)];
+  if (!rr) return reqGone();
+  rr.compVerif = res.bloqueio ? { ...res.verif, status: 'divergente', motivo: res.bloqueio } : res.verif;
+  rr.compHash = res.hash;
+  saveRequisicoes();
+  renderRequisicoes();
+  alert(res.bloqueio ? '🚫 Divergente: ' + res.bloqueio : (res.verif.status === 'ok' ? '✅ ' : '⚠️ ') + res.verif.motivo);
+}
+// Admin/gestora: aceitar manualmente depois de olhar a foto
+function aceitarComprovante(k) {
+  const r = requisicoes[reqIdx(k)];
+  if (!r) return reqGone();
+  requirePinThen('✔ Aceitar comprovante', 'Você conferiu a foto e confirma que é o cupom deste abastecimento? Informe seu PIN.', () => {
+    const rr = requisicoes[reqIdx(k)];
+    if (!rr) return reqGone();
+    rr.compVerif = { ...(rr.compVerif || {}), status: 'aprovado', motivo: 'Conferido manualmente por ' + (sessionStorage.getItem('sv_user') || 'admin'), em: new Date().toLocaleString('pt-BR') };
+    saveRequisicoes();
+    renderRequisicoes();
+  });
+}
+function compVerifHtml(r, k, canManage) {
+  const v = r.compVerif;
+  const st = v ? v.status : 'antigo';
+  const cfg = {
+    ok:         ['✅', 'Cupom conferido', '#1B5E20', '#E8F5E9'],
+    aprovado:   ['✔', 'Aceito manualmente', '#1B5E20', '#E8F5E9'],
+    alerta:     ['⚠️', 'Conferir', '#E65100', '#FFF3E0'],
+    divergente: ['🚫', 'Divergente', '#B71C1C', '#FFEBEE'],
+    pendente:   ['⏳', 'Aguardando verificação', '#F57F17', '#FFF8E1'],
+    antigo:     ['📎', 'Sem conferência automática', '#616161', '#F5F5F5'],
+  }[st] || ['⏳', 'Aguardando verificação', '#F57F17', '#FFF8E1'];
+  const motivo = v ? v.motivo : 'anexado antes da conferência automática existir.';
+  const acoes = canManage && st !== 'ok' && st !== 'aprovado'
+    ? `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();reverificarComprovante(${k})">🔍 Verificar</button>
+        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();aceitarComprovante(${k})">✔ Aceitar</button>
+      </div>` : '';
+  return `<div style="margin-top:6px;padding:6px 8px;border-radius:8px;font-size:11px;background:${cfg[3]};color:${cfg[2]}">
+    <strong>${cfg[0]} ${cfg[1]}</strong>${motivo ? ' — ' + escapeHtml(motivo) : ''}${acoes}</div>`;
 }
 
 function showOcrOverlay(msg) {
@@ -5061,6 +5255,8 @@ function deleteComprovante() {
   delete r.comprovante;
   delete r.comprovanteBy;
   delete r.comprovanteDate;
+  delete r.compVerif;
+  delete r.compHash;
   saveRequisicoes();
   renderRequisicoes();
   closePhotoModal();
@@ -5079,6 +5275,8 @@ function zerarComprovantes() {
         delete r.comprovante;
         delete r.comprovanteBy;
         delete r.comprovanteDate;
+        delete r.compVerif;
+        delete r.compHash;
       }
     });
     saveRequisicoes();
