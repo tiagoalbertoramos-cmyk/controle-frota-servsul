@@ -165,8 +165,6 @@ function getSecondaryAuth() {
   return app2.auth();
 }
 
-function excData() { return db.collection('excelencia_data'); }
-
 // ═══════════════════════════════════════════════
 //  DADOS
 // ═══════════════════════════════════════════════
@@ -214,23 +212,42 @@ function excHojeISO()  { return new Date().toISOString().slice(0,10); }
 // ═══════════════════════════════════════════════
 //  PERSISTÊNCIA — Firestore próprio ou localStorage (fallback)
 // ═══════════════════════════════════════════════
-// excelencia_data/main: colaboradores, ocorrências, bônus extras e configs —
-// só o administrador tem permissão de escrita (ver README/regras do Firestore).
-// excelencia_checklist/{colaboradorId}_{data}: 1 documento por colaborador+dia,
-// cada colaborador só pode escrever no seu próprio, o admin escreve em qualquer um.
+// Cada tipo de dado vira sua própria coleção no Firestore (em vez de um único
+// documento "main" com tudo dentro). Isso é o que permite que as regras de
+// segurança restrinjam CADA COLABORADOR a ler/escrever só os próprios dados —
+// com tudo num documento só, a regra só poderia liberar "tudo ou nada".
+//  excelencia_colaboradores/{id}  — admin lê/escreve tudo; colaborador lê só o próprio.
+//  excelencia_ocorrencias/{id}    — idem.
+//  excelencia_bonusExtras/{id}    — idem.
+//  excelencia_checklist/{id}_{data} — colaborador lê/escreve só o próprio dia.
+//  excelencia_config/main         — extrasConfig/checklistItens, sem dado sensível: qualquer logado lê, só admin escreve.
+//  excelencia_roles/{uid}         — papel (admin/colaborador) de cada conta.
+// Modo local (sem Firebase): mantém tudo junto no localStorage, por simplicidade
+// (um único aparelho, sem outras pessoas para proteger os dados).
 function saveExcelencia() {
-  if (db) {
-    excData().doc('main').set({
-      colaboradores: excColaboradores, ocorrencias: excOcorrencias,
-      bonusExtras: excBonusExtras, extrasConfig: excExtrasConfig, checklistItens: excChecklistItens,
-    }).catch(e => { console.error(e); alert('Erro ao salvar: ' + e.message); });
-  } else {
-    localStorage.setItem('exc_colaboradores', JSON.stringify(excColaboradores));
-    localStorage.setItem('exc_ocorrencias',   JSON.stringify(excOcorrencias));
-    localStorage.setItem('exc_bonusExtras',   JSON.stringify(excBonusExtras));
-    localStorage.setItem('exc_extrasConfig',  JSON.stringify(excExtrasConfig));
-    localStorage.setItem('exc_checklistItens',JSON.stringify(excChecklistItens));
-  }
+  localStorage.setItem('exc_colaboradores', JSON.stringify(excColaboradores));
+  localStorage.setItem('exc_ocorrencias',   JSON.stringify(excOcorrencias));
+  localStorage.setItem('exc_bonusExtras',   JSON.stringify(excBonusExtras));
+  localStorage.setItem('exc_extrasConfig',  JSON.stringify(excExtrasConfig));
+  localStorage.setItem('exc_checklistItens',JSON.stringify(excChecklistItens));
+}
+
+// Centraliza o "se tem Firebase, grava lá; senão, grava tudo no localStorage"
+// usado por quase todo mutador — evita que algum deles esqueça um dos dois caminhos.
+function excPersistir(acaoRemota) {
+  if (db) acaoRemota(); else saveExcelencia();
+}
+
+function excSaveDoc(colecao, obj) {
+  const { id, ...data } = obj;
+  db.collection(colecao).doc(id).set(data).catch(e => { console.error(e); alert('Erro ao salvar: ' + e.message); });
+}
+function excDeleteDoc(colecao, id) {
+  db.collection(colecao).doc(id).delete().catch(e => { console.error(e); alert('Erro ao excluir: ' + e.message); });
+}
+function excSaveConfig() {
+  db.collection('excelencia_config').doc('main').set({ extrasConfig: excExtrasConfig, checklistItens: excChecklistItens })
+    .catch(e => { console.error(e); alert('Erro ao salvar: ' + e.message); });
 }
 
 function saveChecklistEntry(entry) {
@@ -242,33 +259,92 @@ function saveChecklistEntry(entry) {
   }
 }
 
-async function loadAllFirestore() {
-  const mainSnap = await excData().doc('main').get();
-  if (mainSnap.exists) {
-    const d = mainSnap.data();
-    excColaboradores = d.colaboradores || [];
-    excOcorrencias   = d.ocorrencias   || [];
-    excBonusExtras   = d.bonusExtras   || [];
-    if (d.extrasConfig)   excExtrasConfig   = d.extrasConfig;
-    if (d.checklistItens) excChecklistItens = d.checklistItens;
-  }
-  const checklistSnap = await db.collection('excelencia_checklist').get();
-  excChecklist = checklistSnap.docs.map(doc => doc.data());
+// Listeners em tempo real ativos (onSnapshot). Precisam ser encerrados a cada
+// logout/login — senão cada troca de usuário na mesma aba acumula mais
+// listeners "zumbis" que nunca são desligados (vazamento de memória e de
+// leituras no Firestore a cada novo login na mesma sessão do navegador).
+let _excUnsubs = [];
+function excTeardownListeners() {
+  _excUnsubs.forEach(unsub => { try { unsub(); } catch (e) { /* já desconectado */ } });
+  _excUnsubs = [];
+}
+function excSubscribe(ref, onData) {
+  return new Promise((resolve, reject) => {
+    let primeira = true;
+    const unsub = ref.onSnapshot(
+      snap => {
+        onData(snap);
+        if (primeira) { primeira = false; resolve(); }
+        else if (document.getElementById('app').style.display !== 'none') renderExcelencia();
+      },
+      err => { if (primeira) { primeira = false; reject(err); } else console.error(err); }
+    );
+    _excUnsubs.push(unsub);
+  });
+}
 
-  excData().doc('main').onSnapshot(snap => {
-    if (!snap.exists) return;
-    const d = snap.data();
-    excColaboradores = d.colaboradores || [];
-    excOcorrencias   = d.ocorrencias   || [];
-    excBonusExtras   = d.bonusExtras   || [];
-    if (d.extrasConfig)   excExtrasConfig   = d.extrasConfig;
-    if (d.checklistItens) excChecklistItens = d.checklistItens;
-    if (document.getElementById('app').style.display !== 'none') renderExcelencia();
-  });
-  db.collection('excelencia_checklist').onSnapshot(snap => {
-    excChecklist = snap.docs.map(doc => doc.data());
-    if (document.getElementById('app').style.display !== 'none') renderExcelencia();
-  });
+async function loadAllFirestore(role, colaboradorId) {
+  excTeardownListeners();
+  const tasks = [];
+  if (role === 'admin') {
+    tasks.push(excSubscribe(db.collection('excelencia_colaboradores'), snap => {
+      excColaboradores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }));
+    tasks.push(excSubscribe(db.collection('excelencia_ocorrencias'), snap => {
+      excOcorrencias = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }));
+    tasks.push(excSubscribe(db.collection('excelencia_bonusExtras'), snap => {
+      excBonusExtras = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }));
+    tasks.push(excSubscribe(db.collection('excelencia_checklist'), snap => {
+      excChecklist = snap.docs.map(d => d.data());
+    }));
+  } else {
+    tasks.push(excSubscribe(db.collection('excelencia_colaboradores').doc(colaboradorId), snap => {
+      excColaboradores = snap.exists ? [{ id: snap.id, ...snap.data() }] : [];
+    }));
+    tasks.push(excSubscribe(db.collection('excelencia_ocorrencias').where('colaboradorId','==',colaboradorId), snap => {
+      excOcorrencias = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }));
+    tasks.push(excSubscribe(db.collection('excelencia_bonusExtras').where('colaboradorId','==',colaboradorId), snap => {
+      excBonusExtras = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }));
+    tasks.push(excSubscribe(db.collection('excelencia_checklist').where('colaboradorId','==',colaboradorId), snap => {
+      excChecklist = snap.docs.map(d => d.data());
+    }));
+  }
+  tasks.push(excSubscribe(db.collection('excelencia_config').doc('main'), snap => {
+    if (snap.exists) {
+      const d = snap.data();
+      if (d.extrasConfig)   excExtrasConfig   = d.extrasConfig;
+      if (d.checklistItens) excChecklistItens = d.checklistItens;
+    }
+  }));
+  await Promise.all(tasks);
+  // Se as coleções novas estiverem vazias, tenta migrar dados de uma versão
+  // anterior deste app (que guardava tudo junto em excelencia_data/main).
+  if (role === 'admin' && excColaboradores.length === 0) await excMigrarDadosAntigos();
+}
+
+async function excMigrarDadosAntigos() {
+  try {
+    const legacySnap = await db.collection('excelencia_data').doc('main').get();
+    if (!legacySnap.exists) return;
+    const d = legacySnap.data();
+    const colaboradoresAntigos = d.colaboradores || [];
+    if (!colaboradoresAntigos.length) return;
+    const batch = db.batch();
+    colaboradoresAntigos.forEach(c => { const { id, ...data } = c; batch.set(db.collection('excelencia_colaboradores').doc(id), data); });
+    (d.ocorrencias||[]).forEach(o => { const { id, ...data } = o; batch.set(db.collection('excelencia_ocorrencias').doc(id), data); });
+    (d.bonusExtras||[]).forEach(e => { const { id, ...data } = e; batch.set(db.collection('excelencia_bonusExtras').doc(id), data); });
+    batch.set(db.collection('excelencia_config').doc('main'), {
+      extrasConfig: d.extrasConfig || excExtrasConfig, checklistItens: d.checklistItens || excChecklistItens,
+    });
+    await batch.commit();
+    console.log('Dados de uma versão anterior migrados para as novas coleções.');
+  } catch (e) {
+    console.error('Não foi possível migrar dados de uma versão anterior (ignore se este Firebase é novo):', e);
+  }
 }
 
 function loadAllLocal() {
@@ -324,8 +400,9 @@ async function excAddColaborador() {
       const uid = cred.user.uid;
       await secAuth.signOut();
       await db.collection('excelencia_roles').doc(uid).set({ role:'colaborador', colaboradorId });
-      excColaboradores.push({ id:colaboradorId, nome, cargo, bonusBase, email, uid });
-      saveExcelencia();
+      const novo = { id:colaboradorId, nome, cargo, bonusBase, email, uid };
+      excColaboradores.push(novo);
+      excSaveDoc('excelencia_colaboradores', novo);
       msg.style.color='#2e7d32'; msg.textContent='✅ Colaborador cadastrado! Repasse o e-mail e a senha para ele.';
     } catch (e) {
       msg.style.color='#c62828';
@@ -353,7 +430,7 @@ function excEditColaborador(id) {
   if (bonusBase === null) return;
   c.cargo = cargo.trim();
   c.bonusBase = Number(bonusBase||500);
-  saveExcelencia();
+  excPersistir(() => excSaveDoc('excelencia_colaboradores', c));
   renderExcelencia();
 }
 
@@ -362,9 +439,44 @@ function excRemoveColaborador(id) {
   if (!c) return;
   if (!confirm(`Remover "${c.nome}" do Programa Excelência? O histórico será mantido, mas o acesso dele será revogado.`)) return;
   excColaboradores = excColaboradores.filter(x => x.id !== id);
-  saveExcelencia();
-  if (db && c.uid) db.collection('excelencia_roles').doc(c.uid).delete().catch(console.error);
+  if (db) {
+    excDeleteDoc('excelencia_colaboradores', id);
+    if (c.uid) {
+      db.collection('excelencia_roles').doc(c.uid).delete().catch(e => {
+        console.error(e);
+        alert('⚠️ "' + c.nome + '" foi removido da lista, mas o acesso dele NÃO pôde ser revogado agora (' + e.message + '). Ele ainda consegue entrar — tente remover de novo (ou repita em Configurações) para garantir que o acesso seja cortado.');
+      });
+    }
+  } else {
+    saveExcelencia();
+  }
   renderExcelencia();
+}
+
+// Para colaboradores cadastrados antes desta conta de acesso existir (ou removidos
+// e re-cadastrados sem querer perder o histórico): cria e-mail/senha sem mudar o id,
+// então ocorrências/bônus antigos continuam ligados a ele.
+async function excConfigurarAcessoColaborador(id) {
+  const c = excColaboradores.find(x => x.id === id);
+  if (!c || !db) return;
+  const email = (prompt('E-mail de acesso para ' + c.nome + ':', c.email||'')||'').trim();
+  if (!email) return;
+  const senha = prompt('Senha inicial (mín. 6 caracteres):');
+  if (senha === null) return;
+  if (senha.length < 6) { alert('A senha deve ter no mínimo 6 caracteres. Operação cancelada.'); return; }
+  try {
+    const secAuth = getSecondaryAuth();
+    const cred = await secAuth.createUserWithEmailAndPassword(email, senha);
+    const uid = cred.user.uid;
+    await secAuth.signOut();
+    await db.collection('excelencia_roles').doc(uid).set({ role:'colaborador', colaboradorId:id });
+    c.email = email; c.uid = uid;
+    excSaveDoc('excelencia_colaboradores', c);
+    alert('✅ Acesso configurado! Repasse o e-mail e a senha para ' + c.nome + '.');
+    renderExcelencia();
+  } catch (e) {
+    alert(e.code === 'auth/email-already-in-use' ? '❌ Este e-mail já está em uso por outra conta.' : '❌ Erro: ' + e.message);
+  }
 }
 
 function excPreencherPontosSugeridos() {
@@ -383,8 +495,9 @@ function excLancarOcorrencia() {
   const data = document.getElementById('exc-oc-data').value || excHojeISO();
   if (!colaboradorId) { alert('Selecione um colaborador.'); return; }
   if (!pontos) { alert('Informe a pontuação (positiva para ganho, negativa para perda).'); return; }
-  excOcorrencias.push({ id:'oc_'+Date.now(), colaboradorId, mes, categoria, pontos, obs, data });
-  saveExcelencia();
+  const o = { id:'oc_'+Date.now(), colaboradorId, mes, categoria, pontos, obs, data };
+  excOcorrencias.push(o);
+  excPersistir(() => excSaveDoc('excelencia_ocorrencias', o));
   document.getElementById('exc-oc-obs').value = '';
   renderExcelencia();
 }
@@ -392,7 +505,7 @@ function excLancarOcorrencia() {
 function excRemoveOcorrencia(id) {
   if (!confirm('Excluir esta ocorrência?')) return;
   excOcorrencias = excOcorrencias.filter(o => o.id !== id);
-  saveExcelencia();
+  excPersistir(() => excDeleteDoc('excelencia_ocorrencias', id));
   renderExcelencia();
 }
 
@@ -401,17 +514,31 @@ function excZerarMes(colaboradorId, mes) {
   if (!colaborador) return;
   const mesLabel = mes.split('-').reverse().join('/');
   if (!confirm(`Zerar TODAS as ocorrências e bônus extras de ${colaborador.nome} em ${mesLabel}?\n\nA pontuação volta para 100/100 e os bônus extras somem. O cadastro do colaborador e o checklist diário não são afetados. Essa ação não pode ser desfeita.`)) return;
+  const ocorrenciasRemovidas = excOcorrencias.filter(o => o.colaboradorId === colaboradorId && o.mes === mes);
+  const extrasRemovidos = excBonusExtras.filter(e => e.colaboradorId === colaboradorId && e.mes === mes);
   excOcorrencias = excOcorrencias.filter(o => !(o.colaboradorId === colaboradorId && o.mes === mes));
   excBonusExtras = excBonusExtras.filter(e => !(e.colaboradorId === colaboradorId && e.mes === mes));
-  saveExcelencia();
+  if (db) {
+    const batch = db.batch();
+    ocorrenciasRemovidas.forEach(o => batch.delete(db.collection('excelencia_ocorrencias').doc(o.id)));
+    extrasRemovidos.forEach(e => batch.delete(db.collection('excelencia_bonusExtras').doc(e.id)));
+    batch.commit().catch(e => { console.error(e); alert('Erro ao zerar o mês: ' + e.message); });
+  } else {
+    saveExcelencia();
+  }
   renderExcelencia();
 }
 
 function excToggleExtra(colaboradorId, mes, tipo, valorPadrao, nomePadrao) {
   const idx = excBonusExtras.findIndex(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo===tipo);
-  if (idx >= 0) excBonusExtras.splice(idx,1);
-  else excBonusExtras.push({ id:'be_'+Date.now(), colaboradorId, mes, tipo, valor:valorPadrao, nome:nomePadrao });
-  saveExcelencia();
+  if (idx >= 0) {
+    const [removido] = excBonusExtras.splice(idx,1);
+    excPersistir(() => excDeleteDoc('excelencia_bonusExtras', removido.id));
+  } else {
+    const novo = { id:'be_'+Date.now(), colaboradorId, mes, tipo, valor:valorPadrao, nome:nomePadrao };
+    excBonusExtras.push(novo);
+    excPersistir(() => excSaveDoc('excelencia_bonusExtras', novo));
+  }
   renderExcelencia();
 }
 
@@ -423,14 +550,14 @@ function excAddExtraConfig() {
   excExtrasConfig.push({ tipo:'extra_'+Date.now(), nome, valor });
   document.getElementById('exc-new-extra-nome').value = '';
   document.getElementById('exc-new-extra-valor').value = '';
-  saveExcelencia();
+  excPersistir(excSaveConfig);
   renderExcelencia();
 }
 
 function excRemoveExtraConfig(tipo) {
   if (!confirm('Remover esta opção de bônus extra da lista? Meses que já usaram esse bônus continuam valendo no histórico — ela só deixa de aparecer para marcar em meses futuros.')) return;
   excExtrasConfig = excExtrasConfig.filter(e => e.tipo !== tipo);
-  saveExcelencia();
+  excPersistir(excSaveConfig);
   renderExcelencia();
 }
 
@@ -438,11 +565,14 @@ function excSetEconomia(colaboradorId, mes) {
   const valorEconomizado = Number(document.getElementById('exc-economia-input').value||0);
   const valor = Math.min(valorEconomizado * EXC_ECONOMIA_PCT, EXC_ECONOMIA_TETO);
   const idx = excBonusExtras.findIndex(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo==='economia');
-  const entry = { id:'be_econ_'+colaboradorId+'_'+mes, colaboradorId, mes, tipo:'economia', valorEconomizado, valor };
-  if (valorEconomizado <= 0) { if (idx >= 0) excBonusExtras.splice(idx,1); }
-  else if (idx >= 0) excBonusExtras[idx] = entry;
-  else excBonusExtras.push(entry);
-  saveExcelencia();
+  const id = 'be_econ_'+colaboradorId+'_'+mes;
+  const entry = { id, colaboradorId, mes, tipo:'economia', valorEconomizado, valor };
+  if (valorEconomizado <= 0) {
+    if (idx >= 0) { excBonusExtras.splice(idx,1); excPersistir(() => excDeleteDoc('excelencia_bonusExtras', id)); }
+  } else {
+    if (idx >= 0) excBonusExtras[idx] = entry; else excBonusExtras.push(entry);
+    excPersistir(() => excSaveDoc('excelencia_bonusExtras', entry));
+  }
   renderExcelencia();
 }
 
@@ -455,14 +585,14 @@ function excAddChecklistItem() {
   if (!texto) return;
   excChecklistItens.push({ id:'chk_'+Date.now(), texto });
   document.getElementById('exc-new-chk-item').value = '';
-  saveExcelencia();
+  excPersistir(excSaveConfig);
   renderExcelencia();
 }
 
 function excRemoveChecklistItem(id) {
   if (!confirm('Remover este item do checklist diário? Ele deixará de aparecer nos próximos preenchimentos.')) return;
   excChecklistItens = excChecklistItens.filter(i => i.id !== id);
-  saveExcelencia();
+  excPersistir(excSaveConfig);
   renderExcelencia();
 }
 
@@ -517,11 +647,19 @@ async function resolveRoleAndEnter(user) {
     return;
   }
   const roleData = roleDoc.data();
-  if (roleData.role === 'admin') {
+  const role = roleData.role === 'admin' ? 'admin' : 'colaborador';
+  const colaboradorId = roleData.colaboradorId || null;
+  if (role === 'colaborador' && !colaboradorId) {
+    if (errEl) errEl.textContent = 'Esta conta está configurada incorretamente (sem colaborador vinculado). Peça ao administrador para revisar o cadastro.';
+    await firebase.auth().signOut();
+    return;
+  }
+  await loadAllFirestore(role, colaboradorId);
+  if (role === 'admin') {
     doLogin('admin', 'ADMINISTRADOR');
   } else {
-    sessionStorage.setItem('sv_colaborador_id', roleData.colaboradorId);
-    const colab = excColaboradores.find(c => c.id === roleData.colaboradorId);
+    sessionStorage.setItem('sv_colaborador_id', colaboradorId);
+    const colab = excColaboradores.find(c => c.id === colaboradorId);
     doLogin('colaborador', colab ? colab.nome : 'Colaborador');
   }
 }
@@ -552,6 +690,7 @@ function logout() {
   sessionStorage.removeItem('sv_user');
   sessionStorage.removeItem('sv_colaborador_id');
   if (db) {
+    excTeardownListeners();
     firebase.auth().signOut();
     document.getElementById('app').style.display = 'none';
     document.getElementById('login-email').value = '';
@@ -725,15 +864,21 @@ function excRenderAdmin() {
       <button class="btn btn-danger btn-sm" onclick="excRemoveExtraConfig('${ex.tipo}')">✕</button>
     </div>`).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhuma opção cadastrada.</div>';
 
-  const colabList = excColaboradores.map(c => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;margin-bottom:6px;background:#fafafa">
+  const colabList = excColaboradores.map(c => {
+    const semAcesso = FIREBASE_CONFIGURADO && !c.uid;
+    return `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid ${semAcesso?'#f5c6cb':'#e0e0e0'};border-radius:8px;margin-bottom:6px;background:#fafafa">
       <div><div style="font-weight:700;font-size:13px">🏅 ${c.nome}</div>
-        <div style="font-size:10px;color:#888">${c.cargo||'—'} · Bônus base: R$ ${Number(c.bonusBase).toFixed(2).replace('.',',')}</div></div>
+        <div style="font-size:10px;color:#888">${c.cargo||'—'} · Bônus base: R$ ${Number(c.bonusBase).toFixed(2).replace('.',',')}</div>
+        ${semAcesso ? '<div style="font-size:10px;color:#c62828;font-weight:700">⚠️ Sem login configurado</div>' : ''}
+      </div>
       <div style="display:flex;gap:6px">
+        ${semAcesso ? `<button class="btn btn-secondary btn-sm" onclick="excConfigurarAcessoColaborador('${c.id}')">🔑</button>` : ''}
         <button class="btn btn-secondary btn-sm" onclick="excEditColaborador('${c.id}')">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="excRemoveColaborador('${c.id}')">✕</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   return `${banner}
   <div class="card">
@@ -822,7 +967,12 @@ function excRenderAdmin() {
 
 function excRenderColaborador() {
   const colaborador = excColaboradorLogado();
-  if (!colaborador) return '<div class="card"><div class="empty-state"><div class="icon">🏆</div>Colaborador não encontrado.</div></div>';
+  if (!colaborador) {
+    const msg = db
+      ? 'Colaborador não encontrado. Se o app acabou de ser atualizado, peça para o administrador entrar pelo menos uma vez antes — isso conclui a migração automática dos dados. Se o problema continuar, peça para ele revisar seu cadastro.'
+      : 'Colaborador não encontrado.';
+    return `<div class="card"><div class="empty-state"><div class="icon">🏆</div>${msg}</div></div>`;
+  }
   const mes = excMesAtual();
   const r = excComputeMes(colaborador.id, mes);
   const categoriaBars = r.categorias.map(excBarraCategoria).join('');
@@ -974,7 +1124,6 @@ async function startApp() {
   firebase.auth().onAuthStateChanged(async (user) => {
     if (!user) return;
     try {
-      await loadAllFirestore();
       await resolveRoleAndEnter(user);
     } catch (e) {
       console.error(e);
