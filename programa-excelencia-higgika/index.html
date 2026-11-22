@@ -231,7 +231,9 @@ function enqSubscribe(ref, onData) {
 }
 
 async function carregarPublico() {
-  // Leitura pública (sem exigir login): perguntas/config, colaboradores e rodadas.
+  // enquete_config e enquete_rodadas são de leitura pública (sem dado sensível).
+  // enquete_colaboradores agora guarda a senha de cada um, então a leitura exige
+  // ao menos uma sessão anônima (estabelecida sozinha, sem o colaborador perceber).
   enqTeardown();
   const tasks = [];
   tasks.push(enqSubscribe(db.collection('enquete_colaboradores'), snap => {
@@ -312,21 +314,26 @@ async function entrarComoAdmin(user) {
   renderAdmin();
 }
 
-function logout() {
+async function logout() {
   if (!confirm('Sair da área de administrador?')) return;
   if (db) {
     enqTeardown();
-    firebase.auth().signOut();
+    await firebase.auth().signOut();
+    // Restabelece a sessão anônima, necessária para a tela pública ler a
+    // lista de colaboradores (que agora guarda as senhas).
+    try { await firebase.auth().signInAnonymously(); } catch (e) { console.error(e); }
+    await carregarPublico();
   }
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-email').value = '';
   document.getElementById('login-password').value = '';
   document.getElementById('login-error').textContent = '';
+  _enqColaboradorRespId = null;
   iniciarTelaResponder();
 }
 
 // ═══════════════════════════════════════════════
-//  RESPOSTA (colaborador, sem login — apenas escolhe o nome)
+//  RESPOSTA (colaborador — identifica-se com nome + senha de 4 dígitos)
 // ═══════════════════════════════════════════════
 function enqRodadaAlvo() {
   const params = new URLSearchParams(location.search);
@@ -336,9 +343,11 @@ function enqRodadaAlvo() {
   return ativas[0] || null;
 }
 
-function enqJaRespondeu(rodadaId) {
-  return localStorage.getItem('enq_respondido_' + rodadaId);
+function enqJaRespondeu(rodadaId, colaboradorId) {
+  return localStorage.getItem('enq_respondido_' + rodadaId + '_' + colaboradorId);
 }
+
+let _enqColaboradorRespId = null;
 
 function renderResponder() {
   const el = document.getElementById('responder-content');
@@ -352,12 +361,80 @@ function renderResponder() {
     el.innerHTML = '<div class="card"><div class="empty-state"><div class="icon">🗳️</div>Nenhuma enquete ativa no momento. Peça o link correto ao administrador.</div></div>';
     return;
   }
-  if (enqJaRespondeu(rodada.id)) {
-    el.innerHTML = `<div class="card"><div class="empty-state"><div class="icon">✅</div>Você já respondeu esta enquete. Obrigado!</div></div>`;
+  if (!_enqColaboradorRespId) { renderLoginColaborador(el, rodada); return; }
+  const colaborador = enqColaboradores.find(c => c.id === _enqColaboradorRespId);
+  if (!colaborador) { _enqColaboradorRespId = null; renderLoginColaborador(el, rodada); return; }
+
+  if (colaborador.pinAlterado === false) { renderTrocarSenha(el, colaborador); return; }
+
+  if (enqJaRespondeu(rodada.id, colaborador.id)) {
+    el.innerHTML = `<div class="card"><div class="empty-state"><div class="icon">✅</div>${colaborador.nome}, você já respondeu esta enquete. Obrigado!</div></div>
+      <div class="top-link" onclick="_enqColaboradorRespId=null;renderResponder()">Trocar de usuário</div>`;
     return;
   }
-  const colabOptions = '<option value="">— Selecione —</option>' +
-    enqColaboradores.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+  renderFormularioPerguntas(el, rodada, colaborador);
+}
+
+function renderLoginColaborador(el, rodada) {
+  const setores = [...new Set(enqColaboradores.map(c => c.setor || 'Geral'))];
+  const optgroups = setores.map(setor => {
+    const opts = enqColaboradores.filter(c => (c.setor||'Geral') === setor)
+      .map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+    return `<optgroup label="${setor}">${opts}</optgroup>`;
+  }).join('');
+  el.innerHTML = `
+  <div class="card">
+    <h2>📅 Enquete de ${rodada.data.split('-').reverse().join('/')}</h2>
+    <div class="form-group"><label>Quem é você?</label>
+      <select id="login-colab-select"><option value="">— Selecione —</option>${optgroups}</select></div>
+    <div class="form-group"><label>Sua senha (4 dígitos)</label>
+      <input type="tel" inputmode="numeric" maxlength="4" id="login-colab-pin" placeholder="••••"
+        onkeydown="if(event.key==='Enter') enqLoginColaborador()"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="enqLoginColaborador()">Entrar</button>
+    <div id="login-colab-msg" style="font-size:12px;margin-top:8px;color:#c62828"></div>
+  </div>`;
+}
+
+function enqLoginColaborador() {
+  const id = document.getElementById('login-colab-select').value;
+  const pin = (document.getElementById('login-colab-pin').value||'').trim();
+  const msg = document.getElementById('login-colab-msg');
+  if (!id) { msg.textContent = 'Selecione quem você é.'; return; }
+  const colaborador = enqColaboradores.find(c => c.id === id);
+  if (!colaborador || pin !== String(colaborador.pin||'')) { msg.textContent = 'Senha incorreta. Tente novamente.'; return; }
+  _enqColaboradorRespId = id;
+  renderResponder();
+}
+
+function renderTrocarSenha(el, colaborador) {
+  el.innerHTML = `
+  <div class="card">
+    <h2>🔐 Defina sua nova senha</h2>
+    <div style="font-size:12px;color:#666;margin-bottom:10px">É seu primeiro acesso, ${colaborador.nome}. Crie uma senha de 4 dígitos só sua, trocando a senha que o administrador te deu.</div>
+    <div class="form-group"><label>Nova senha (4 dígitos)</label>
+      <input type="tel" inputmode="numeric" maxlength="4" id="nova-senha-1"></div>
+    <div class="form-group"><label>Confirme a nova senha</label>
+      <input type="tel" inputmode="numeric" maxlength="4" id="nova-senha-2"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="enqDefinirNovaSenha('${colaborador.id}')">Salvar e continuar</button>
+    <div id="nova-senha-msg" style="font-size:12px;margin-top:8px;color:#c62828"></div>
+  </div>`;
+}
+
+function enqDefinirNovaSenha(colaboradorId) {
+  const s1 = (document.getElementById('nova-senha-1').value||'').trim();
+  const s2 = (document.getElementById('nova-senha-2').value||'').trim();
+  const msg = document.getElementById('nova-senha-msg');
+  if (!/^\d{4}$/.test(s1)) { msg.textContent = 'A senha deve ter exatamente 4 números.'; return; }
+  if (s1 !== s2) { msg.textContent = 'As senhas não coincidem.'; return; }
+  const colaborador = enqColaboradores.find(c => c.id === colaboradorId);
+  if (!colaborador) return;
+  colaborador.pin = s1;
+  colaborador.pinAlterado = true;
+  enqPersistir(() => enqSaveDoc('enquete_colaboradores', colaborador));
+  renderResponder();
+}
+
+function renderFormularioPerguntas(el, rodada, colaborador) {
   const perguntasHtml = rodada.perguntas.map(p => {
     if (p.tipo === 'nota') {
       return `<div class="form-group"><label>${p.texto}</label>
@@ -371,8 +448,7 @@ function renderResponder() {
   el.innerHTML = `
   <div class="card">
     <h2>📅 Enquete de ${rodada.data.split('-').reverse().join('/')}</h2>
-    <div class="form-group"><label>Quem é você?</label>
-      <select id="resp-colaborador">${colabOptions}</select></div>
+    <div style="font-size:12px;color:#666;margin-bottom:10px">Respondendo como <strong>${colaborador.nome}</strong> · <span class="top-link" style="display:inline" onclick="_enqColaboradorRespId=null;renderResponder()">trocar</span></div>
     ${perguntasHtml}
     <button class="btn btn-primary" style="width:100%" onclick="enqEnviarResposta('${rodada.id}')">Enviar resposta</button>
     <div id="resp-msg" style="font-size:12px;margin-top:8px;color:#c62828"></div>
@@ -389,8 +465,9 @@ function enqSelecionarNota(perguntaId, nota) {
 
 async function enqEnviarResposta(rodadaId) {
   const msg = document.getElementById('resp-msg');
-  const colaboradorId = document.getElementById('resp-colaborador').value;
-  if (!colaboradorId) { msg.textContent = 'Selecione quem é você.'; return; }
+  const colaboradorId = _enqColaboradorRespId;
+  const colaborador = enqColaboradores.find(c => c.id === colaboradorId);
+  if (!colaborador) { msg.textContent = 'Sessão expirada, selecione seu nome novamente.'; _enqColaboradorRespId = null; renderResponder(); return; }
   const rodada = enqRodadas.find(r => r.id === rodadaId);
   if (!rodada) { msg.textContent = 'Esta enquete não está mais disponível.'; return; }
   const respostas = {};
@@ -402,10 +479,9 @@ async function enqEnviarResposta(rodadaId) {
       respostas[p.id] = (document.getElementById('resp-' + p.id).value||'').trim();
     }
   }
-  const colaborador = enqColaboradores.find(c => c.id === colaboradorId);
   const entry = {
     id: rodadaId + '_' + colaboradorId,
-    rodadaId, colaboradorId, colaboradorNome: colaborador ? colaborador.nome : '?',
+    rodadaId, colaboradorId, colaboradorNome: colaborador.nome,
     respostas, enviadoEm: new Date().toISOString(),
   };
   msg.style.color = '#666'; msg.textContent = 'Enviando...';
@@ -417,7 +493,7 @@ async function enqEnviarResposta(rodadaId) {
       enqRespostas.push(entry);
       saveLocal();
     }
-    localStorage.setItem('enq_respondido_' + rodadaId, '1');
+    localStorage.setItem('enq_respondido_' + rodadaId + '_' + colaboradorId, '1');
     _enqNotasSelecionadas = {};
     renderResponder();
   } catch (e) {
@@ -428,14 +504,24 @@ async function enqEnviarResposta(rodadaId) {
 // ═══════════════════════════════════════════════
 //  ADMIN — colaboradores, perguntas, alertas, rodadas
 // ═══════════════════════════════════════════════
+function enqGerarPin(pinsExistentes) {
+  let pin;
+  do { pin = String(Math.floor(1000 + Math.random()*9000)); } while (pinsExistentes.has(pin));
+  return pin;
+}
+
 function enqAddColaborador() {
   const nome = (document.getElementById('enq-new-colab').value||'').trim().toUpperCase();
+  const setor = (document.getElementById('enq-new-colab-setor').value||'').trim() || 'Geral';
   if (!nome) return;
   if (enqColaboradores.find(c => c.nome === nome)) { alert('Colaborador já cadastrado.'); return; }
-  const novo = { id: enqGerarId('col'), nome };
+  const pinsExistentes = new Set(enqColaboradores.map(c => c.pin).filter(Boolean));
+  const pin = enqGerarPin(pinsExistentes);
+  const novo = { id: enqGerarId('col'), nome, setor, pin, pinAlterado: false };
   enqColaboradores.push(novo);
   document.getElementById('enq-new-colab').value = '';
   enqPersistir(() => enqSaveDoc('enquete_colaboradores', novo));
+  alert(`✅ Colaborador cadastrado!\n\nSenha inicial de ${nome}: ${pin}\n(ele(a) deve trocar no primeiro acesso)`);
   renderAdmin();
 }
 function enqRemoveColaborador(id) {
@@ -444,6 +530,50 @@ function enqRemoveColaborador(id) {
   enqPersistir(() => enqDeleteDoc('enquete_colaboradores', id));
   renderAdmin();
 }
+function enqResetarSenha(id) {
+  const c = enqColaboradores.find(x => x.id === id);
+  if (!c) return;
+  if (!confirm(`Gerar uma nova senha temporária para ${c.nome}? Ele(a) vai precisar trocar no próximo acesso.`)) return;
+  const pinsExistentes = new Set(enqColaboradores.filter(x => x.id !== id).map(x => x.pin).filter(Boolean));
+  c.pin = enqGerarPin(pinsExistentes);
+  c.pinAlterado = false;
+  enqPersistir(() => enqSaveDoc('enquete_colaboradores', c));
+  alert(`✅ Nova senha de ${c.nome}: ${c.pin}\n\nRepasse individualmente — ele(a) vai precisar trocar no próximo acesso.`);
+  renderAdmin();
+}
+
+let _enqUltimaImportacao = null;
+function enqImportarColaboradores() {
+  const texto = document.getElementById('enq-import-lista').value || '';
+  const blocos = texto.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+  const pinsExistentes = new Set(enqColaboradores.map(c => c.pin).filter(Boolean));
+  const novos = [];
+  blocos.forEach(bloco => {
+    const linhas = bloco.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!linhas.length) return;
+    const setor = linhas[0];
+    linhas.slice(1).forEach(nomeRaw => {
+      const nome = nomeRaw.toUpperCase();
+      if (enqColaboradores.find(c => c.nome === nome) || novos.find(n => n.nome === nome)) return;
+      const pin = enqGerarPin(pinsExistentes);
+      pinsExistentes.add(pin);
+      novos.push({ id: enqGerarId('col'), nome, setor, pin, pinAlterado: false });
+    });
+  });
+  if (!novos.length) { alert('Nenhum colaborador novo encontrado no texto colado (ou todos já cadastrados).'); return; }
+  novos.forEach(n => { enqColaboradores.push(n); enqPersistir(() => enqSaveDoc('enquete_colaboradores', n)); });
+  document.getElementById('enq-import-lista').value = '';
+  _enqUltimaImportacao = novos;
+  renderAdmin();
+}
+function enqTextoImportacao() {
+  return _enqUltimaImportacao.map(c => `${c.nome} (${c.setor}): ${c.pin}`).join('\n');
+}
+function enqCopiarImportacao() {
+  const texto = enqTextoImportacao();
+  navigator.clipboard.writeText(texto).then(() => alert('Lista copiada!'), () => prompt('Copie a lista:', texto));
+}
+function enqFecharImportacao() { _enqUltimaImportacao = null; renderAdmin(); }
 
 function enqAddPergunta() {
   const texto = (document.getElementById('enq-new-pergunta').value||'').trim();
@@ -579,11 +709,32 @@ function renderAdmin() {
   const banner = FIREBASE_CONFIGURADO ? '' :
     `<div id="config-banner" style="display:block">⚠️ Este app ainda está salvando os dados só neste aparelho (Firebase não configurado). Veja o <strong>README.md</strong> para conectar um banco próprio e sincronizar entre celulares.</div>`;
 
-  const colabList = enqColaboradores.map(c => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #f5f5f5;font-size:13px">
-      <span>${c.nome}</span>
-      <button class="btn btn-danger btn-sm" onclick="enqRemoveColaborador('${c.id}')">✕</button>
-    </div>`).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhum colaborador cadastrado.</div>';
+  const colabList = (() => {
+    if (!enqColaboradores.length) return '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhum colaborador cadastrado.</div>';
+    const setores = [...new Set(enqColaboradores.map(c => c.setor || 'Geral'))];
+    return setores.map(setor => {
+      const itens = enqColaboradores.filter(c => (c.setor||'Geral') === setor).map(c => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #f5f5f5;font-size:13px">
+          <span>${c.nome} ${c.pinAlterado===false ? '<span class="badge badge-atencao" style="margin-left:4px">senha padrão</span>' : ''}</span>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-secondary btn-sm" onclick="enqResetarSenha('${c.id}')">🔑</button>
+            <button class="btn btn-danger btn-sm" onclick="enqRemoveColaborador('${c.id}')">✕</button>
+          </div>
+        </div>`).join('');
+      return `<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:700;color:var(--azul-dark);text-transform:uppercase;margin-bottom:4px">${setor}</div>${itens}</div>`;
+    }).join('');
+  })();
+
+  const importacaoCard = _enqUltimaImportacao ? `
+  <div class="card" style="border:2px solid var(--amarelo)">
+    <h2>🔑 Senhas geradas (${_enqUltimaImportacao.length} colaboradores novos)</h2>
+    <div style="font-size:11px;color:#888;margin-bottom:8px">Repasse cada senha individualmente (WhatsApp direto, não no grupo). Cada um precisa trocar a senha no primeiro acesso.</div>
+    <pre style="background:#f5f5f5;padding:10px;border-radius:8px;font-size:12px;white-space:pre-wrap;margin:0">${enqTextoImportacao()}</pre>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-secondary btn-sm" onclick="enqCopiarImportacao()">📋 Copiar lista</button>
+      <button class="btn btn-secondary btn-sm" onclick="enqFecharImportacao()">Fechar</button>
+    </div>
+  </div>` : '';
 
   const perguntasList = enqConfig.perguntas.map(p => `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #f5f5f5;font-size:13px">
@@ -591,7 +742,7 @@ function renderAdmin() {
       <button class="btn btn-danger btn-sm" onclick="enqRemovePergunta('${p.id}')">✕</button>
     </div>`).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhuma pergunta cadastrada.</div>';
 
-  el.innerHTML = `${banner}
+  el.innerHTML = `${banner}${importacaoCard}
   <div class="card">
     <h2>🔗 Enquete da semana</h2>
     <button class="btn btn-primary" style="width:100%" onclick="enqGerarRodada()">➕ Gerar nova enquete (nova semana)</button>
@@ -608,8 +759,46 @@ function renderAdmin() {
     ${colabList}
     <div style="display:flex;gap:8px;margin-top:10px">
       <input type="text" id="enq-new-colab" placeholder="Nome do colaborador" style="flex:1;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
+      <input type="text" id="enq-new-colab-setor" placeholder="Setor" style="flex:0 0 110px;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
       <button class="btn btn-primary" onclick="enqAddColaborador()">➕</button>
     </div>
+  </div>
+
+  <div class="card">
+    <h2>📥 Importar lista de colaboradores</h2>
+    <div style="font-size:11px;color:#888;margin-bottom:8px">Cole uma lista no formato abaixo (nome do setor numa linha, colaboradores daquele setor nas linhas seguintes, um setor separado do outro por linha em branco). Uma senha de 4 dígitos é gerada automaticamente para cada nome novo.</div>
+    <div class="form-group"><textarea id="enq-import-lista" style="min-height:220px;font-family:monospace;font-size:12px">Produção
+Éder
+Reginaldo
+Wilian
+Sérgio
+Marcos
+Raquel
+Talita
+Joice
+Giulia
+
+Logística
+Tiago
+Nory
+Ednilson
+Magdiel
+
+Motoristas
+Bruno
+Edrey
+Felipe
+
+Administrativo
+Mileide
+Yasmin
+Kaio
+Leonardo
+Maria Eduarda
+
+Limpeza
+Ingredi</textarea></div>
+    <button class="btn btn-primary" onclick="enqImportarColaboradores()">📥 Importar lista</button>
   </div>
 
   <div class="card">

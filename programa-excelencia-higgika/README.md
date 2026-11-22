@@ -6,16 +6,18 @@ App separado (código, deploy e banco de dados próprios) para enviar perguntas 
 
 ## Como funciona
 
-1. **Você (administrador)** cadastra os colaboradores e as perguntas da semana, depois clica em **"Gerar nova enquete"**. Isso cria um link único.
+1. **Você (administrador)** cadastra os colaboradores (um a um, ou colando uma lista inteira organizada por setor) e as perguntas da semana, depois clica em **"Gerar nova enquete"**. Isso cria um link único.
 2. Você cola esse link no grupo do WhatsApp (tem um botão de compartilhamento direto).
-3. **Cada colaborador** abre o link, escolhe o próprio nome numa lista e responde — sem precisar de senha nem cadastro próprio.
-4. Você acompanha as respostas num **painel do administrador** (esse sim com login por e-mail/senha), que já destaca:
+3. **Cada colaborador** abre o link, escolhe o próprio nome numa lista (agrupada por setor) e digita a **senha de 4 dígitos** que você gerou para ele. No primeiro acesso, é obrigado a trocar essa senha por uma só dele antes de responder.
+4. Você acompanha as respostas num **painel do administrador** (login por e-mail/senha), que já destaca:
    - Notas baixas (abaixo do limite que você configurar), em vermelho/amarelo.
    - Respostas em texto que contenham palavras de alerta (configuráveis), destacadas e marcadas com ⚠️.
    - Quem ainda não respondeu.
    - Uma tendência simples das últimas médias de cada colaborador.
 
-**Importante sobre o modelo de link único:** como os colaboradores não têm login próprio (só escolhem o nome), qualquer pessoa com o link técnicamente poderia responder "como" outra pessoa. Isso foi uma escolha deliberada para manter o uso simples — o link deve ficar só no grupo de confiança do WhatsApp. Se no futuro você quiser login individual por colaborador (mais seguro, porém com mais fricção), isso pode ser adicionado depois.
+**Sobre a senha de 4 dígitos:** ao cadastrar (individualmente ou pela importação em massa), o app gera uma senha aleatória para cada colaborador e mostra para você repassar — **individualmente** (WhatsApp direto com a pessoa, por exemplo), nunca no grupo todo, já que ali ela deixaria de ser secreta. No primeiro acesso, a pessoa é obrigada a trocar essa senha. Você, como administrador, pode gerar uma nova senha temporária para qualquer um a qualquer momento (botão 🔑 ao lado do nome) — útil se alguém esquecer a própria senha.
+
+**Limite real dessa segurança:** diferente de uma senha de e-mail, essa senha de 4 dígitos é verificada no próprio aparelho do colaborador (o app não tem um servidor próprio para validar isso em segredo). Isso significa que é uma barreira boa contra alguém abrir o link por acaso e responder por engano ou de brincadeira, mas não é à prova de alguém tecnicamente muito capaz que decida investigar o aplicativo a fundo. Para o uso pretendido (pesquisa interna semanal, link só no grupo fechado do WhatsApp), esse nível de proteção é proporcional ao risco.
 
 **Sobre os alertas automáticos:** são regras simples — nota numérica abaixo de um limite, e palavras-chave nas respostas em texto. Não é inteligência artificial nem análise de sentimento de verdade; é um apoio para você não perder nada ao ler rapidamente, mas a interpretação final é sempre sua.
 
@@ -52,12 +54,16 @@ service cloud.firestore {
     function myRole() { return get(/databases/$(database)/documents/enquete_roles/$(request.auth.uid)).data; }
     function isAdmin() { return isSignedIn() && myRole().role == 'admin'; }
 
-    // Nomes de colaboradores, perguntas e enquetes não são sigilosos — qualquer
-    // pessoa com o link precisa conseguir ler isso, mesmo sem estar logada,
-    // para o formulário funcionar. Só o admin edita.
-    match /enquete_colaboradores/{id} { allow read: if true; allow write: if isAdmin(); }
-    match /enquete_config/{id}        { allow read: if true; allow write: if isAdmin(); }
-    match /enquete_rodadas/{id}       { allow read: if true; allow write: if isAdmin(); }
+    // Perguntas e enquetes não são sigilosas — qualquer pessoa com o link
+    // precisa conseguir ler isso, mesmo sem estar logada, para o formulário
+    // funcionar. Só o admin edita.
+    match /enquete_config/{id}  { allow read: if true; allow write: if isAdmin(); }
+    match /enquete_rodadas/{id} { allow read: if true; allow write: if isAdmin(); }
+
+    // Colaboradores agora guarda a senha de 4 dígitos de cada um, então a
+    // leitura exige pelo menos uma sessão anônima (o app já faz isso sozinho,
+    // sem o colaborador perceber nenhuma tela de login a mais).
+    match /enquete_colaboradores/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
 
     match /enquete_roles/{uid} {
       allow read: if isSignedIn() && request.auth.uid == uid;
@@ -87,10 +93,17 @@ Se for a primeira vez publicando:
 2. Importe o repositório e, em **"Root Directory"**, selecione a pasta **`programa-excelencia-higgika`**.
 3. **Deploy**.
 
-## 5. Uso semanal
+## 5. Cadastrar colaboradores
 
 1. Entre no app com seu e-mail/senha de administrador (link "Sou administrador", embaixo da tela inicial).
-2. Confira/ajuste as perguntas da semana.
-3. Clique em **"Gerar nova enquete"**.
-4. Clique em **"Compartilhar no WhatsApp"** (abre o WhatsApp já com o texto e o link prontos — escolha o grupo) ou **"Copiar link"** para colar manualmente.
-5. Ao longo da semana, acompanhe o painel **"Respostas e sinais de alerta"**.
+2. No card **"📥 Importar lista de colaboradores"**, cole os nomes organizados por setor (uma linha com o nome do setor, seguida dos nomes daquele setor, com uma linha em branco entre setores) e clique em **Importar lista**.
+3. O app mostra a senha gerada para cada nome novo. **Copie e repasse cada uma individualmente** (WhatsApp direto com a pessoa) — nunca no grupo, pois ali todo mundo veria a senha de todo mundo.
+4. Para adicionar alguém depois, use o campo "Nome do colaborador" + "Setor" logo acima do importador.
+5. Esqueceu a senha? Clique no 🔑 ao lado do nome da pessoa para gerar uma nova.
+
+## 6. Uso semanal
+
+1. Confira/ajuste as perguntas da semana.
+2. Clique em **"Gerar nova enquete"**.
+3. Clique em **"Compartilhar no WhatsApp"** (abre o WhatsApp já com o texto e o link prontos — escolha o grupo) ou **"Copiar link"** para colar manualmente.
+4. Ao longo da semana, acompanhe o painel **"Respostas e sinais de alerta"**.
