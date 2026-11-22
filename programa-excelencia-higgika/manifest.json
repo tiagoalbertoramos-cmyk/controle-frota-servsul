@@ -1,11 +1,11 @@
 {
-  "name": "Programa Excelência – Higgika",
-  "short_name": "Excelência",
-  "description": "Programa de bonificação por desempenho — Higgika Estoque e Logística",
+  "name": "Enquete Semanal – Higgika",
+  "short_name": "Enquete",
+  "description": "Enquete semanal para colaboradores — Higgika",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#8D6E00",
-  "theme_color": "#8D6E00",
+  "background_color": "#0D47A1",
+  "theme_color": "#1565C0",
   "orientation": "portrait-primary",
   "icons": [
     {

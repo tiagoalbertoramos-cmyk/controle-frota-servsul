@@ -1,112 +1,75 @@
-# Programa Excelência – Higgika
+# Enquete Semanal – Higgika
 
-App separado (não compartilha código, banco de dados ou deploy com o Controle de Frota SERVSUL) do programa de bonificação por desempenho para colaboradores de estoque e logística.
+App separado (código, deploy e banco de dados próprios) para enviar perguntas semanais aos colaboradores pelo grupo do WhatsApp e acompanhar as respostas num painel só seu, com sinais automáticos de atenção.
+
+> Este projeto substituiu o antigo **Programa Excelência** (bonificação por desempenho). O código e os dados daquele programa foram salvos à parte antes da substituição.
 
 ## Como funciona
 
-- **Administrador**: cadastra colaboradores (criando o e-mail/senha de acesso de cada um), lança ocorrências (entregas, estoque, organização, veículo, equipamentos, comprometimento), marca bônus extras do mês e gera o PDF de fechamento.
-- **Colaborador**: acessa com e-mail e senha próprios, acompanha sua pontuação e bônus previsto do mês, preenche o checklist diário e vê o histórico dos últimos 6 meses.
+1. **Você (administrador)** cadastra os colaboradores e as perguntas da semana, depois clica em **"Gerar nova enquete"**. Isso cria um link único.
+2. Você cola esse link no grupo do WhatsApp (tem um botão de compartilhamento direto).
+3. **Cada colaborador** abre o link, escolhe o próprio nome numa lista e responde — sem precisar de senha nem cadastro próprio.
+4. Você acompanha as respostas num **painel do administrador** (esse sim com login por e-mail/senha), que já destaca:
+   - Notas baixas (abaixo do limite que você configurar), em vermelho/amarelo.
+   - Respostas em texto que contenham palavras de alerta (configuráveis), destacadas e marcadas com ⚠️.
+   - Quem ainda não respondeu.
+   - Uma tendência simples das últimas médias de cada colaborador.
 
-O login é feito com **e-mail e senha reais do Firebase Authentication** — não é um PIN simples. Isso permite configurar regras de segurança no banco de dados que realmente impedem que alguém sem conta leia ou altere os dados (ver seção 3).
+**Importante sobre o modelo de link único:** como os colaboradores não têm login próprio (só escolhem o nome), qualquer pessoa com o link técnicamente poderia responder "como" outra pessoa. Isso foi uma escolha deliberada para manter o uso simples — o link deve ficar só no grupo de confiança do WhatsApp. Se no futuro você quiser login individual por colaborador (mais seguro, porém com mais fricção), isso pode ser adicionado depois.
 
-Enquanto o Firebase não está configurado, o app entra automaticamente em **modo local de teste** (sem tela de login, direto como Administrador), salvando os dados só no aparelho onde foi aberto — ótimo para testar a interface, mas sem sincronizar entre celulares e sem a segurança real descrita abaixo.
+**Sobre os alertas automáticos:** são regras simples — nota numérica abaixo de um limite, e palavras-chave nas respostas em texto. Não é inteligência artificial nem análise de sentimento de verdade; é um apoio para você não perder nada ao ler rapidamente, mas a interpretação final é sempre sua.
+
+Enquanto o Firebase não está configurado, o app funciona em **modo local de teste**: os dados ficam só no aparelho onde foi aberto, útil para testar a interface antes de configurar o banco de verdade.
 
 ## 1. Criar o banco de dados (Firebase) — gratuito
 
 1. Acesse **https://console.firebase.google.com** e faça login com uma conta Google.
-2. Clique em **"Adicionar projeto"**, dê um nome (ex: `excelencia-higgika`) e conclua a criação.
-3. No menu lateral, vá em **Build → Firestore Database** → **Criar banco de dados** → escolha o modo **produção** e a região mais próxima (ex: `southamerica-east1`).
-4. Vá em **Build → Authentication** → aba **Sign-in method** → habilite o provedor **E-mail/senha** (Email/Password) — é esse, e não o "Anônimo".
-5. Ainda no console, clique no ícone de engrenagem (⚙️) → **Configurações do projeto** → role até **"Seus apps"** → clique no ícone **`</>`** (Web) → dê um nome ao app e registre.
-6. O Firebase vai mostrar um bloco `firebaseConfig` parecido com este:
+2. Clique em **"Adicionar projeto"**, dê um nome (ex: `enquete-higgika`) e conclua a criação.
+3. No menu lateral, vá em **Build → Firestore Database** → **Criar banco de dados** → modo **produção**, região mais próxima (ex: `southamerica-east1`).
+4. Vá em **Build → Authentication** → aba **Sign-in method** → habilite **dois** provedores:
+   - **E-mail/senha** (para o login do administrador).
+   - **Anônimo** (usado nos bastidores quando um colaborador envia uma resposta — ele não vê nenhuma tela de login por causa disso).
+5. No ícone de engrenagem (⚙️) → **Configurações do projeto** → **"Seus apps"** → ícone **`</>`** (Web) → registre um app e copie o bloco `firebaseConfig`.
+6. Cole esses valores no arquivo **`index.html`** deste projeto, na constante `FIREBASE_CONFIG` (procure por `COLE_AQUI_`).
 
-```js
-const firebaseConfig = {
-  apiKey: "AIza...",
-  authDomain: "excelencia-higgika.firebaseapp.com",
-  projectId: "excelencia-higgika",
-  storageBucket: "excelencia-higgika.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef"
-};
-```
+## 2. Criar sua conta de Administrador (manual, uma única vez)
 
-7. Copie esses valores e cole no arquivo **`index.html`** deste projeto, na constante `FIREBASE_CONFIG` (procure por `COLE_AQUI_`).
+1. No Firebase Console: **Build → Authentication → Users → Add user**. Informe seu e-mail e uma senha. Copie o **User UID** gerado.
+2. Em **Build → Firestore Database**, crie uma coleção chamada **`enquete_roles`**.
+3. ID do documento: cole o **User UID** do passo 1.
+4. Adicione um campo `role` (tipo `string`) com valor `admin`. Salve.
 
-## 2. Criar a primeira conta de Administrador (manual, uma única vez)
+## 3. Regras de segurança do Firestore
 
-Como o app não tem um "backend" próprio, a primeiríssima conta de administrador precisa ser criada direto no console do Firebase (as próximas contas — dos colaboradores — você cria pelo próprio app, isso aqui é só para o primeiro acesso):
-
-1. No Firebase Console, vá em **Build → Authentication → Users → Add user**. Informe seu e-mail e uma senha. Anote/copie o **User UID** que aparece na lista depois de criado.
-2. Vá em **Build → Firestore Database → Start collection** (ou "+ Start collection" se já houver dados). Nome da coleção: **`excelencia_roles`**.
-3. ID do documento: cole o **User UID** copiado no passo 1.
-4. Adicione um campo: nome `role`, tipo `string`, valor `admin`. Salve.
-
-Pronto — esse e-mail e senha agora entram no app como Administrador.
-
-## 3. Regras de segurança do Firestore (importante!)
-
-Vá em **Firestore Database → Regras** e substitua pelo conteúdo abaixo. Isso garante que **só o Administrador** pode alterar colaboradores/ocorrências/configurações, que **cada colaborador só lê e edita os próprios dados** (não vê e-mail, ocorrências ou checklist dos colegas), e que **ninguém sem login** consegue ler ou escrever nada:
+Vá em **Firestore Database → Regras** e publique:
 
 ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isSignedIn() {
-      return request.auth != null;
-    }
-    function myRole() {
-      return get(/databases/$(database)/documents/excelencia_roles/$(request.auth.uid)).data;
-    }
-    function isAdmin() {
-      return isSignedIn() && myRole().role == 'admin';
-    }
-    function myColaboradorId() {
-      return myRole().colaboradorId;
-    }
+    function isSignedIn() { return request.auth != null; }
+    function myRole() { return get(/databases/$(database)/documents/enquete_roles/$(request.auth.uid)).data; }
+    function isAdmin() { return isSignedIn() && myRole().role == 'admin'; }
 
-    match /excelencia_roles/{uid} {
+    // Nomes de colaboradores, perguntas e enquetes não são sigilosos — qualquer
+    // pessoa com o link precisa conseguir ler isso, mesmo sem estar logada,
+    // para o formulário funcionar. Só o admin edita.
+    match /enquete_colaboradores/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /enquete_config/{id}        { allow read: if true; allow write: if isAdmin(); }
+    match /enquete_rodadas/{id}       { allow read: if true; allow write: if isAdmin(); }
+
+    match /enquete_roles/{uid} {
       allow read: if isSignedIn() && request.auth.uid == uid;
       allow write: if isAdmin();
     }
 
-    // Documento da versão anterior deste app (dados antigos, se existirem) —
-    // só para o admin poder ler e migrar automaticamente ao entrar.
-    match /excelencia_data/{docId} {
-      allow read, write: if isAdmin();
-    }
-
-    // Sem dado sensível (listas de bônus extra e itens do checklist) — qualquer
-    // pessoa logada pode ler, só o admin edita.
-    match /excelencia_config/{docId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-
-    // Cada colaborador só lê o próprio cadastro (nome, cargo, e-mail) — não os dos colegas.
-    match /excelencia_colaboradores/{cid} {
-      allow read: if isAdmin() || (isSignedIn() && cid == myColaboradorId());
-      allow write: if isAdmin();
-    }
-
-    // Cada colaborador só lê as próprias ocorrências (nunca as dos colegas).
-    match /excelencia_ocorrencias/{id} {
-      allow read: if isAdmin() || (isSignedIn() && resource.data.colaboradorId == myColaboradorId());
-      allow write: if isAdmin();
-    }
-
-    // Idem para bônus extras.
-    match /excelencia_bonusExtras/{id} {
-      allow read: if isAdmin() || (isSignedIn() && resource.data.colaboradorId == myColaboradorId());
-      allow write: if isAdmin();
-    }
-
-    // Cada colaborador só lê/escreve o próprio checklist diário; o admin lê e edita todos.
-    match /excelencia_checklist/{docId} {
-      allow read: if isAdmin() || (isSignedIn() && resource.data.colaboradorId == myColaboradorId());
-      allow create, update: if isSignedIn() &&
-        (isAdmin() || request.resource.data.colaboradorId == myColaboradorId());
+    // Respostas só podem ser lidas pelo administrador (dado sensível de
+    // desempenho/relacionamento). Qualquer sessão autenticada (inclusive
+    // anônima, usada pelos colaboradores) pode enviar uma resposta.
+    match /enquete_respostas/{id} {
+      allow read: if isAdmin();
+      allow create, update: if isSignedIn();
       allow delete: if isAdmin();
     }
   }
@@ -115,22 +78,19 @@ service cloud.firestore {
 
 Clique em **Publicar**.
 
-> **Nota para quem já tinha publicado a versão anterior destas regras:** esta versão troca o documento único `excelencia_data/main` por coleções separadas (`excelencia_colaboradores`, `excelencia_ocorrencias`, `excelencia_bonusExtras`, `excelencia_config`). Isso é necessário porque o Firestore só controla permissão por documento — com tudo num documento só, não era possível impedir que um colaborador lesse os dados dos colegas. Basta colar as novas regras; **o próprio app migra os dados antigos automaticamente** na primeira vez que o Administrador entrar na versão nova — por isso, depois de atualizar, peça para o administrador abrir o app antes dos colaboradores (se um colaborador entrar primeiro, só vai ver "colaborador não encontrado" até o admin entrar uma vez).
+## 4. Publicar o app (Vercel)
 
-## 4. Publicar o app (Vercel) — separado de qualquer outro projeto
+Se este projeto já estava publicado como "Programa Excelência", **não precisa reconfigurar nada** — é a mesma pasta (`programa-excelencia-higgika`) e o mesmo projeto Vercel; o próximo deploy automático já troca o conteúdo pela Enquete Semanal, no mesmo link.
 
-1. No painel da [vercel.com](https://vercel.com), clique em **"Add New" → "Project"**.
+Se for a primeira vez publicando:
+1. No painel da [vercel.com](https://vercel.com), **"Add New" → "Project"**.
 2. Importe o repositório e, em **"Root Directory"**, selecione a pasta **`programa-excelencia-higgika`**.
-3. Clique em **Deploy**. A Vercel vai gerar uma URL própria, completamente separada do app de frota.
+3. **Deploy**.
 
-## 5. Cadastrando colaboradores (Felipe, etc.)
+## 5. Uso semanal
 
-1. Abra o link publicado e entre com o e-mail/senha de Administrador criados no passo 2.
-2. Na aba do Programa Excelência, cadastre o colaborador: nome, cargo, valor do bônus mensal, **e-mail** e **senha inicial** (mín. 6 caracteres) — isso cria a conta de acesso dele automaticamente, sem precisar voltar ao console do Firebase.
-3. Repasse o e-mail e a senha para o colaborador. Ele entra na mesma URL, com essas credenciais.
-4. Para instalar como aplicativo no celular, use o botão **"📲 Instalar App"** na tela de login (ou "Adicionar à tela de início" no Safari/iOS).
-5. Se um colaborador já estava cadastrado antes (sem e-mail/senha — versão antiga do app), a lista de colaboradores mostra **"⚠️ Sem login configurado"** com um botão **🔑** ao lado do nome: clique para criar o e-mail/senha dele sem perder o histórico de ocorrências e bônus já lançados.
-
-## Segurança — o que isso resolve
-
-Numa versão anterior deste app, o acesso era por um PIN de 4 dígitos verificado só na tela (interface), enquanto o banco de dados ficava aberto para qualquer pessoa que abrisse o link (autenticação anônima automática). Com e-mail/senha reais + as regras acima, o próprio banco de dados passa a exigir login de verdade para ler ou escrever qualquer coisa, e cada colaborador só consegue alterar o seu próprio checklist — o PIN deixou de ser a única barreira.
+1. Entre no app com seu e-mail/senha de administrador (link "Sou administrador", embaixo da tela inicial).
+2. Confira/ajuste as perguntas da semana.
+3. Clique em **"Gerar nova enquete"**.
+4. Clique em **"Compartilhar no WhatsApp"** (abre o WhatsApp já com o texto e o link prontos — escolha o grupo) ou **"Copiar link"** para colar manualmente.
+5. Ao longo da semana, acompanhe o painel **"Respostas e sinais de alerta"**.
