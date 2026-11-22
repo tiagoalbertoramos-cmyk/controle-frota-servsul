@@ -3,22 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Programa Excelência – Higgika</title>
-<meta name="description" content="Programa de bonificação por desempenho — Higgika">
-<meta name="theme-color" content="#8D6E00">
+<title>Enquete Semanal – Higgika</title>
+<meta name="description" content="Enquete semanal para colaboradores — Higgika">
+<meta name="theme-color" content="#1565C0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Excelência Higgika">
+<meta name="apple-mobile-web-app-title" content="Enquete Higgika">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.svg">
 <style>
   :root {
-    --gold: #C9A227;
-    --gold-dark: #8D6E00;
-    --green-ok: #388E3C;
-    --yellow: #FDD835;
-    --red: #e53935;
-    --bg: #f4f1e8;
+    --azul: #1565C0;
+    --azul-dark: #0D47A1;
+    --verde: #388E3C;
+    --amarelo: #F9A825;
+    --vermelho: #C62828;
+    --bg: #eef3f8;
   }
   * { box-sizing: border-box; }
   body {
@@ -27,56 +27,58 @@
   }
   .header {
     display: flex; align-items: center; justify-content: space-between;
-    background: var(--gold-dark); color: #fff; padding: 12px 16px;
+    background: var(--azul-dark); color: #fff; padding: 12px 16px;
     position: sticky; top: 0; z-index: 50;
   }
   .header h1 { font-size: 16px; font-weight: 700; margin: 0; }
   .header .sub { font-size: 11px; opacity: .85; }
-  .ub-name { font-size: 12px; font-weight: 700; }
-  .ub-role { font-size: 10px; opacity: .85; }
   .header button {
     background: rgba(255,255,255,.15); color: #fff; border: none; border-radius: 8px;
-    padding: 8px 12px; font-size: 12px; font-weight: 700; cursor: pointer; margin-left: 8px;
+    padding: 8px 12px; font-size: 12px; font-weight: 700; cursor: pointer;
   }
-  #app { max-width: 640px; margin: 0 auto; padding: 12px; padding-bottom: 40px; display: none; }
+  #responder, #app, #admin-login { max-width: 560px; margin: 0 auto; padding: 16px; padding-bottom: 50px; }
   .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-  .card h2 { font-size: 14px; font-weight: 700; color: var(--gold-dark); margin: 0 0 12px; }
-  .form-group { margin-bottom: 10px; }
-  .form-group label { display: block; font-size: 11px; font-weight: 700; color: #666; margin-bottom: 4px; }
-  .form-group input, .form-group select {
-    width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; background: #fafafa;
+  .card h2 { font-size: 14px; font-weight: 700; color: var(--azul-dark); margin: 0 0 12px; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 700; color: #444; margin-bottom: 6px; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; background: #fafafa; font-family: inherit;
   }
-  .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--gold); background: #fff; }
+  .form-group textarea { min-height: 70px; resize: vertical; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--azul); background: #fff; }
   .btn { border: none; border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
-  .btn-primary { background: var(--gold-dark); color: #fff; }
-  .btn-primary:hover { background: var(--gold); }
+  .btn-primary { background: var(--azul-dark); color: #fff; }
+  .btn-primary:hover { background: var(--azul); }
   .btn-secondary { background: #eee; color: #444; }
-  .btn-danger { background: var(--red); color: #fff; }
+  .btn-danger { background: var(--vermelho); color: #fff; }
+  .btn-whats { background: #25D366; color: #fff; }
   .btn-sm { padding: 6px 10px; font-size: 11px; }
+  .btn:disabled { opacity: .5; cursor: default; }
   .empty-state { text-align: center; padding: 32px 16px; color: #aaa; font-size: 13px; }
   .empty-state .icon { font-size: 36px; margin-bottom: 8px; }
-  .summary-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
-  .summary-row:last-child { border: none; }
-  .chart-bar-row { display: flex; align-items: center; margin-bottom: 8px; gap: 8px; }
-  .chart-label { font-size: 10px; font-weight: 700; color: #444; min-width: 100px; text-align: right; }
-  .chart-bar-bg { flex: 1; background: #f0ece0; border-radius: 6px; height: 22px; overflow: hidden; }
-  .chart-bar-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; transition: width .4s ease; }
-  .chart-bar-fill span { font-size: 10px; font-weight: 700; white-space: nowrap; }
-
-  /* ── LOGIN ── */
-  #login-overlay {
-    position: fixed; inset: 0; background: linear-gradient(160deg, var(--gold-dark), #4a3900);
-    display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px;
+  .nota-row { display: flex; gap: 8px; }
+  .nota-btn {
+    flex: 1; padding: 12px 0; border: 2px solid #ddd; border-radius: 10px; background: #fafafa;
+    font-size: 16px; font-weight: 700; color: #555; cursor: pointer;
   }
-  .login-box { background: #fff; border-radius: 16px; padding: 28px 22px; width: 100%; max-width: 360px; text-align: center; }
-  .login-box .logo { font-size: 44px; margin-bottom: 6px; }
-  .login-box h2 { font-size: 17px; color: var(--gold-dark); margin: 0 0 4px; }
-  .login-box .sub { font-size: 12px; color: #888; margin-bottom: 20px; }
-  .login-box .form-group label { text-align: left; }
+  .nota-btn.selected { background: var(--azul-dark); border-color: var(--azul-dark); color: #fff; }
+  .top-link { text-align: center; font-size: 12px; color: #888; margin-top: 20px; cursor: pointer; text-decoration: underline; }
+  .top-link:hover { color: var(--azul-dark); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .badge-ok { background: #c8e6c9; color: var(--verde); }
+  .badge-atencao { background: #ffecb3; color: #a16a00; }
+  .badge-alerta { background: #ffcdd2; color: var(--vermelho); }
+  .badge-pendente { background: #eee; color: #888; }
+  .resp-row { padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  .resp-row:last-child { border: none; }
+  .link-box {
+    display: flex; gap: 8px; align-items: center; background: #eef3f8; border: 1.5px dashed var(--azul);
+    border-radius: 8px; padding: 10px; font-size: 12px; word-break: break-all; margin: 10px 0;
+  }
   #login-install-btn {
     position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
-    background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.4);
-    border-radius: 20px; padding: 8px 16px; font-size: 12px; cursor: pointer; display: none;
+    background: var(--azul-dark); color: #fff; border: none;
+    border-radius: 20px; padding: 8px 16px; font-size: 12px; cursor: pointer; display: none; z-index: 60;
   }
   #config-banner {
     display: none; background: #fff3cd; color: #7a5b00; border: 1px solid #ffe08a;
@@ -86,12 +88,19 @@
 </head>
 <body>
 
-<!-- ══════════════ LOGIN ══════════════ -->
-<div id="login-overlay">
-  <div class="login-box">
-    <div class="logo">🏆</div>
-    <h2>Programa Excelência</h2>
-    <div class="sub">Higgika — Estoque e Logística</div>
+<!-- ══════════════ TELA: RESPONDER (pública, sem login) ══════════════ -->
+<div id="responder" style="display:none">
+  <div class="header"><div><h1>🗳️ Enquete Semanal</h1><div class="sub">Higgika</div></div></div>
+  <div id="responder-content" style="padding-top:12px"></div>
+  <div class="top-link" onclick="mostrarLoginAdmin()">Sou administrador</div>
+  <button id="login-install-btn" onclick="triggerInstall()">📲 Instalar App no celular</button>
+</div>
+
+<!-- ══════════════ TELA: LOGIN DO ADMINISTRADOR ══════════════ -->
+<div id="admin-login" style="display:none">
+  <div class="header"><div><h1>🗳️ Enquete Semanal</h1><div class="sub">Área do administrador</div></div></div>
+  <div class="card" style="margin-top:12px">
+    <h2>🔐 Entrar</h2>
     <div class="form-group"><label>E-mail</label>
       <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="username"></div>
     <div class="form-group"><label>Senha</label>
@@ -100,25 +109,16 @@
     <button class="btn btn-primary" style="width:100%" onclick="doEmailLogin()">Entrar</button>
     <div id="login-error" style="color:#c62828;font-size:12px;margin-top:10px;min-height:14px"></div>
   </div>
-  <button id="login-install-btn" onclick="triggerInstall()">📲 Instalar App no celular</button>
+  <div class="top-link" onclick="voltarParaResponder()">← Voltar para a enquete</div>
 </div>
 
-<!-- ══════════════ APP ══════════════ -->
-<div id="app">
+<!-- ══════════════ APP ADMIN ══════════════ -->
+<div id="app" style="display:none">
   <div class="header">
-    <div>
-      <h1>🏆 Programa Excelência</h1>
-      <div class="sub" id="hdr-sub">Higgika</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <div style="text-align:right">
-        <div class="ub-name" id="hdr-user">—</div>
-        <div class="ub-role" id="hdr-role">—</div>
-      </div>
-      <button onclick="logout()">Sair</button>
-    </div>
+    <div><h1>🗳️ Enquete Semanal</h1><div class="sub">Higgika — Administrador</div></div>
+    <button onclick="logout()">Sair</button>
   </div>
-  <div id="exc-content" style="padding:12px"></div>
+  <div id="admin-content" style="padding:16px"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -126,10 +126,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
 // ═══════════════════════════════════════════════
-//  CONFIGURAÇÃO DO FIREBASE — banco de dados PRÓPRIO deste app
-//  (separado de qualquer outro app/projeto). Veja README.md para
-//  o passo a passo de como criar o projeto gratuito no Firebase e
-//  preencher os valores abaixo.
+//  CONFIGURAÇÃO DO FIREBASE — banco de dados PRÓPRIO deste app.
+//  Veja README.md para o passo a passo de criação e as regras do Firestore.
 // ═══════════════════════════════════════════════
 const FIREBASE_CONFIG = {
   apiKey: "COLE_AQUI_A_apiKey",
@@ -141,14 +139,14 @@ const FIREBASE_CONFIG = {
 };
 const FIREBASE_CONFIGURADO = FIREBASE_CONFIG.projectId && !FIREBASE_CONFIG.projectId.startsWith('COLE_AQUI');
 
-let db = null; // Firestore (null = modo local, salvando só neste aparelho)
+let db = null; // null = modo local, salvando só neste aparelho (sem Firebase configurado)
 
 async function initFirebase() {
   if (!FIREBASE_CONFIGURADO) return false;
   try {
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    firebase.auth(); // garante que o Auth foi inicializado
+    firebase.auth();
     return true;
   } catch (e) {
     console.error('Erro ao inicializar Firebase:', e);
@@ -157,473 +155,135 @@ async function initFirebase() {
   }
 }
 
-// Instância secundária do Firebase Auth, usada só para o administrador criar
-// a conta de um colaborador sem perder a própria sessão logada.
-function getSecondaryAuth() {
-  let app2 = firebase.apps.find(a => a.name === 'secondary');
-  if (!app2) app2 = firebase.initializeApp(FIREBASE_CONFIG, 'secondary');
-  return app2.auth();
-}
-
 // ═══════════════════════════════════════════════
 //  DADOS
 // ═══════════════════════════════════════════════
-let excColaboradores = [];  // {id, nome, cargo, bonusBase, email, uid}
-let excOcorrencias   = [];  // {id, colaboradorId, mes, categoria, pontos, obs, data}
-let excChecklist     = [];  // {colaboradorId, data, itens:{...}, hora} — 1 documento por colaborador+dia
-let excBonusExtras   = [];  // {id, colaboradorId, mes, tipo, valor, valorEconomizado?}
+let enqColaboradores = [];   // {id, nome}
+let enqConfig = {
+  perguntas: [
+    { id:'p1', tipo:'nota',  texto:'De 1 a 5, como foi sua semana de trabalho?' },
+    { id:'p2', tipo:'nota',  texto:'De 1 a 5, como está seu relacionamento com a equipe esta semana?' },
+    { id:'p3', tipo:'texto', texto:'Quer compartilhar alguma dificuldade, sugestão ou elogio?' },
+    { id:'p4', tipo:'texto', texto:'Precisa de ajuda com algo específico esta semana?' },
+  ],
+  notaAlerta: 3, // nota igual ou menor que isso entra em alerta
+  palavrasAlerta: ['briga','brigando','conflito','estresse','estressado','ansioso','ansiedade','triste',
+    'deprimido','desmotivado','não aguento','demitir','demissão','assédio','agressão','humilhação','injusto','injustiça','sozinho'],
+};
+let enqRodadas = [];    // {id, criadoEm, data, perguntas:[...], ativa}
+let enqRespostas = [];  // {id, rodadaId, colaboradorId, colaboradorNome, respostas:{perguntaId:valor}, enviadoEm}
 
-const EXC_CATEGORIAS = [
-  { id:'entregas',        nome:'Entregas',        icone:'🚚', peso:30, penalidade:5 },
-  { id:'estoque',         nome:'Estoque',         icone:'📦', peso:25, penalidade:5 },
-  { id:'organizacao',     nome:'Organização',     icone:'🧹', peso:15, penalidade:3 },
-  { id:'veiculo',         nome:'Veículo',         icone:'🚗', peso:10, penalidade:3 },
-  { id:'equipamentos',    nome:'Equipamentos',    icone:'🛠️', peso:10, penalidade:2 },
-  { id:'comprometimento', nome:'Comprometimento', icone:'⭐', peso:10, penalidade:0 },
-];
-const EXC_BONUS_TIERS = [
-  { min:95, pct:100 }, { min:90, pct:80 }, { min:85, pct:60 }, { min:80, pct:40 }, { min:0, pct:0 },
-];
-// Configuráveis pelo administrador (Configurações) — valores iniciais abaixo,
-// mas podem ganhar itens novos, ter itens removidos, e são salvos no banco.
-let excExtrasConfig = [
-  { tipo:'zero_erros',     nome:'Zero erros no mês',             valor:100 },
-  { tipo:'estoque_ok',     nome:'Estoque sem divergência',       valor:100 },
-  { tipo:'sem_reclamacao', nome:'Nenhuma reclamação de clientes', valor:100 },
-  { tipo:'inventario_ok',  nome:'Inventário aprovado',            valor:100 },
-];
-const EXC_ECONOMIA_PCT = 0.05;
-const EXC_ECONOMIA_TETO = 200;
-let excChecklistItens = [
-  { id:'chk_veiculo_limpo',    texto:'Veículo limpo' },
-  { id:'chk_estoque_org',      texto:'Estoque organizado' },
-  { id:'chk_pedidos_sep',      texto:'Pedidos separados' },
-  { id:'chk_produtos_conf',    texto:'Produtos conferidos' },
-  { id:'chk_notas_entregues',  texto:'Notas entregues' },
-  { id:'chk_coletas_reg',      texto:'Coletas registradas' },
-  { id:'chk_lixo_retirado',    texto:'Lixo retirado' },
-  { id:'chk_portas_fechadas',  texto:'Portas fechadas' },
-  { id:'chk_equip_desligados', texto:'Equipamentos desligados' },
-];
-
-function excMesAtual() { return new Date().toISOString().slice(0,7); }
-function excHojeISO()  { return new Date().toISOString().slice(0,10); }
+function enqHojeISO() { return new Date().toISOString().slice(0,10); }
+function enqGerarId(prefixo) { return prefixo + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
 
 // ═══════════════════════════════════════════════
-//  PERSISTÊNCIA — Firestore próprio ou localStorage (fallback)
+//  PERSISTÊNCIA
 // ═══════════════════════════════════════════════
-// Cada tipo de dado vira sua própria coleção no Firestore (em vez de um único
-// documento "main" com tudo dentro). Isso é o que permite que as regras de
-// segurança restrinjam CADA COLABORADOR a ler/escrever só os próprios dados —
-// com tudo num documento só, a regra só poderia liberar "tudo ou nada".
-//  excelencia_colaboradores/{id}  — admin lê/escreve tudo; colaborador lê só o próprio.
-//  excelencia_ocorrencias/{id}    — idem.
-//  excelencia_bonusExtras/{id}    — idem.
-//  excelencia_checklist/{id}_{data} — colaborador lê/escreve só o próprio dia.
-//  excelencia_config/main         — extrasConfig/checklistItens, sem dado sensível: qualquer logado lê, só admin escreve.
-//  excelencia_roles/{uid}         — papel (admin/colaborador) de cada conta.
-// Modo local (sem Firebase): mantém tudo junto no localStorage, por simplicidade
-// (um único aparelho, sem outras pessoas para proteger os dados).
-function saveExcelencia() {
-  localStorage.setItem('exc_colaboradores', JSON.stringify(excColaboradores));
-  localStorage.setItem('exc_ocorrencias',   JSON.stringify(excOcorrencias));
-  localStorage.setItem('exc_bonusExtras',   JSON.stringify(excBonusExtras));
-  localStorage.setItem('exc_extrasConfig',  JSON.stringify(excExtrasConfig));
-  localStorage.setItem('exc_checklistItens',JSON.stringify(excChecklistItens));
+function saveLocal() {
+  localStorage.setItem('enq_colaboradores', JSON.stringify(enqColaboradores));
+  localStorage.setItem('enq_config',        JSON.stringify(enqConfig));
+  localStorage.setItem('enq_rodadas',       JSON.stringify(enqRodadas));
+  localStorage.setItem('enq_respostas',     JSON.stringify(enqRespostas));
+}
+function loadLocal() {
+  enqColaboradores = JSON.parse(localStorage.getItem('enq_colaboradores') || '[]');
+  enqConfig         = JSON.parse(localStorage.getItem('enq_config')        || 'null') || enqConfig;
+  enqRodadas        = JSON.parse(localStorage.getItem('enq_rodadas')       || '[]');
+  enqRespostas      = JSON.parse(localStorage.getItem('enq_respostas')     || '[]');
 }
 
-// Centraliza o "se tem Firebase, grava lá; senão, grava tudo no localStorage"
-// usado por quase todo mutador — evita que algum deles esqueça um dos dois caminhos.
-function excPersistir(acaoRemota) {
-  if (db) acaoRemota(); else saveExcelencia();
+function enqPersistir(acaoRemota) {
+  if (db) acaoRemota(); else saveLocal();
 }
-
-function excSaveDoc(colecao, obj) {
+function enqSaveDoc(colecao, obj) {
   const { id, ...data } = obj;
   db.collection(colecao).doc(id).set(data).catch(e => { console.error(e); alert('Erro ao salvar: ' + e.message); });
 }
-function excDeleteDoc(colecao, id) {
+function enqDeleteDoc(colecao, id) {
   db.collection(colecao).doc(id).delete().catch(e => { console.error(e); alert('Erro ao excluir: ' + e.message); });
 }
-function excSaveConfig() {
-  db.collection('excelencia_config').doc('main').set({ extrasConfig: excExtrasConfig, checklistItens: excChecklistItens })
-    .catch(e => { console.error(e); alert('Erro ao salvar: ' + e.message); });
+function enqSaveConfig() {
+  db.collection('enquete_config').doc('main').set(enqConfig).catch(e => { console.error(e); alert('Erro ao salvar: ' + e.message); });
 }
 
-function saveChecklistEntry(entry) {
-  if (db) {
-    db.collection('excelencia_checklist').doc(entry.colaboradorId + '_' + entry.data).set(entry)
-      .catch(e => { console.error(e); alert('Erro ao salvar checklist: ' + e.message); });
-  } else {
-    localStorage.setItem('exc_checklist', JSON.stringify(excChecklist));
-  }
+// Listeners em tempo real — desligados a cada logout/login para não acumular.
+let _enqUnsubs = [];
+function enqTeardown() {
+  _enqUnsubs.forEach(u => { try { u(); } catch(e){} });
+  _enqUnsubs = [];
 }
-
-// Listeners em tempo real ativos (onSnapshot). Precisam ser encerrados a cada
-// logout/login — senão cada troca de usuário na mesma aba acumula mais
-// listeners "zumbis" que nunca são desligados (vazamento de memória e de
-// leituras no Firestore a cada novo login na mesma sessão do navegador).
-let _excUnsubs = [];
-function excTeardownListeners() {
-  _excUnsubs.forEach(unsub => { try { unsub(); } catch (e) { /* já desconectado */ } });
-  _excUnsubs = [];
-}
-function excSubscribe(ref, onData) {
+function enqSubscribe(ref, onData) {
   return new Promise((resolve, reject) => {
     let primeira = true;
     const unsub = ref.onSnapshot(
       snap => {
         onData(snap);
         if (primeira) { primeira = false; resolve(); }
-        else if (document.getElementById('app').style.display !== 'none') renderExcelencia();
+        else {
+          if (document.getElementById('app').style.display !== 'none') renderAdmin();
+          if (document.getElementById('responder').style.display !== 'none') renderResponder();
+        }
       },
       err => { if (primeira) { primeira = false; reject(err); } else console.error(err); }
     );
-    _excUnsubs.push(unsub);
+    _enqUnsubs.push(unsub);
   });
 }
 
-async function loadAllFirestore(role, colaboradorId) {
-  excTeardownListeners();
+async function carregarPublico() {
+  // Leitura pública (sem exigir login): perguntas/config, colaboradores e rodadas.
+  enqTeardown();
   const tasks = [];
-  if (role === 'admin') {
-    tasks.push(excSubscribe(db.collection('excelencia_colaboradores'), snap => {
-      excColaboradores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    }));
-    tasks.push(excSubscribe(db.collection('excelencia_ocorrencias'), snap => {
-      excOcorrencias = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    }));
-    tasks.push(excSubscribe(db.collection('excelencia_bonusExtras'), snap => {
-      excBonusExtras = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    }));
-    tasks.push(excSubscribe(db.collection('excelencia_checklist'), snap => {
-      excChecklist = snap.docs.map(d => d.data());
-    }));
-  } else {
-    tasks.push(excSubscribe(db.collection('excelencia_colaboradores').doc(colaboradorId), snap => {
-      excColaboradores = snap.exists ? [{ id: snap.id, ...snap.data() }] : [];
-    }));
-    tasks.push(excSubscribe(db.collection('excelencia_ocorrencias').where('colaboradorId','==',colaboradorId), snap => {
-      excOcorrencias = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    }));
-    tasks.push(excSubscribe(db.collection('excelencia_bonusExtras').where('colaboradorId','==',colaboradorId), snap => {
-      excBonusExtras = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    }));
-    tasks.push(excSubscribe(db.collection('excelencia_checklist').where('colaboradorId','==',colaboradorId), snap => {
-      excChecklist = snap.docs.map(d => d.data());
-    }));
-  }
-  tasks.push(excSubscribe(db.collection('excelencia_config').doc('main'), snap => {
-    if (snap.exists) {
-      const d = snap.data();
-      if (d.extrasConfig)   excExtrasConfig   = d.extrasConfig;
-      if (d.checklistItens) excChecklistItens = d.checklistItens;
-    }
+  tasks.push(enqSubscribe(db.collection('enquete_colaboradores'), snap => {
+    enqColaboradores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }));
+  tasks.push(enqSubscribe(db.collection('enquete_config').doc('main'), snap => {
+    if (snap.exists) enqConfig = { ...enqConfig, ...snap.data() };
+  }));
+  tasks.push(enqSubscribe(db.collection('enquete_rodadas'), snap => {
+    enqRodadas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   }));
   await Promise.all(tasks);
-  // Se as coleções novas estiverem vazias, tenta migrar dados de uma versão
-  // anterior deste app (que guardava tudo junto em excelencia_data/main).
-  if (role === 'admin' && excColaboradores.length === 0) await excMigrarDadosAntigos();
 }
 
-async function excMigrarDadosAntigos() {
-  try {
-    const legacySnap = await db.collection('excelencia_data').doc('main').get();
-    if (!legacySnap.exists) return;
-    const d = legacySnap.data();
-    const colaboradoresAntigos = d.colaboradores || [];
-    if (!colaboradoresAntigos.length) return;
-    const batch = db.batch();
-    colaboradoresAntigos.forEach(c => { const { id, ...data } = c; batch.set(db.collection('excelencia_colaboradores').doc(id), data); });
-    (d.ocorrencias||[]).forEach(o => { const { id, ...data } = o; batch.set(db.collection('excelencia_ocorrencias').doc(id), data); });
-    (d.bonusExtras||[]).forEach(e => { const { id, ...data } = e; batch.set(db.collection('excelencia_bonusExtras').doc(id), data); });
-    batch.set(db.collection('excelencia_config').doc('main'), {
-      extrasConfig: d.extrasConfig || excExtrasConfig, checklistItens: d.checklistItens || excChecklistItens,
-    });
-    await batch.commit();
-    console.log('Dados de uma versão anterior migrados para as novas coleções.');
-  } catch (e) {
-    console.error('Não foi possível migrar dados de uma versão anterior (ignore se este Firebase é novo):', e);
-  }
-}
-
-function loadAllLocal() {
-  excColaboradores = JSON.parse(localStorage.getItem('exc_colaboradores') || '[]');
-  excOcorrencias   = JSON.parse(localStorage.getItem('exc_ocorrencias')   || '[]');
-  excChecklist     = JSON.parse(localStorage.getItem('exc_checklist')    || '[]');
-  excBonusExtras   = JSON.parse(localStorage.getItem('exc_bonusExtras')  || '[]');
-  excExtrasConfig   = JSON.parse(localStorage.getItem('exc_extrasConfig')   || 'null') || excExtrasConfig;
-  excChecklistItens = JSON.parse(localStorage.getItem('exc_checklistItens') || 'null') || excChecklistItens;
+async function carregarAdmin() {
+  enqTeardown();
+  const tasks = [];
+  tasks.push(enqSubscribe(db.collection('enquete_colaboradores'), snap => {
+    enqColaboradores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }));
+  tasks.push(enqSubscribe(db.collection('enquete_config').doc('main'), snap => {
+    if (snap.exists) enqConfig = { ...enqConfig, ...snap.data() };
+  }));
+  tasks.push(enqSubscribe(db.collection('enquete_rodadas'), snap => {
+    enqRodadas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }));
+  tasks.push(enqSubscribe(db.collection('enquete_respostas'), snap => {
+    enqRespostas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }));
+  await Promise.all(tasks);
 }
 
 // ═══════════════════════════════════════════════
-//  LÓGICA DE PONTUAÇÃO
+//  LOGIN DO ADMINISTRADOR (e-mail/senha reais)
 // ═══════════════════════════════════════════════
-function excComputeMes(colaboradorId, mes) {
-  const colaborador = excColaboradores.find(c => c.id === colaboradorId);
-  const categorias = EXC_CATEGORIAS.map(cat => {
-    const pts = excOcorrencias
-      .filter(o => o.colaboradorId === colaboradorId && o.mes === mes && o.categoria === cat.id)
-      .reduce((s,o) => s + Number(o.pontos||0), 0);
-    const nota = Math.max(0, Math.min(cat.peso, cat.peso + pts));
-    return { ...cat, pontosLancados: pts, nota };
-  });
-  const total = categorias.reduce((s,c) => s + c.nota, 0);
-  const tier = EXC_BONUS_TIERS.find(t => total >= t.min) || EXC_BONUS_TIERS[EXC_BONUS_TIERS.length-1];
-  const bonusBase = colaborador ? Number(colaborador.bonusBase||500) : 500;
-  const bonusValor = bonusBase * tier.pct / 100;
-  const extras = excBonusExtras.filter(e => e.colaboradorId === colaboradorId && e.mes === mes);
-  const extrasValor = extras.reduce((s,e) => s + Number(e.valor||0), 0);
-  return { colaborador, categorias, total, tier, bonusBase, bonusValor, extras, extrasValor, totalFinal: bonusValor + extrasValor };
-}
-
-// ═══════════════════════════════════════════════
-//  AÇÕES — colaboradores, ocorrências, extras, checklist
-// ═══════════════════════════════════════════════
-async function excAddColaborador() {
-  const nome = (document.getElementById('exc-new-nome').value||'').trim().toUpperCase();
-  const cargo = (document.getElementById('exc-new-cargo').value||'').trim();
-  const bonusBase = Number(document.getElementById('exc-new-bonus').value||500);
-  const email = (document.getElementById('exc-new-email').value||'').trim();
-  const senha = (document.getElementById('exc-new-senha').value||'').trim();
-  const msg = document.getElementById('exc-new-msg');
-  if (!nome) { msg.style.color='#c62828'; msg.textContent='❌ Informe o nome.'; return; }
-  if (excColaboradores.find(c => c.nome === nome)) { msg.style.color='#c62828'; msg.textContent='❌ Colaborador já cadastrado.'; return; }
-  const colaboradorId = 'col_'+Date.now();
-
-  if (db) {
-    if (!email || senha.length < 6) { msg.style.color='#c62828'; msg.textContent='❌ Informe e-mail e uma senha com no mínimo 6 caracteres.'; return; }
-    msg.style.color='#666'; msg.textContent='Criando conta de acesso...';
-    try {
-      const secAuth = getSecondaryAuth();
-      const cred = await secAuth.createUserWithEmailAndPassword(email, senha);
-      const uid = cred.user.uid;
-      await secAuth.signOut();
-      await db.collection('excelencia_roles').doc(uid).set({ role:'colaborador', colaboradorId });
-      const novo = { id:colaboradorId, nome, cargo, bonusBase, email, uid };
-      excColaboradores.push(novo);
-      excSaveDoc('excelencia_colaboradores', novo);
-      msg.style.color='#2e7d32'; msg.textContent='✅ Colaborador cadastrado! Repasse o e-mail e a senha para ele.';
-    } catch (e) {
-      msg.style.color='#c62828';
-      msg.textContent = e.code === 'auth/email-already-in-use' ? '❌ Este e-mail já está em uso por outra conta.' : '❌ Erro ao criar conta: ' + e.message;
-      return;
-    }
-  } else {
-    excColaboradores.push({ id:colaboradorId, nome, cargo, bonusBase, email });
-    saveExcelencia();
-    msg.style.color='#2e7d32'; msg.textContent='✅ Colaborador cadastrado (modo local)!';
+function mostrarLoginAdmin() {
+  if (!db) {
+    // Modo local de teste (sem Firebase configurado): não há nada a proteger
+    // num único aparelho, então entra direto no painel do administrador.
+    document.getElementById('responder').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    renderAdmin();
+    return;
   }
-  document.getElementById('exc-new-nome').value = '';
-  document.getElementById('exc-new-cargo').value = '';
-  document.getElementById('exc-new-email').value = '';
-  document.getElementById('exc-new-senha').value = '';
-  renderExcelencia();
+  document.getElementById('responder').style.display = 'none';
+  document.getElementById('admin-login').style.display = 'block';
+}
+function voltarParaResponder() {
+  document.getElementById('admin-login').style.display = 'none';
+  document.getElementById('responder').style.display = 'block';
 }
 
-function excEditColaborador(id) {
-  const c = excColaboradores.find(x => x.id === id);
-  if (!c) return;
-  const cargo = prompt('Cargo/função:', c.cargo||'');
-  if (cargo === null) return;
-  const bonusBase = prompt('Valor do bônus mensal (R$) para 100% da pontuação:', c.bonusBase);
-  if (bonusBase === null) return;
-  c.cargo = cargo.trim();
-  c.bonusBase = Number(bonusBase||500);
-  excPersistir(() => excSaveDoc('excelencia_colaboradores', c));
-  renderExcelencia();
-}
-
-function excRemoveColaborador(id) {
-  const c = excColaboradores.find(x => x.id === id);
-  if (!c) return;
-  if (!confirm(`Remover "${c.nome}" do Programa Excelência? O histórico será mantido, mas o acesso dele será revogado.`)) return;
-  excColaboradores = excColaboradores.filter(x => x.id !== id);
-  if (db) {
-    excDeleteDoc('excelencia_colaboradores', id);
-    if (c.uid) {
-      db.collection('excelencia_roles').doc(c.uid).delete().catch(e => {
-        console.error(e);
-        alert('⚠️ "' + c.nome + '" foi removido da lista, mas o acesso dele NÃO pôde ser revogado agora (' + e.message + '). Ele ainda consegue entrar — tente remover de novo (ou repita em Configurações) para garantir que o acesso seja cortado.');
-      });
-    }
-  } else {
-    saveExcelencia();
-  }
-  renderExcelencia();
-}
-
-// Para colaboradores cadastrados antes desta conta de acesso existir (ou removidos
-// e re-cadastrados sem querer perder o histórico): cria e-mail/senha sem mudar o id,
-// então ocorrências/bônus antigos continuam ligados a ele.
-async function excConfigurarAcessoColaborador(id) {
-  const c = excColaboradores.find(x => x.id === id);
-  if (!c || !db) return;
-  const email = (prompt('E-mail de acesso para ' + c.nome + ':', c.email||'')||'').trim();
-  if (!email) return;
-  const senha = prompt('Senha inicial (mín. 6 caracteres):');
-  if (senha === null) return;
-  if (senha.length < 6) { alert('A senha deve ter no mínimo 6 caracteres. Operação cancelada.'); return; }
-  try {
-    const secAuth = getSecondaryAuth();
-    const cred = await secAuth.createUserWithEmailAndPassword(email, senha);
-    const uid = cred.user.uid;
-    await secAuth.signOut();
-    await db.collection('excelencia_roles').doc(uid).set({ role:'colaborador', colaboradorId:id });
-    c.email = email; c.uid = uid;
-    excSaveDoc('excelencia_colaboradores', c);
-    alert('✅ Acesso configurado! Repasse o e-mail e a senha para ' + c.nome + '.');
-    renderExcelencia();
-  } catch (e) {
-    alert(e.code === 'auth/email-already-in-use' ? '❌ Este e-mail já está em uso por outra conta.' : '❌ Erro: ' + e.message);
-  }
-}
-
-function excPreencherPontosSugeridos() {
-  const catId = document.getElementById('exc-oc-categoria').value;
-  const cat = EXC_CATEGORIAS.find(c => c.id === catId);
-  const input = document.getElementById('exc-oc-pontos');
-  if (cat && input) input.value = cat.penalidade ? -cat.penalidade : 0;
-}
-
-function excLancarOcorrencia() {
-  const colaboradorId = document.getElementById('exc-sel-colaborador').value;
-  const mes = document.getElementById('exc-sel-mes').value || excMesAtual();
-  const categoria = document.getElementById('exc-oc-categoria').value;
-  const pontos = Number(document.getElementById('exc-oc-pontos').value);
-  const obs = (document.getElementById('exc-oc-obs').value||'').trim();
-  const data = document.getElementById('exc-oc-data').value || excHojeISO();
-  if (!colaboradorId) { alert('Selecione um colaborador.'); return; }
-  if (!pontos) { alert('Informe a pontuação (positiva para ganho, negativa para perda).'); return; }
-  const o = { id:'oc_'+Date.now(), colaboradorId, mes, categoria, pontos, obs, data };
-  excOcorrencias.push(o);
-  excPersistir(() => excSaveDoc('excelencia_ocorrencias', o));
-  document.getElementById('exc-oc-obs').value = '';
-  renderExcelencia();
-}
-
-function excRemoveOcorrencia(id) {
-  if (!confirm('Excluir esta ocorrência?')) return;
-  excOcorrencias = excOcorrencias.filter(o => o.id !== id);
-  excPersistir(() => excDeleteDoc('excelencia_ocorrencias', id));
-  renderExcelencia();
-}
-
-function excZerarMes(colaboradorId, mes) {
-  const colaborador = excColaboradores.find(c => c.id === colaboradorId);
-  if (!colaborador) return;
-  const mesLabel = mes.split('-').reverse().join('/');
-  if (!confirm(`Zerar TODAS as ocorrências e bônus extras de ${colaborador.nome} em ${mesLabel}?\n\nA pontuação volta para 100/100 e os bônus extras somem. O cadastro do colaborador e o checklist diário não são afetados. Essa ação não pode ser desfeita.`)) return;
-  const ocorrenciasRemovidas = excOcorrencias.filter(o => o.colaboradorId === colaboradorId && o.mes === mes);
-  const extrasRemovidos = excBonusExtras.filter(e => e.colaboradorId === colaboradorId && e.mes === mes);
-  excOcorrencias = excOcorrencias.filter(o => !(o.colaboradorId === colaboradorId && o.mes === mes));
-  excBonusExtras = excBonusExtras.filter(e => !(e.colaboradorId === colaboradorId && e.mes === mes));
-  if (db) {
-    const batch = db.batch();
-    ocorrenciasRemovidas.forEach(o => batch.delete(db.collection('excelencia_ocorrencias').doc(o.id)));
-    extrasRemovidos.forEach(e => batch.delete(db.collection('excelencia_bonusExtras').doc(e.id)));
-    batch.commit().catch(e => { console.error(e); alert('Erro ao zerar o mês: ' + e.message); });
-  } else {
-    saveExcelencia();
-  }
-  renderExcelencia();
-}
-
-function excToggleExtra(colaboradorId, mes, tipo, valorPadrao, nomePadrao) {
-  const idx = excBonusExtras.findIndex(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo===tipo);
-  if (idx >= 0) {
-    const [removido] = excBonusExtras.splice(idx,1);
-    excPersistir(() => excDeleteDoc('excelencia_bonusExtras', removido.id));
-  } else {
-    const novo = { id:'be_'+Date.now(), colaboradorId, mes, tipo, valor:valorPadrao, nome:nomePadrao };
-    excBonusExtras.push(novo);
-    excPersistir(() => excSaveDoc('excelencia_bonusExtras', novo));
-  }
-  renderExcelencia();
-}
-
-function excAddExtraConfig() {
-  const nome = (document.getElementById('exc-new-extra-nome').value||'').trim();
-  const valor = Number(document.getElementById('exc-new-extra-valor').value||0);
-  if (!nome) { alert('Informe o nome do bônus extra.'); return; }
-  if (!valor) { alert('Informe o valor do bônus extra.'); return; }
-  excExtrasConfig.push({ tipo:'extra_'+Date.now(), nome, valor });
-  document.getElementById('exc-new-extra-nome').value = '';
-  document.getElementById('exc-new-extra-valor').value = '';
-  excPersistir(excSaveConfig);
-  renderExcelencia();
-}
-
-function excRemoveExtraConfig(tipo) {
-  if (!confirm('Remover esta opção de bônus extra da lista? Meses que já usaram esse bônus continuam valendo no histórico — ela só deixa de aparecer para marcar em meses futuros.')) return;
-  excExtrasConfig = excExtrasConfig.filter(e => e.tipo !== tipo);
-  excPersistir(excSaveConfig);
-  renderExcelencia();
-}
-
-function excSetEconomia(colaboradorId, mes) {
-  const valorEconomizado = Number(document.getElementById('exc-economia-input').value||0);
-  const valor = Math.min(valorEconomizado * EXC_ECONOMIA_PCT, EXC_ECONOMIA_TETO);
-  const idx = excBonusExtras.findIndex(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo==='economia');
-  const id = 'be_econ_'+colaboradorId+'_'+mes;
-  const entry = { id, colaboradorId, mes, tipo:'economia', valorEconomizado, valor };
-  if (valorEconomizado <= 0) {
-    if (idx >= 0) { excBonusExtras.splice(idx,1); excPersistir(() => excDeleteDoc('excelencia_bonusExtras', id)); }
-  } else {
-    if (idx >= 0) excBonusExtras[idx] = entry; else excBonusExtras.push(entry);
-    excPersistir(() => excSaveDoc('excelencia_bonusExtras', entry));
-  }
-  renderExcelencia();
-}
-
-function excChecklistDoDia(colaboradorId, data) {
-  return excChecklist.find(c => c.colaboradorId === colaboradorId && c.data === data);
-}
-
-function excAddChecklistItem() {
-  const texto = (document.getElementById('exc-new-chk-item').value||'').trim();
-  if (!texto) return;
-  excChecklistItens.push({ id:'chk_'+Date.now(), texto });
-  document.getElementById('exc-new-chk-item').value = '';
-  excPersistir(excSaveConfig);
-  renderExcelencia();
-}
-
-function excRemoveChecklistItem(id) {
-  if (!confirm('Remover este item do checklist diário? Ele deixará de aparecer nos próximos preenchimentos.')) return;
-  excChecklistItens = excChecklistItens.filter(i => i.id !== id);
-  excPersistir(excSaveConfig);
-  renderExcelencia();
-}
-
-function excSalvarChecklistHoje() {
-  const colaborador = excColaboradorLogado();
-  if (!colaborador) return;
-  const hoje = excHojeISO();
-  const itens = {};
-  excChecklistItens.forEach(item => { itens[item.id] = !!document.getElementById('exc-chk-'+item.id)?.checked; });
-  const idx = excChecklist.findIndex(c => c.colaboradorId===colaborador.id && c.data===hoje);
-  const entry = {
-    colaboradorId: colaborador.id, data: hoje, itens,
-    hora: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}),
-  };
-  if (idx >= 0) excChecklist[idx] = entry; else excChecklist.push(entry);
-  saveChecklistEntry(entry);
-  renderExcelencia();
-}
-
-function excAlterarSenhaAdmin() {
-  const user = db && firebase.auth().currentUser;
-  if (!user || !user.email) { alert('Disponível apenas com o Firebase configurado (veja README.md).'); return; }
-  if (!confirm(`Enviar e-mail de redefinição de senha para ${user.email}?`)) return;
-  firebase.auth().sendPasswordResetEmail(user.email)
-    .then(() => alert('✅ E-mail de redefinição enviado! Confira sua caixa de entrada.'))
-    .catch(e => alert('Erro: ' + e.message));
-}
-
-// ═══════════════════════════════════════════════
-//  LOGIN — e-mail/senha reais (Firebase Auth) ou modo local de teste
-// ═══════════════════════════════════════════════
 async function doEmailLogin() {
   const email = (document.getElementById('login-email').value||'').trim();
   const senha = document.getElementById('login-password').value||'';
@@ -632,464 +292,350 @@ async function doEmailLogin() {
   if (!email || !senha) { errEl.textContent = 'Informe e-mail e senha.'; return; }
   try {
     await firebase.auth().signInWithEmailAndPassword(email, senha);
-    // A troca de tela acontece em onAuthStateChanged (startApp), após carregar os dados.
   } catch (e) {
     errEl.textContent = 'E-mail ou senha incorretos.';
   }
 }
 
-async function resolveRoleAndEnter(user) {
+async function entrarComoAdmin(user) {
   const errEl = document.getElementById('login-error');
-  const roleDoc = await db.collection('excelencia_roles').doc(user.uid).get();
-  if (!roleDoc.exists) {
-    if (errEl) errEl.textContent = 'Esta conta não tem acesso liberado no Programa Excelência. Peça ao administrador para configurá-la.';
+  const roleDoc = await db.collection('enquete_roles').doc(user.uid).get();
+  if (!roleDoc.exists || roleDoc.data().role !== 'admin') {
+    if (errEl) errEl.textContent = 'Esta conta não tem acesso de administrador.';
     await firebase.auth().signOut();
     return;
   }
-  const roleData = roleDoc.data();
-  const role = roleData.role === 'admin' ? 'admin' : 'colaborador';
-  const colaboradorId = roleData.colaboradorId || null;
-  if (role === 'colaborador' && !colaboradorId) {
-    if (errEl) errEl.textContent = 'Esta conta está configurada incorretamente (sem colaborador vinculado). Peça ao administrador para revisar o cadastro.';
-    await firebase.auth().signOut();
-    return;
-  }
-  await loadAllFirestore(role, colaboradorId);
-  if (role === 'admin') {
-    doLogin('admin', 'ADMINISTRADOR');
-  } else {
-    sessionStorage.setItem('sv_colaborador_id', colaboradorId);
-    const colab = excColaboradores.find(c => c.id === colaboradorId);
-    doLogin('colaborador', colab ? colab.nome : 'Colaborador');
-  }
-}
-
-function doLogin(role, name) {
-  sessionStorage.setItem('sv_role', role);
-  sessionStorage.setItem('sv_user', name);
-  document.getElementById('login-overlay').style.display = 'none';
+  await carregarAdmin();
+  document.getElementById('responder').style.display = 'none';
+  document.getElementById('admin-login').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  document.getElementById('hdr-user').textContent = name;
-  document.getElementById('hdr-role').textContent = role === 'admin' ? '🔐 Administrador' : '🏅 Colaborador';
-  renderExcelencia();
-}
-
-function enterLocalMode() {
-  sessionStorage.setItem('sv_role', 'admin');
-  sessionStorage.setItem('sv_user', 'ADMINISTRADOR (local)');
-  document.getElementById('login-overlay').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('hdr-user').textContent = 'ADMINISTRADOR';
-  document.getElementById('hdr-role').textContent = '🔐 Admin (modo local)';
-  renderExcelencia();
+  renderAdmin();
 }
 
 function logout() {
-  if (!confirm('Deseja sair da sessão atual?')) return;
-  sessionStorage.removeItem('sv_role');
-  sessionStorage.removeItem('sv_user');
-  sessionStorage.removeItem('sv_colaborador_id');
+  if (!confirm('Sair da área de administrador?')) return;
   if (db) {
-    excTeardownListeners();
+    enqTeardown();
     firebase.auth().signOut();
-    document.getElementById('app').style.display = 'none';
-    document.getElementById('login-email').value = '';
-    document.getElementById('login-password').value = '';
-    document.getElementById('login-error').textContent = '';
-    document.getElementById('login-overlay').style.display = 'flex';
-  } else {
-    location.reload();
   }
-}
-
-function isAdmin() { return sessionStorage.getItem('sv_role') === 'admin'; }
-function excColaboradorLogado() {
-  const id = sessionStorage.getItem('sv_colaborador_id');
-  return excColaboradores.find(c => c.id === id) || null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-error').textContent = '';
+  iniciarTelaResponder();
 }
 
 // ═══════════════════════════════════════════════
-//  TELAS
+//  RESPOSTA (colaborador, sem login — apenas escolhe o nome)
 // ═══════════════════════════════════════════════
-let _excSelColaboradorId = null;
-let _excSelMes = null;
-let _excChecklistRelData = null;
+function enqRodadaAlvo() {
+  const params = new URLSearchParams(location.search);
+  const r = params.get('r');
+  if (r) return enqRodadas.find(x => x.id === r) || null;
+  const ativas = enqRodadas.filter(x => x.ativa).sort((a,b) => (b.criadoEm||'').localeCompare(a.criadoEm||''));
+  return ativas[0] || null;
+}
 
-function renderExcelencia() {
-  const el = document.getElementById('exc-content');
+function enqJaRespondeu(rodadaId) {
+  return localStorage.getItem('enq_respondido_' + rodadaId);
+}
+
+function renderResponder() {
+  const el = document.getElementById('responder-content');
   if (!el) return;
-  const role = sessionStorage.getItem('sv_role');
-  if (role === 'colaborador') { el.innerHTML = excRenderColaborador(); return; }
-  if (!isAdmin()) { el.innerHTML = '<div class="card"><div class="empty-state"><div class="icon">🔒</div>Acesso restrito.</div></div>'; return; }
-  const selEl = document.getElementById('exc-sel-colaborador');
-  const mesEl = document.getElementById('exc-sel-mes');
-  const chkDataEl = document.getElementById('exc-rel-chk-data');
-  if (selEl && selEl.value) _excSelColaboradorId = selEl.value;
-  if (mesEl && mesEl.value) _excSelMes = mesEl.value;
-  if (chkDataEl && chkDataEl.value) _excChecklistRelData = chkDataEl.value;
-  if (!_excSelColaboradorId || !excColaboradores.find(c=>c.id===_excSelColaboradorId)) {
-    _excSelColaboradorId = excColaboradores[0] ? excColaboradores[0].id : null;
+  if (!enqColaboradores.length) {
+    el.innerHTML = '<div class="card"><div class="empty-state"><div class="icon">🗳️</div>Nenhuma enquete disponível no momento.</div></div>';
+    return;
   }
-  if (!_excSelMes) _excSelMes = excMesAtual();
-  if (!_excChecklistRelData) _excChecklistRelData = excHojeISO();
-  el.innerHTML = excRenderAdmin();
-}
+  const rodada = enqRodadaAlvo();
+  if (!rodada) {
+    el.innerHTML = '<div class="card"><div class="empty-state"><div class="icon">🗳️</div>Nenhuma enquete ativa no momento. Peça o link correto ao administrador.</div></div>';
+    return;
+  }
+  if (enqJaRespondeu(rodada.id)) {
+    el.innerHTML = `<div class="card"><div class="empty-state"><div class="icon">✅</div>Você já respondeu esta enquete. Obrigado!</div></div>`;
+    return;
+  }
+  const colabOptions = '<option value="">— Selecione —</option>' +
+    enqColaboradores.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+  const perguntasHtml = rodada.perguntas.map(p => {
+    if (p.tipo === 'nota') {
+      return `<div class="form-group"><label>${p.texto}</label>
+        <div class="nota-row" id="nota-row-${p.id}">
+          ${[1,2,3,4,5].map(n => `<button type="button" class="nota-btn" onclick="enqSelecionarNota('${p.id}',${n})">${n}</button>`).join('')}
+        </div></div>`;
+    }
+    return `<div class="form-group"><label>${p.texto}</label><textarea id="resp-${p.id}" placeholder="Escreva aqui (opcional)"></textarea></div>`;
+  }).join('');
 
-function excFormNovoColaborador() {
-  const camposConta = FIREBASE_CONFIGURADO ? `
-    <div class="form-group"><label>E-mail de acesso do colaborador</label><input type="email" id="exc-new-email" placeholder="felipe@email.com"></div>
-    <div class="form-group"><label>Senha inicial (mín. 6 caracteres)</label><input type="text" id="exc-new-senha" placeholder="Ex: uma senha simples"></div>` :
-    `<div class="form-group"><label>E-mail (opcional em modo local)</label><input type="email" id="exc-new-email" placeholder="felipe@email.com"></div>
-     <input type="hidden" id="exc-new-senha" value="">`;
-  return `
-    <div class="form-group"><label>Nome</label><input type="text" id="exc-new-nome" placeholder="Ex: FELIPE"></div>
-    <div class="form-group"><label>Cargo/função</label><input type="text" id="exc-new-cargo" placeholder="Ex: Estoquista e Motorista"></div>
-    <div class="form-group"><label>Bônus mensal (100%)</label><input type="number" id="exc-new-bonus" value="500"></div>
-    ${camposConta}
-    <button class="btn btn-primary" onclick="excAddColaborador()">Cadastrar</button>
-    <div id="exc-new-msg" style="font-size:12px;margin-top:6px"></div>`;
-}
-
-function excBarraCategoria(c) {
-  const pct = Math.round((c.nota / c.peso) * 100);
-  const cor = pct >= 90 ? '#388E3C' : pct >= 70 ? '#FDD835' : '#e53935';
-  const corTexto = (pct >= 70 && pct < 90) ? '#333' : '#fff';
-  return `<div class="chart-bar-row">
-    <div class="chart-label">${c.icone} ${c.nome}</div>
-    <div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${Math.max(pct,6)}%;background:${cor}">
-      <span style="color:${corTexto}">${c.nota}/${c.peso}</span></div></div>
+  el.innerHTML = `
+  <div class="card">
+    <h2>📅 Enquete de ${rodada.data.split('-').reverse().join('/')}</h2>
+    <div class="form-group"><label>Quem é você?</label>
+      <select id="resp-colaborador">${colabOptions}</select></div>
+    ${perguntasHtml}
+    <button class="btn btn-primary" style="width:100%" onclick="enqEnviarResposta('${rodada.id}')">Enviar resposta</button>
+    <div id="resp-msg" style="font-size:12px;margin-top:8px;color:#c62828"></div>
   </div>`;
 }
-function excCorTier(pct) { return pct >= 100 ? '#388E3C' : pct >= 60 ? '#FDD835' : pct > 0 ? '#F57F17' : '#e53935'; }
 
-function excBannerConfig() {
-  if (FIREBASE_CONFIGURADO) return '';
-  return `<div id="config-banner" style="display:block">⚠️ Este app ainda está salvando os dados só neste aparelho (Firebase não configurado). Veja o <strong>README.md</strong> do projeto para conectar um banco de dados próprio e sincronizar entre celulares.</div>`;
+let _enqNotasSelecionadas = {};
+function enqSelecionarNota(perguntaId, nota) {
+  _enqNotasSelecionadas[perguntaId] = nota;
+  document.querySelectorAll(`#nota-row-${perguntaId} .nota-btn`).forEach((btn,i) => {
+    btn.classList.toggle('selected', i+1 === nota);
+  });
 }
 
-function excChecklistDiaLinhas(data) {
-  return excColaboradores.map(c => {
-    const entry = excChecklistDoDia(c.id, data);
-    if (!entry) {
-      return `<div style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px">
-        <strong>${c.nome}</strong> — <span style="color:#e53935;font-weight:700">❌ Não preenchido</span>
-      </div>`;
+async function enqEnviarResposta(rodadaId) {
+  const msg = document.getElementById('resp-msg');
+  const colaboradorId = document.getElementById('resp-colaborador').value;
+  if (!colaboradorId) { msg.textContent = 'Selecione quem é você.'; return; }
+  const rodada = enqRodadas.find(r => r.id === rodadaId);
+  if (!rodada) { msg.textContent = 'Esta enquete não está mais disponível.'; return; }
+  const respostas = {};
+  for (const p of rodada.perguntas) {
+    if (p.tipo === 'nota') {
+      if (!_enqNotasSelecionadas[p.id]) { msg.textContent = 'Responda a pergunta: "' + p.texto + '"'; return; }
+      respostas[p.id] = _enqNotasSelecionadas[p.id];
+    } else {
+      respostas[p.id] = (document.getElementById('resp-' + p.id).value||'').trim();
     }
-    const total = excChecklistItens.length;
-    const marcados = Object.values(entry.itens||{}).filter(Boolean).length;
-    const itensDetalhe = excChecklistItens.map(item => {
-      const ok = !!entry.itens[item.id];
-      return `<span style="display:inline-block;margin:2px 6px 2px 0;font-size:11px;color:${ok?'#2e7d32':'#aaa'}">${ok?'✅':'⬜'} ${item.texto}</span>`;
+  }
+  const colaborador = enqColaboradores.find(c => c.id === colaboradorId);
+  const entry = {
+    id: rodadaId + '_' + colaboradorId,
+    rodadaId, colaboradorId, colaboradorNome: colaborador ? colaborador.nome : '?',
+    respostas, enviadoEm: new Date().toISOString(),
+  };
+  msg.style.color = '#666'; msg.textContent = 'Enviando...';
+  try {
+    if (db) {
+      if (!firebase.auth().currentUser) await firebase.auth().signInAnonymously();
+      enqSaveDoc('enquete_respostas', entry);
+    } else {
+      enqRespostas.push(entry);
+      saveLocal();
+    }
+    localStorage.setItem('enq_respondido_' + rodadaId, '1');
+    _enqNotasSelecionadas = {};
+    renderResponder();
+  } catch (e) {
+    msg.style.color = '#c62828'; msg.textContent = 'Erro ao enviar: ' + e.message;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  ADMIN — colaboradores, perguntas, alertas, rodadas
+// ═══════════════════════════════════════════════
+function enqAddColaborador() {
+  const nome = (document.getElementById('enq-new-colab').value||'').trim().toUpperCase();
+  if (!nome) return;
+  if (enqColaboradores.find(c => c.nome === nome)) { alert('Colaborador já cadastrado.'); return; }
+  const novo = { id: enqGerarId('col'), nome };
+  enqColaboradores.push(novo);
+  document.getElementById('enq-new-colab').value = '';
+  enqPersistir(() => enqSaveDoc('enquete_colaboradores', novo));
+  renderAdmin();
+}
+function enqRemoveColaborador(id) {
+  if (!confirm('Remover este colaborador da lista? O histórico de respostas é mantido.')) return;
+  enqColaboradores = enqColaboradores.filter(c => c.id !== id);
+  enqPersistir(() => enqDeleteDoc('enquete_colaboradores', id));
+  renderAdmin();
+}
+
+function enqAddPergunta() {
+  const texto = (document.getElementById('enq-new-pergunta').value||'').trim();
+  const tipo = document.getElementById('enq-new-pergunta-tipo').value;
+  if (!texto) return;
+  enqConfig.perguntas.push({ id: enqGerarId('p'), tipo, texto });
+  document.getElementById('enq-new-pergunta').value = '';
+  enqPersistir(enqSaveConfig);
+  renderAdmin();
+}
+function enqRemovePergunta(id) {
+  if (!confirm('Remover esta pergunta do questionário padrão? Rodadas já geradas não são afetadas.')) return;
+  enqConfig.perguntas = enqConfig.perguntas.filter(p => p.id !== id);
+  enqPersistir(enqSaveConfig);
+  renderAdmin();
+}
+function enqSalvarAlertas() {
+  enqConfig.notaAlerta = Number(document.getElementById('enq-nota-alerta').value || 3);
+  enqConfig.palavrasAlerta = (document.getElementById('enq-palavras-alerta').value || '')
+    .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  enqPersistir(enqSaveConfig);
+  alert('✅ Configurações de alerta salvas.');
+  renderAdmin();
+}
+
+function enqGerarRodada() {
+  if (!enqConfig.perguntas.length) { alert('Cadastre pelo menos uma pergunta antes de gerar a enquete.'); return; }
+  enqRodadas.forEach(r => { if (r.ativa) { r.ativa = false; enqPersistir(() => enqSaveDoc('enquete_rodadas', r)); } });
+  const nova = {
+    id: enqGerarId('rodada'),
+    criadoEm: new Date().toISOString(),
+    data: enqHojeISO(),
+    perguntas: enqConfig.perguntas.map(p => ({ ...p })),
+    ativa: true,
+  };
+  enqRodadas.push(nova);
+  enqPersistir(() => enqSaveDoc('enquete_rodadas', nova));
+  _enqRodadaSelecionada = nova.id;
+  renderAdmin();
+}
+
+function enqLinkRodada(id) {
+  return location.origin + location.pathname + '?r=' + id;
+}
+function enqCopiarLink(id) {
+  const link = enqLinkRodada(id);
+  navigator.clipboard.writeText(link).then(
+    () => alert('🔗 Link copiado!\n\n' + link),
+    () => prompt('Copie o link abaixo:', link)
+  );
+}
+function enqCompartilharWhatsApp(id) {
+  const link = enqLinkRodada(id);
+  const texto = `🗳️ Enquete semanal Higgika\n\nResponda rapidinho, leva 1 minuto:\n${link}`;
+  window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+}
+
+// ═══════════════════════════════════════════════
+//  ADMIN — dashboard de respostas com sinais de alerta
+// ═══════════════════════════════════════════════
+function enqCorNota(nota) {
+  if (nota >= 4) return { cls: 'badge-ok', label: nota + '/5' };
+  if (nota === enqConfig.notaAlerta) return { cls: 'badge-atencao', label: nota + '/5' };
+  if (nota <= enqConfig.notaAlerta) return { cls: 'badge-alerta', label: nota + '/5 ⚠️' };
+  return { cls: 'badge-atencao', label: nota + '/5' };
+}
+function enqDestacarTexto(texto) {
+  if (!texto) return '<span style="color:#aaa">— sem resposta —</span>';
+  let out = texto;
+  let temAlerta = false;
+  enqConfig.palavrasAlerta.forEach(palavra => {
+    if (!palavra) return;
+    const re = new RegExp('(' + palavra.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    if (re.test(out)) { temAlerta = true; out = out.replace(re, '<strong style="color:#c62828;background:#ffebee;padding:0 2px;border-radius:3px">$1</strong>'); }
+  });
+  return (temAlerta ? '⚠️ ' : '') + out;
+}
+
+function enqHistoricoMedia(colaboradorId) {
+  const rodadasOrdenadas = [...enqRodadas].sort((a,b) => (a.criadoEm||'').localeCompare(b.criadoEm||'')).slice(-6);
+  return rodadasOrdenadas.map(r => {
+    const resp = enqRespostas.find(x => x.rodadaId === r.id && x.colaboradorId === colaboradorId);
+    if (!resp) return null;
+    const notas = r.perguntas.filter(p => p.tipo === 'nota').map(p => Number(resp.respostas[p.id] || 0)).filter(Boolean);
+    if (!notas.length) return null;
+    return (notas.reduce((s,n) => s+n, 0) / notas.length).toFixed(1);
+  }).filter(Boolean);
+}
+
+let _enqRodadaSelecionada = null;
+function renderPainelRespostas() {
+  if (!enqRodadas.length) return '<div class="empty-state"><div class="icon">🗳️</div>Nenhuma enquete gerada ainda.</div>';
+  const rodadasOrdenadas = [...enqRodadas].sort((a,b) => (b.criadoEm||'').localeCompare(a.criadoEm||''));
+  if (!_enqRodadaSelecionada || !enqRodadas.find(r => r.id === _enqRodadaSelecionada)) {
+    _enqRodadaSelecionada = rodadasOrdenadas[0].id;
+  }
+  const rodada = enqRodadas.find(r => r.id === _enqRodadaSelecionada);
+  const options = rodadasOrdenadas.map(r =>
+    `<option value="${r.id}" ${r.id===_enqRodadaSelecionada?'selected':''}>${r.data.split('-').reverse().join('/')}${r.ativa?' (ativa)':''}</option>`).join('');
+
+  const linhas = enqColaboradores.map(c => {
+    const resp = enqRespostas.find(x => x.rodadaId === rodada.id && x.colaboradorId === c.id);
+    const historico = enqHistoricoMedia(c.id);
+    const tendencia = historico.length ? `<div style="font-size:11px;color:#888;margin-top:4px">📈 Últimas médias: ${historico.join(', ')}</div>` : '';
+    if (!resp) {
+      return `<div class="resp-row"><strong>${c.nome}</strong> <span class="badge badge-pendente">não respondeu</span>${tendencia}</div>`;
+    }
+    const partes = rodada.perguntas.map(p => {
+      if (p.tipo === 'nota') {
+        const nota = Number(resp.respostas[p.id] || 0);
+        const cor = enqCorNota(nota);
+        return `<div style="margin-top:6px"><span class="badge ${cor.cls}">${cor.label}</span> <span style="font-size:11px;color:#777">${p.texto}</span></div>`;
+      }
+      return `<div style="margin-top:6px;font-size:12px"><span style="font-size:11px;color:#777">${p.texto}</span><br>${enqDestacarTexto(resp.respostas[p.id])}</div>`;
     }).join('');
-    return `<div style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px">
-      <strong>${c.nome}</strong> — <span style="color:#2e7d32;font-weight:700">✅ Enviado às ${entry.hora}</span> (${marcados}/${total})
-      <div style="margin-top:4px">${itensDetalhe}</div>
-    </div>`;
-  }).join('');
-}
-
-function excRenderChecklistDiaCard() {
-  const data = _excChecklistRelData;
-  const linhas = excChecklistDiaLinhas(data) || '<div class="empty-state"><div class="icon">📋</div>Nenhum colaborador cadastrado.</div>';
-  return `
-  <div class="card">
-    <h2>📋 Relatório diário do checklist (todos os colaboradores)</h2>
-    <div class="form-group"><label>Data</label>
-      <input type="date" id="exc-rel-chk-data" value="${data}" onchange="renderExcelencia()"></div>
-    ${linhas}
-    <button class="btn btn-primary" style="margin-top:10px" onclick="exportChecklistDiarioPDF('${data}')">📄 Gerar PDF do dia</button>
-  </div>`;
-}
-
-function excRenderAdmin() {
-  const banner = excBannerConfig();
-  if (!excColaboradores.length) {
-    return `${banner}
-    <div class="card"><h2>🏆 Programa Excelência</h2>
-      <div class="empty-state"><div class="icon">🏆</div>Cadastre o primeiro colaborador para começar.</div>
-    </div>
-    <div class="card"><h2>➕ Cadastrar colaborador</h2>${excFormNovoColaborador()}</div>`;
-  }
-
-  const colaboradorId = _excSelColaboradorId;
-  const mes = _excSelMes;
-  const colabOptions = excColaboradores.map(c =>
-    `<option value="${c.id}" ${c.id===colaboradorId?'selected':''}>${c.nome}${c.cargo?' — '+c.cargo:''}</option>`).join('');
-
-  const r = excComputeMes(colaboradorId, mes);
-  const categoriaBars = r.categorias.map(excBarraCategoria).join('');
-  const corTier = excCorTier(r.tier.pct);
-
-  const ocorrenciasMes = excOcorrencias.filter(o => o.colaboradorId===colaboradorId && o.mes===mes)
-    .sort((a,b) => (b.data||'').localeCompare(a.data||''));
-  const ocList = ocorrenciasMes.map(o => {
-    const cat = EXC_CATEGORIAS.find(c => c.id === o.categoria);
-    const sinal = o.pontos > 0 ? '+' : '';
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #f0f0f0;font-size:12px">
-      <div><strong>${cat ? cat.icone+' '+cat.nome : o.categoria}</strong>
-        <span style="color:${o.pontos<0?'#e53935':'#2e7d32'};font-weight:700">${sinal}${o.pontos} pts</span><br>
-        <span style="color:#888;font-size:11px">${o.data||''}${o.obs?' · '+o.obs:''}</span></div>
-      <button class="btn btn-danger btn-sm" onclick="excRemoveOcorrencia('${o.id}')">✕</button>
-    </div>`;
-  }).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhuma ocorrência lançada neste mês.</div>';
-
-  const extrasChecks = excExtrasConfig.map(ex => {
-    const ativo = !!excBonusExtras.find(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo===ex.tipo);
-    const nomeEsc = ex.nome.replace(/'/g, "\\'");
-    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;cursor:pointer">
-      <input type="checkbox" ${ativo?'checked':''} onchange="excToggleExtra('${colaboradorId}','${mes}','${ex.tipo}',${ex.valor},'${nomeEsc}')">
-      ${ex.nome} <span style="margin-left:auto;color:#2e7d32;font-weight:700">+R$ ${ex.valor}</span>
-    </label>`;
-  }).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhuma opção de bônus extra cadastrada. Adicione em Configurações.</div>';
-  const economiaEntry = excBonusExtras.find(e => e.colaboradorId===colaboradorId && e.mes===mes && e.tipo==='economia');
-
-  const checklistMes = excChecklist.filter(c => c.colaboradorId===colaboradorId && (c.data||'').startsWith(mes))
-    .sort((a,b) => b.data.localeCompare(a.data));
-  const checklistList = checklistMes.slice(0,10).map(c => {
-    const n = Object.values(c.itens||{}).filter(Boolean).length;
-    return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #f5f5f5">
-      <span>${c.data.split('-').reverse().join('/')}</span><span>${n}/${excChecklistItens.length} itens · ${c.hora}</span>
-    </div>`;
-  }).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhum checklist enviado neste mês.</div>';
-
-  const checklistItensList = excChecklistItens.map(item => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #f5f5f5;font-size:12px">
-      <span>${item.texto}</span>
-      <button class="btn btn-danger btn-sm" onclick="excRemoveChecklistItem('${item.id}')">✕</button>
-    </div>`).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhum item cadastrado.</div>';
-
-  const extrasConfigList = excExtrasConfig.map(ex => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #f5f5f5;font-size:12px">
-      <span>${ex.nome} <strong style="color:#2e7d32">+R$ ${Number(ex.valor).toFixed(2).replace('.',',')}</strong></span>
-      <button class="btn btn-danger btn-sm" onclick="excRemoveExtraConfig('${ex.tipo}')">✕</button>
-    </div>`).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhuma opção cadastrada.</div>';
-
-  const colabList = excColaboradores.map(c => {
-    const semAcesso = FIREBASE_CONFIGURADO && !c.uid;
-    return `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid ${semAcesso?'#f5c6cb':'#e0e0e0'};border-radius:8px;margin-bottom:6px;background:#fafafa">
-      <div><div style="font-weight:700;font-size:13px">🏅 ${c.nome}</div>
-        <div style="font-size:10px;color:#888">${c.cargo||'—'} · Bônus base: R$ ${Number(c.bonusBase).toFixed(2).replace('.',',')}</div>
-        ${semAcesso ? '<div style="font-size:10px;color:#c62828;font-weight:700">⚠️ Sem login configurado</div>' : ''}
-      </div>
-      <div style="display:flex;gap:6px">
-        ${semAcesso ? `<button class="btn btn-secondary btn-sm" onclick="excConfigurarAcessoColaborador('${c.id}')">🔑</button>` : ''}
-        <button class="btn btn-secondary btn-sm" onclick="excEditColaborador('${c.id}')">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="excRemoveColaborador('${c.id}')">✕</button>
-      </div>
-    </div>`;
-  }).join('');
-
-  return `${banner}
-  <div class="card">
-    <h2>🏆 Programa Excelência — Estoque e Logística</h2>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-      <div class="form-group" style="flex:2;min-width:160px;margin:0"><label>Colaborador</label>
-        <select id="exc-sel-colaborador" onchange="renderExcelencia()">${colabOptions}</select></div>
-      <div class="form-group" style="flex:1;min-width:130px;margin:0"><label>Mês</label>
-        <input type="month" id="exc-sel-mes" value="${mes}" onchange="renderExcelencia()"></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>📊 Painel do mês</h2>
-    ${categoriaBars}
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:10px;border-top:2px solid #e0e0e0">
-      <div><div style="font-size:11px;color:#888">Pontuação total</div><div style="font-size:24px;font-weight:900;color:var(--gold-dark)">${r.total}/100</div></div>
-      <div style="text-align:right"><div style="font-size:11px;color:#888">Bônus previsto</div>
-        <div style="font-size:20px;font-weight:900;color:${corTier}">${r.tier.pct}% · R$ ${r.bonusValor.toFixed(2).replace('.',',')}</div></div>
-    </div>
-    ${r.extrasValor>0 ? `<div style="margin-top:8px;font-size:12px;color:#2e7d32;font-weight:700">+ R$ ${r.extrasValor.toFixed(2).replace('.',',')} em bônus extras</div>` : ''}
-    <div style="margin-top:4px;font-size:15px;font-weight:900;color:var(--gold-dark)">Total do mês: R$ ${r.totalFinal.toFixed(2).replace('.',',')}</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-      <button class="btn btn-primary" onclick="exportExcelenciaPDF('${colaboradorId}','${mes}')">📄 Gerar PDF do mês</button>
-      <button class="btn btn-danger" onclick="excZerarMes('${colaboradorId}','${mes}')">🔄 Zerar ocorrências e bônus deste mês</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>➕ Lançar ocorrência</h2>
-    <div class="form-group"><label>Categoria</label>
-      <select id="exc-oc-categoria" onchange="excPreencherPontosSugeridos()">
-        ${EXC_CATEGORIAS.map(c => `<option value="${c.id}">${c.icone} ${c.nome} (peso ${c.peso})</option>`).join('')}
-      </select></div>
-    <div style="display:flex;gap:10px">
-      <div class="form-group" style="flex:1"><label>Pontos (negativo=perda, positivo=ganho)</label>
-        <input type="number" id="exc-oc-pontos" value="-5"></div>
-      <div class="form-group" style="flex:1"><label>Data</label>
-        <input type="date" id="exc-oc-data" value="${excHojeISO()}"></div>
-    </div>
-    <div class="form-group"><label>Observação</label><input type="text" id="exc-oc-obs" placeholder="Ex: atraso na entrega do pedido X"></div>
-    <button class="btn btn-primary" onclick="excLancarOcorrencia()">Lançar ocorrência</button>
-    <div style="margin-top:12px">${ocList}</div>
-  </div>
-
-  <div class="card">
-    <h2>🎁 Bônus extras do mês</h2>
-    ${extrasChecks}
-    <div class="form-group" style="margin-top:8px"><label>Economia comprovada (R$ economizado no mês)</label>
-      <input type="number" id="exc-economia-input" value="${economiaEntry?economiaEntry.valorEconomizado:''}" placeholder="0,00" onchange="excSetEconomia('${colaboradorId}','${mes}')"></div>
-    ${economiaEntry ? `<div style="font-size:11px;color:#2e7d32">Bônus de economia: R$ ${economiaEntry.valor.toFixed(2).replace('.',',')} (5%, teto R$ ${EXC_ECONOMIA_TETO})</div>` : ''}
-  </div>
-
-  <div class="card"><h2>📋 Checklist diário — histórico do mês</h2>${checklistList}</div>
-
-  ${excRenderChecklistDiaCard()}
-
-  <div class="card"><h2>👥 Colaboradores cadastrados</h2>${colabList}</div>
-
-  <div class="card"><h2>➕ Cadastrar colaborador</h2>${excFormNovoColaborador()}</div>
-
-  <div class="card">
-    <h2>📋 Itens do checklist diário</h2>
-    ${checklistItensList}
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <input type="text" id="exc-new-chk-item" placeholder="Ex: Chave do galpão entregue" style="flex:1;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
-      <button class="btn btn-primary" onclick="excAddChecklistItem()">➕ Adicionar</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>🎁 Opções de bônus extra</h2>
-    ${extrasConfigList}
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <input type="text" id="exc-new-extra-nome" placeholder="Nome do bônus" style="flex:2;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
-      <input type="number" id="exc-new-extra-valor" placeholder="R$" style="flex:1;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
-      <button class="btn btn-primary" onclick="excAddExtraConfig()">➕</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>⚙️ Configurações</h2>
-    <button class="btn btn-secondary" onclick="excAlterarSenhaAdmin()">🔐 Redefinir minha senha</button>
-  </div>`;
-}
-
-function excRenderColaborador() {
-  const colaborador = excColaboradorLogado();
-  if (!colaborador) {
-    const msg = db
-      ? 'Colaborador não encontrado. Se o app acabou de ser atualizado, peça para o administrador entrar pelo menos uma vez antes — isso conclui a migração automática dos dados. Se o problema continuar, peça para ele revisar seu cadastro.'
-      : 'Colaborador não encontrado.';
-    return `<div class="card"><div class="empty-state"><div class="icon">🏆</div>${msg}</div></div>`;
-  }
-  const mes = excMesAtual();
-  const r = excComputeMes(colaborador.id, mes);
-  const categoriaBars = r.categorias.map(excBarraCategoria).join('');
-  const corTier = excCorTier(r.tier.pct);
-
-  const hoje = excHojeISO();
-  const jaEnviado = excChecklistDoDia(colaborador.id, hoje);
-  const checklistForm = excChecklistItens.map(item => `
-    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer">
-      <input type="checkbox" id="exc-chk-${item.id}" ${jaEnviado && jaEnviado.itens[item.id] ? 'checked':''}> ${item.texto}
-    </label>`).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhum item de checklist cadastrado pelo administrador.</div>';
-
-  const base = new Date();
-  const meses = [];
-  for (let i=0; i<6; i++) meses.push(new Date(base.getFullYear(), base.getMonth()-i, 1).toISOString().slice(0,7));
-  const historico = meses.map(m => {
-    const rm = excComputeMes(colaborador.id, m);
-    return `<div class="summary-row"><span>${m.split('-').reverse().join('/')}</span><span>${rm.total}/100 · R$ ${rm.totalFinal.toFixed(2).replace('.',',')}</span></div>`;
+    return `<div class="resp-row"><strong>${c.nome}</strong> <span class="badge badge-ok">respondeu</span>${partes}${tendencia}</div>`;
   }).join('');
 
   return `
-  <div class="card">
-    <h2>🏆 ${colaborador.nome}</h2>
-    <div style="font-size:12px;color:#888;margin-bottom:8px">${colaborador.cargo||''} · ${mes.split('-').reverse().join('/')}</div>
-    ${categoriaBars}
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:10px;border-top:2px solid #e0e0e0">
-      <div><div style="font-size:11px;color:#888">Pontuação total</div><div style="font-size:24px;font-weight:900;color:var(--gold-dark)">${r.total}/100</div></div>
-      <div style="text-align:right"><div style="font-size:11px;color:#888">Bônus previsto</div>
-        <div style="font-size:20px;font-weight:900;color:${corTier}">${r.tier.pct}% · R$ ${r.bonusValor.toFixed(2).replace('.',',')}</div></div>
+    <div class="form-group"><label>Enquete (semana)</label>
+      <select id="enq-sel-rodada" onchange="_enqRodadaSelecionada=this.value;renderAdmin()">${options}</select></div>
+    <div class="link-box">🔗 ${enqLinkRodada(rodada.id)}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <button class="btn btn-secondary btn-sm" onclick="enqCopiarLink('${rodada.id}')">📋 Copiar link</button>
+      <button class="btn btn-whats btn-sm" onclick="enqCompartilharWhatsApp('${rodada.id}')">📤 Compartilhar no WhatsApp</button>
     </div>
-    ${r.extrasValor>0 ? `<div style="margin-top:8px;font-size:12px;color:#2e7d32;font-weight:700">+ R$ ${r.extrasValor.toFixed(2).replace('.',',')} em bônus extras conquistados</div>` : ''}
-    <div style="margin-top:4px;font-size:15px;font-weight:900;color:var(--gold-dark)">Total do mês: R$ ${r.totalFinal.toFixed(2).replace('.',',')}</div>
+    ${linhas || '<div class="empty-state">Nenhum colaborador cadastrado.</div>'}`;
+}
+
+function renderAdmin() {
+  const el = document.getElementById('admin-content');
+  if (!el) return;
+  const banner = FIREBASE_CONFIGURADO ? '' :
+    `<div id="config-banner" style="display:block">⚠️ Este app ainda está salvando os dados só neste aparelho (Firebase não configurado). Veja o <strong>README.md</strong> para conectar um banco próprio e sincronizar entre celulares.</div>`;
+
+  const colabList = enqColaboradores.map(c => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #f5f5f5;font-size:13px">
+      <span>${c.nome}</span>
+      <button class="btn btn-danger btn-sm" onclick="enqRemoveColaborador('${c.id}')">✕</button>
+    </div>`).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhum colaborador cadastrado.</div>';
+
+  const perguntasList = enqConfig.perguntas.map(p => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #f5f5f5;font-size:13px">
+      <span>${p.tipo === 'nota' ? '🔢' : '✏️'} ${p.texto}</span>
+      <button class="btn btn-danger btn-sm" onclick="enqRemovePergunta('${p.id}')">✕</button>
+    </div>`).join('') || '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">Nenhuma pergunta cadastrada.</div>';
+
+  el.innerHTML = `${banner}
+  <div class="card">
+    <h2>🔗 Enquete da semana</h2>
+    <button class="btn btn-primary" style="width:100%" onclick="enqGerarRodada()">➕ Gerar nova enquete (nova semana)</button>
+    <div style="font-size:11px;color:#888;margin-top:8px">Isso cria um link novo com as perguntas atuais e desativa o anterior. Cole o link no grupo do WhatsApp.</div>
   </div>
 
   <div class="card">
-    <h2>📋 Checklist de hoje ${jaEnviado ? '· ✅ enviado às '+jaEnviado.hora : ''}</h2>
-    ${checklistForm}
-    <button class="btn btn-primary" style="margin-top:8px" onclick="excSalvarChecklistHoje()">${jaEnviado ? 'Atualizar checklist' : 'Salvar checklist de hoje'}</button>
+    <h2>📊 Respostas e sinais de alerta</h2>
+    ${renderPainelRespostas()}
   </div>
 
-  <div class="card"><h2>📁 Histórico mensal</h2>${historico}</div>`;
-}
+  <div class="card">
+    <h2>👥 Colaboradores</h2>
+    ${colabList}
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input type="text" id="enq-new-colab" placeholder="Nome do colaborador" style="flex:1;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
+      <button class="btn btn-primary" onclick="enqAddColaborador()">➕</button>
+    </div>
+  </div>
 
-function exportExcelenciaPDF(colaboradorId, mes) {
-  const r = excComputeMes(colaboradorId, mes);
-  if (!r.colaborador) { alert('Colaborador não encontrado.'); return; }
-  const now = new Date();
-  const rows = r.categorias.map(c => `<tr><td>${c.icone} ${c.nome}</td><td>${c.peso}</td><td>${c.nota}</td></tr>`).join('');
-  const extrasRows = r.extras.map(e => {
-    const nomeExtra = e.tipo === 'economia' ? 'Economia comprovada' : (e.nome || (excExtrasConfig.find(x=>x.tipo===e.tipo)||{}).nome || e.tipo);
-    return `<tr><td>${nomeExtra}</td><td>R$ ${Number(e.valor).toFixed(2).replace('.',',')}</td></tr>`;
-  }).join('') || '<tr><td colspan="2">Nenhum bônus extra no mês.</td></tr>';
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Programa Excelência — ${r.colaborador.nome}</title>
-  <style>
-    body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:24px}
-    h1{color:#8D6E00;font-size:18px;margin-bottom:4px}
-    .sub{font-size:12px;color:#555;margin-bottom:16px}
-    table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px}
-    th{background:#8D6E00;color:#fff;padding:6px;text-align:left}
-    td{padding:6px;border-bottom:1px solid #ddd}
-    .total{font-size:16px;font-weight:700;color:#8D6E00;margin:10px 0}
-    .sig{display:flex;gap:40px;margin-top:60px}
-    .sig div{flex:1;border-top:1px solid #333;text-align:center;padding-top:6px;font-size:12px}
-    @media print{ button{display:none} }
-    #btn-voltar{position:fixed;top:12px;right:12px;background:#8D6E00;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;z-index:999}
-  </style></head><body>
-    <button id="btn-voltar" onclick="window.close()">← Voltar ao App</button>
-    <h1>🏆 Programa Excelência — Higgika</h1>
-    <div class="sub">Colaborador: <strong>${r.colaborador.nome}</strong> ${r.colaborador.cargo?'('+r.colaborador.cargo+')':''} · Mês: ${mes.split('-').reverse().join('/')} · Gerado em ${now.toLocaleDateString('pt-BR')}</div>
-    <table><thead><tr><th>Critério</th><th>Peso</th><th>Nota obtida</th></tr></thead><tbody>${rows}</tbody></table>
-    <div class="total">Pontuação total: ${r.total}/100 — Bônus: ${r.tier.pct}% de R$ ${r.bonusBase.toFixed(2).replace('.',',')} = R$ ${r.bonusValor.toFixed(2).replace('.',',')}</div>
-    <table><thead><tr><th>Bônus extra</th><th>Valor</th></tr></thead><tbody>${extrasRows}</tbody></table>
-    <div class="total">Total do mês: R$ ${r.totalFinal.toFixed(2).replace('.',',')}</div>
-    <div class="sig"><div>Assinatura do Gestor</div><div>Assinatura do Colaborador</div></div>
-    <script>window.onload = () => { window.print(); };${'</' + 'script>'}
-  </body></html>`;
-  const w = window.open('', '_blank');
-  if (!w) { alert('Popup bloqueado. Permita popups para este site e tente novamente.'); return; }
-  w.document.write(html);
-  w.document.close();
-}
+  <div class="card">
+    <h2>❓ Perguntas padrão da enquete</h2>
+    ${perguntasList}
+    <div class="form-group" style="margin-top:10px"><label>Nova pergunta</label>
+      <div style="display:flex;gap:8px">
+        <select id="enq-new-pergunta-tipo" style="flex:0 0 110px">
+          <option value="nota">Nota 1-5</option>
+          <option value="texto">Texto livre</option>
+        </select>
+        <input type="text" id="enq-new-pergunta" placeholder="Digite a pergunta">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="enqAddPergunta()">➕ Adicionar pergunta</button>
+  </div>
 
-function exportChecklistDiarioPDF(data) {
-  if (!excColaboradores.length) { alert('Nenhum colaborador cadastrado.'); return; }
-  const now = new Date();
-  const dataLabel = data.split('-').reverse().join('/');
-  const linhas = excColaboradores.map(c => {
-    const entry = excChecklistDoDia(c.id, data);
-    if (!entry) {
-      return `<tr><td><strong>${c.nome}</strong></td><td colspan="2" style="color:#c62828">Não preenchido</td></tr>`;
-    }
-    const total = excChecklistItens.length;
-    const marcados = Object.values(entry.itens||{}).filter(Boolean).length;
-    const itensTexto = excChecklistItens.map(item => `${entry.itens[item.id] ? '✅' : '⬜'} ${item.texto}`).join('<br>');
-    return `<tr><td><strong>${c.nome}</strong><br><span style="font-size:11px;color:#555">Enviado às ${entry.hora} (${marcados}/${total})</span></td><td colspan="2">${itensTexto}</td></tr>`;
-  }).join('');
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Checklist diário — ${dataLabel}</title>
-  <style>
-    body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:24px}
-    h1{color:#8D6E00;font-size:18px;margin-bottom:4px}
-    .sub{font-size:12px;color:#555;margin-bottom:16px}
-    table{width:100%;border-collapse:collapse;font-size:12px}
-    th{background:#8D6E00;color:#fff;padding:6px;text-align:left}
-    td{padding:8px 6px;border-bottom:1px solid #ddd;vertical-align:top}
-    @media print{ button{display:none} }
-    #btn-voltar{position:fixed;top:12px;right:12px;background:#8D6E00;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;z-index:999}
-  </style></head><body>
-    <button id="btn-voltar" onclick="window.close()">← Voltar ao App</button>
-    <h1>📋 Relatório diário do checklist — Higgika</h1>
-    <div class="sub">Data: <strong>${dataLabel}</strong> · Gerado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
-    <table><thead><tr><th>Colaborador</th><th colspan="2">Itens do checklist</th></tr></thead><tbody>${linhas}</tbody></table>
-    <script>window.onload = () => { window.print(); };${'</' + 'script>'}
-  </body></html>`;
-  const w = window.open('', '_blank');
-  if (!w) { alert('Popup bloqueado. Permita popups para este site e tente novamente.'); return; }
-  w.document.write(html);
-  w.document.close();
+  <div class="card">
+    <h2>⚠️ Configurar alertas automáticos</h2>
+    <div class="form-group"><label>Nota considerada "atenção" (1-5)</label>
+      <input type="number" id="enq-nota-alerta" min="1" max="5" value="${enqConfig.notaAlerta}"></div>
+    <div class="form-group"><label>Palavras que disparam alerta nas respostas de texto (separadas por vírgula)</label>
+      <textarea id="enq-palavras-alerta">${enqConfig.palavrasAlerta.join(', ')}</textarea></div>
+    <button class="btn btn-primary" onclick="enqSalvarAlertas()">Salvar configurações</button>
+    <div style="font-size:11px;color:#888;margin-top:8px">Isso é um alerta simples por palavra-chave e nota baixa — não é uma análise de sentimento real. Use como apoio, não como veredito.</div>
+  </div>`;
 }
 
 // ═══════════════════════════════════════════════
@@ -1114,17 +660,26 @@ if ('serviceWorker' in navigator) {
 // ═══════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════
+function iniciarTelaResponder() {
+  document.getElementById('admin-login').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('responder').style.display = 'block';
+  renderResponder();
+}
+
 async function startApp() {
   const ok = await initFirebase();
   if (!ok || !db) {
-    loadAllLocal();
-    enterLocalMode();
+    loadLocal();
+    iniciarTelaResponder();
     return;
   }
+  await carregarPublico();
+  iniciarTelaResponder();
   firebase.auth().onAuthStateChanged(async (user) => {
-    if (!user) return;
+    if (!user || user.isAnonymous) return;
     try {
-      await resolveRoleAndEnter(user);
+      await entrarComoAdmin(user);
     } catch (e) {
       console.error(e);
       const errEl = document.getElementById('login-error');
